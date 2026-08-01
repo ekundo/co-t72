@@ -1,42 +1,56 @@
 #!/bin/sh
-# Turn the original CO v2.0 (co.com, Шишатский С.М., 1993, требует T-34)
-# into a build that runs under MDOS T-72, and put it on a quasi-disk image.
+# Собрать из оригинального CO v2.0 (Шишатский С.М., 1993, требует T-34) сборку,
+# работающую под MDOS T-72, и положить её на образ квазидиска.
 #
 #   ./patch-co.sh work/co/co.com work/os-t72/os-t72.edd out/
 #
-# Needs a dis8080.py listing of the original binary; the one checked in as
-# co-cov.asm was produced with an execution-coverage map, see README.
+# Правок три: две обязательные и одна косметическая. Список отвергнутых
+# кандидатов -- в README, чтобы не проверять заново.
 set -e
 
-CO=${1:?original co.com}
-EDD=${2:?genuine os-t72.edd to use as a base}
+CO=${1:?оригинальный co.com}
+EDD=${2:?подлинный os-t72.edd как основа}
 OUT=${3:-out}
-HERE=$(dirname "$0")
+HERE=$(cd "$(dirname "$0")" && pwd)
 mkdir -p "$OUT"
 
-# 1. BIOS disk handler moved: T-34 has it at E2BD, T-72 at E2ED. CO hooks the
-#    disk vector at E213 with its own filter and passes calls through to a
-#    hardcoded continuation, so the constant has to follow the handler.
+# 1. Адрес дискового обработчика БСВВ. CO перехватывает вектор дисковых операций
+#    (SHLD E213h), ставит свой фильтр по 0185 и пропускает вызовы дальше по
+#    жёстко зашитому адресу. У T-34 обработчик на E2BD, у T-72 -- на E2ED.
+#    Это единственный зашитый адрес БСВВ во всём CO.
 python3 "$HERE/tools/patchaddr.py" "$CO" "$OUT/co1.com" \
     --listing "$HERE/co-cov.asm" --map E2BD:E2ED
 
-# 2. The banner is stored in KOI-7 and selected with the single-byte control
-#    0Eh. T-72 has neither that control nor a KOI-7 font, so the text moves to
-#    KOI-8, which both monitors support.
+# 2. Заставка хранится в КОИ-7 и переключает набор однобайтным кодом 0Eh.
+#    У T-72 нет ни такого кода, ни шрифта КОИ-7 (на 1B 5C у него CP866).
+#    КОИ-8 = КОИ-7 | 80h. Косметика, но без неё текст лезет латиницей.
 python3 "$HERE/tools/koi7to8.py" "$OUT/co1.com" "$OUT/co2.com" \
     --at 0x3FB8 --len 0x67
 
-# 3. CO's output trap saves the stack pointer at A838 and the screen vector at
-#    A83A -- inside the quasi-disk bank window. The trap runs from inside the
-#    T-72 screen driver, which switches that bank off, so the values read back
-#    are video memory. Move both to page zero.
-python3 "$HERE/tools/patchaddr.py" "$OUT/co2.com" "$OUT/CO.COM" \
-    --listing "$HERE/co-cov.asm" --map A838:0040 --map A83A:0042
-
+# 3. Стек. CO ставит его по правилам CP/M -- на вершину TPA из ячейки 0006,
+#    то есть на C000 вниз. Но T-72 держит килобайтный буфер дисковода по
+#    BC00-BFFF (D_FD_B в Source/_E200h.asm; в исходной МикроДОС он был на EB00),
+#    и вершину TPA при переносе не опустили. Каждое чтение сектора затирало
+#    стек CO вместе с адресами возврата. Опускаем стек ниже буфера.
+python3 - "$OUT/co2.com" "$OUT/CO.COM" <<'PY'
+import sys
+d = bytearray(open(sys.argv[1], 'rb').read())
+O = 0x100
+# 406A: LHLD 0006 / SPHL / SHLD 0009  ->  JMP 40DB
+d[0x406A-O:0x4070-O] = bytes([0xC3, 0xDB, 0x40, 0x00, 0x00, 0x00])
+# в свободном хвосте образа -- то же самое, но со стеком ниже буфера дисковода.
+# [0006] нужен дважды: и как вершина стека, и как цель RST 1, поэтому просто
+# заменить LHLD на LXI H,BC00 нельзя -- сломается вызов БДОС.
+d[0x40DB-O:0x40E7-O] = bytes([0x2A, 0x06, 0x00,    # LHLD 0006
+                              0x22, 0x09, 0x00,    # SHLD 0009  (RST 1 -> БДОС)
+                              0x31, 0x00, 0xBC,    # LXI SP,BC00h
+                              0xC3, 0x71, 0x40])   # JMP 4071
+open(sys.argv[2], 'wb').write(bytes(d))
+PY
 rm -f "$OUT/co1.com" "$OUT/co2.com"
 
-# 4. Install onto the quasi-disk: CO plus its support files, and INITIALC.SUB
-#    so MicroDOS starts it automatically.
+# 4. Установка: CO со служебными файлами и INITIALC.SUB (autoexec МикроДОС),
+#    чтобы система стартовала прямо в менеджер.
 cp "$EDD" "$OUT/co-t72.edd"
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
