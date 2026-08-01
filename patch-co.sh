@@ -104,6 +104,12 @@ rm -f "$OUT/co1.com" "$OUT/co2.com"
 python3 "$HERE/tools/fix16k.py" "$OUT/CO.COM" "$OUT/co3.com"
 mv "$OUT/co3.com" "$OUT/CO.COM"
 
+# 3aa. Квазидисковая проба CO переключает банк с разрешёнными прерываниями --
+#      прилетело прерывание в это окно, и машина исполняет содержимое банка
+#      вместо БСВВ. Подробности -- в tools/kdprobe.py.
+python3 "$HERE/tools/kdprobe.py" "$OUT/CO.COM" "$OUT/co5.com"
+mv "$OUT/co5.com" "$OUT/CO.COM"
+
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
 python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com"

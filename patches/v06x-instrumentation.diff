@@ -161,21 +161,47 @@ index e4fdebf..360a267 100644
      std::function<void(void)> onbreakpoint = nullptr;
      std::function<void(void)> onframetimer;
 diff --git a/src/emulator.cpp b/src/emulator.cpp
-index b1239ff..94aa1db 100644
+index b1239ff..22226d9 100644
 --- a/src/emulator.cpp
 +++ b/src/emulator.cpp
-@@ -1,4 +1,7 @@
+@@ -1,4 +1,10 @@
 +#include <cstdlib>
 +
  #include "emulator.h"
 +#include "options.h"
++#include "i8080.h"
++
++using namespace i8080cpu;
  
  static void kick_timer()
  {
-@@ -23,6 +26,19 @@ Emulator::~Emulator()
+@@ -23,6 +29,42 @@ Emulator::~Emulator()
      }
  }
  
++void Emulator::dump_state_now()
++{
++    // Снимок для разбора зависаний: где стоит процессор и какой стек. Пишем
++    // рядом с логом, чтобы можно было прислать одним файлом.
++    const char * path = getenv("V06X_STATE_FILE");
++    FILE * f = fopen(path ? path : "v06x-state.txt", "a");
++    if (!f) return;
++    Memory & mem = board.get_memory();
++    int pc = i8080_pc(), sp = i8080_regs_sp();
++    fprintf(f, "PC=%04X SP=%04X A=%02X BC=%04X DE=%04X HL=%04X port10=%02X\n",
++            pc, sp, i8080_regs_a(), i8080_regs_bc(), i8080_regs_de(),
++            i8080_regs_hl(), mem.get_mode_map() | mem.get_page_map());
++    fprintf(f, "  код у PC:");
++    for (int i = 0; i < 12; ++i) fprintf(f, " %02X", mem.get_byte(pc + i, false));
++    fprintf(f, "\n  стек:");
++    for (int i = 0; i < 8; ++i)
++        fprintf(f, " %04X", mem.get_byte(sp + i * 2, true) |
++                            (mem.get_byte(sp + i * 2 + 1, true) << 8));
++    fprintf(f, "\n");
++    fclose(f);
++    fprintf(stderr, "состояние записано в %s\n", path ? path : "v06x-state.txt");
++}
++
 +void Emulator::save_edd_now()
 +{
 +    if (Options.eddfile.size() == 0) {
@@ -192,10 +218,16 @@ index b1239ff..94aa1db 100644
  bool Emulator::handle_keyboard_event(SDL_KeyboardEvent & event)
  {
      switch (event.keysym.scancode) 
-@@ -37,6 +53,14 @@ bool Emulator::handle_keyboard_event(SDL_KeyboardEvent & event)
+@@ -37,6 +79,20 @@ bool Emulator::handle_keyboard_event(SDL_KeyboardEvent & event)
                      return true;
                  }
              break;
++        case SDL_SCANCODE_D:
++            if (event.keysym.mod & (KMOD_GUI | KMOD_ALT)) {
++                dump_state_now();
++                return true;
++            }
++            break;
 +        case SDL_SCANCODE_S:
 +            // выгрузить текущий квазидиск: сам эмулятор его нигде не сохраняет,
 +            // а без этого всё, что записано на диск C:, теряется при выходе
@@ -208,14 +240,15 @@ index b1239ff..94aa1db 100644
              break;
      }
 diff --git a/src/emulator.h b/src/emulator.h
-index 1431046..4d3bb4a 100644
+index 1431046..9d0da9d 100644
 --- a/src/emulator.h
 +++ b/src/emulator.h
-@@ -79,6 +79,7 @@ private:
+@@ -79,6 +79,8 @@ private:
      void handle_render(threadevent & event, bool & stopping);
      void join_emulator_thread();
      bool handle_keyboard_event(SDL_KeyboardEvent & event);
 +    void save_edd_now();
++    void dump_state_now();
      int wait_event(SDL_Event * event, threadevent & ev, int timeout);
  
      void refresh_joysticks();
