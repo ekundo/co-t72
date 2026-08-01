@@ -1,0 +1,23 @@
+/* Boot MDOS T-72 with УС (Left Ctrl) held so the OS formats the quasi-disk C:,
+ * then run CO from floppy A:.
+ *
+ * УС is checked by the loader right after the OS is unpacked (os-t72hl.asm:
+ * IN 001h / ANI 040h / CZ 0E21Bh), so the key has to be down from frame 0.
+ * Keys are spaced out by hand -- the CCP drops keystrokes that arrive while it
+ * is still printing its banner.
+ */
+
+global us = scancode_from_name("Left Ctrl")
+
+def framefunc(frameno) {
+    if (frameno == 0) { keydown(us) }
+    if (frameno == 90) {
+        keyup(us)
+        keytyper.types([120,
+                        "A", 15, "'", 15, "Return", 60,
+                        "C", 15, "O", 15, "Return"])
+    }
+    keytyper.onframe()
+}
+
+add_callback("frame", framefunc)

@@ -1,0 +1,8 @@
+/* Boot T-72 keeping the quasi-disk, then run CO from C: -- its intended home,
+ * with CO.PRM/MNU/EXT/HLP/ZGR alongside it.
+ */
+def framefunc(frameno) {
+    if (frameno == 150) { keytyper.types([60, "C", 15, "O", 15, "Return"]) }
+    keytyper.onframe()
+}
+add_callback("frame", framefunc)

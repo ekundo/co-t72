@@ -1,0 +1,27 @@
+/* Drive a working CO under T-34 so the coverage bitmap sees the real code:
+ * start it, then walk the panels. Only navigation and help -- nothing that
+ * copies, renames or deletes.
+ */
+
+global us = scancode_from_name("Left Ctrl")
+
+def framefunc(frameno) {
+    if (frameno == 0) { keydown(us) }
+    if (frameno == 90) {
+        keyup(us)
+        keytyper.types([120,
+                        "A", 15, "'", 15, "Return", 120,   // A:
+                        "C", 15, "O", 15, "Return", 400,   // CO
+                        "Down", 20, "Down", 20, "Down", 20,
+                        "Up", 20,
+                        "Tab", 40,
+                        "Down", 20, "Down", 20,
+                        "Tab", 40,
+                        "1", 120,                          // help
+                        "Return", 60,
+                        "Down", 20, "Up", 20])
+    }
+    keytyper.onframe()
+}
+
+add_callback("frame", framefunc)

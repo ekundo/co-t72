@@ -1,0 +1,310 @@
+diff --git a/src/board.cpp b/src/board.cpp
+index 43a5a25..e9e82c1 100644
+--- a/src/board.cpp
++++ b/src/board.cpp
+@@ -16,6 +16,84 @@ extern "C" unsigned int boots_bin_len;
+ 
+ using namespace i8080cpu;
+ 
++// PC-range trace, enabled with V06X_TRACE_LO / V06X_TRACE_HI / V06X_TRACE_FILE.
++// Scripted breakpoints cannot do this job: script_attached() raises
++// script_interrupt and execute_frame() then returns before reaching the
++// instruction loop, so the machine stops instead of tracing.
++static FILE* trace_file = nullptr;
++static int trace_lo = 0;
++static int trace_hi = -1;
++static int trace_last_pc = -1;
++// Optional gate: tracing only runs between V06X_TRACE_ARM and V06X_TRACE_DISARM,
++// so a single OS call can be isolated instead of the whole run. Each arming
++// bumps a window counter that is printed with every line.
++static int trace_arm = -1;
++static int trace_disarm = -1;
++static bool trace_armed = true;
++static int trace_window = 0;
++// V06X_TRACE_ALL logs every instruction in the range instead of only the first
++// of a run -- needed to diff two runs instruction by instruction.
++// V06X_TRACE_MAX caps the number of logged lines so the file stays usable.
++static bool trace_all = false;
++static long trace_max = 0;
++static long trace_count = 0;
++
++// Execution coverage bitmap, enabled with V06X_COV_LO / V06X_COV_HI /
++// V06X_COV_FILE. Every executed PC in the range is marked, so the dump is an
++// exact set of instruction starts -- which static disassembly of a program full
++// of jump tables cannot give.
++static unsigned char* cov = nullptr;
++static int cov_lo = 0;
++static int cov_hi = -1;
++static const char* cov_path = nullptr;
++
++static void cov_dump()
++{
++    if (!cov || !cov_path) return;
++    FILE* f = fopen(cov_path, "wb");
++    if (!f) return;
++    fwrite(cov, 1, (size_t)(cov_hi - cov_lo + 1), f);
++    fclose(f);
++}
++
++static void cov_init()
++{
++    const char* lo = getenv("V06X_COV_LO");
++    const char* hi = getenv("V06X_COV_HI");
++    cov_path = getenv("V06X_COV_FILE");
++    if (!lo || !hi || !cov_path) return;
++    cov_lo = (int)strtol(lo, nullptr, 0);
++    cov_hi = (int)strtol(hi, nullptr, 0);
++    if (cov_hi < cov_lo) return;
++    cov = (unsigned char*)calloc((size_t)(cov_hi - cov_lo + 1), 1);
++    atexit(cov_dump);
++}
++
++static void trace_init()
++{
++    cov_init();
++    const char* lo = getenv("V06X_TRACE_LO");
++    const char* hi = getenv("V06X_TRACE_HI");
++    const char* path = getenv("V06X_TRACE_FILE");
++    if (!lo || !hi || !path) return;
++    trace_lo = (int)strtol(lo, nullptr, 0);
++    trace_hi = (int)strtol(hi, nullptr, 0);
++    const char* arm = getenv("V06X_TRACE_ARM");
++    const char* dis = getenv("V06X_TRACE_DISARM");
++    if (arm && dis) {
++        trace_arm = (int)strtol(arm, nullptr, 0);
++        trace_disarm = (int)strtol(dis, nullptr, 0);
++        trace_armed = false;
++    }
++    trace_all = getenv("V06X_TRACE_ALL") != nullptr;
++    const char* mx = getenv("V06X_TRACE_MAX");
++    trace_max = mx ? strtol(mx, nullptr, 0) : 0;
++    trace_file = fopen(path, "w");
++    fprintf(stderr, "pc-trace: %04x..%04x -> %s (%s)\n", trace_lo, trace_hi,
++            path, trace_file ? "open" : "FAILED");
++    atexit([]{ if (trace_file) fclose(trace_file); });
++}
++
+ Board::Board(Memory& _memory, IO& _io, PixelFiller& _filler, Soundnik& _snd,
+   TV& _tv, WavPlayer& _tape_player, Debug& _debug)
+   : memory(_memory)
+@@ -35,6 +113,7 @@ Board::Board(Memory& _memory, IO& _io, PixelFiller& _filler, Soundnik& _snd,
+ 
+ void Board::init()
+ {
++    trace_init();
+     i8080_hal_bind(memory, io, *this);
+     cadence::set_cadence(
+       this->tv.get_refresh_rate(), cadence_frames, cadence_length);
+@@ -147,6 +226,50 @@ int Board::execute_frame(bool update_screen)
+         this->filler.irq = false;
+         // DBG_FRM(F1,F2,printf("%05d %04x: ", this->between + this->instr_time,
+         // i8080_pc()));
++        if (cov) {
++            int pc = i8080_pc();
++            if (pc >= cov_lo && pc <= cov_hi) cov[pc - cov_lo] = 1;
++        }
++
++        if (trace_file) {
++            int pc = i8080_pc();
++            if (trace_arm >= 0) {
++                if (pc == trace_arm) { trace_armed = true; ++trace_window; }
++                else if (pc == trace_disarm) trace_armed = false;
++            }
++            if (!trace_armed) { /* gated off */ }
++            else if (pc < trace_lo || pc > trace_hi) {
++                // leaving the window re-arms the filter, so every *entry* into
++                // the range is logged even when the same address is re-entered
++                trace_last_pc = -1;
++            }
++            else if (trace_all || pc != trace_last_pc) {
++                trace_last_pc = pc;
++                if (trace_max && ++trace_count > trace_max) {
++                    fclose(trace_file);
++                    trace_file = nullptr;
++                }
++                if (!trace_file) break;
++                int sp = i8080_regs_sp();
++                fprintf(trace_file,
++                  "w%d %04x sp=%04x a=%02x bc=%04x de=%04x hl=%04x ret=%04x "
++                  "bytes=%02x %02x %02x stack=%04x,%04x,%04x,%04x,%04x,%04x\n",
++                  trace_window, pc, sp, i8080_regs_a(),
++                  i8080_regs_bc(), i8080_regs_de(), i8080_regs_hl(),
++                  this->memory.read(sp, true) |
++                    (this->memory.read(sp + 1, true) << 8),
++                  this->memory.read(pc, false),
++                  this->memory.read(pc + 1, false),
++                  this->memory.read(pc + 2, false),
++                  this->memory.read(sp + 2, true) | (this->memory.read(sp + 3, true) << 8),
++                  this->memory.read(sp + 4, true) | (this->memory.read(sp + 5, true) << 8),
++                  this->memory.read(sp + 6, true) | (this->memory.read(sp + 7, true) << 8),
++                  this->memory.read(sp + 8, true) | (this->memory.read(sp + 9, true) << 8),
++                  this->memory.read(sp + 10, true) | (this->memory.read(sp + 11, true) << 8),
++                  this->memory.read(sp + 12, true) | (this->memory.read(sp + 13, true) << 8));
++            }
++        }
++
+         // script hook
+         if (this->scripting && check_breakpoint()) {
+             this->script_interrupt = true;
+diff --git a/src/hal.cpp b/src/hal.cpp
+index b6b3651..7673b1f 100644
+--- a/src/hal.cpp
++++ b/src/hal.cpp
+@@ -13,30 +13,92 @@ static Memory * memory;
+ static IO * io;
+ static Board * board;
+ 
++// Data-access trace: V06X_DATA_LO / V06X_DATA_HI / V06X_DATA_FILE. Logs each
++// distinct (pc, addr, direction) triple that reads or writes the range, ignoring
++// opcode fetch. This is how operands still pointing at a relocated work area are
++// found: a disassembler cannot see references inside code it never reached.
++#include <set>
++#include <stdlib.h>
++static FILE * data_file = nullptr;
++static int data_lo = 0, data_hi = -1;
++static std::set<uint64_t> data_seen;
++static bool data_nodedup = false;   // V06X_DATA_ALL=1 logs every access, not just new (pc,addr) pairs
++
++// last value written to port 10h -- the quasi-disk bank window control. Logged
++// alongside data accesses so it is visible whether a given read of A000-DFFF saw
++// main RAM or the bank.
++int hal_last_bank = -1;
++
++static inline void data_trace(int addr, char rw, int val)
++{
++    if (!data_file || addr < data_lo || addr > data_hi) return;
++    int pc = i8080cpu::i8080_pc();
++    uint64_t key = ((uint64_t)pc << 24) | ((uint64_t)addr << 8) | (uint64_t)rw;
++    if (!data_nodedup && !data_seen.insert(key).second) return;
++    fprintf(data_file, "%c %04x=%02x pc=%04x bank=%02x\n", rw, addr, val & 0xFF, pc, hal_last_bank & 0xFF);
++}
++
++static void data_dump() { if (data_file) fclose(data_file); }
++
++static FILE * port_file = nullptr;
++static int port_watch = -1;
++
++static void port_dump() { if (port_file) fclose(port_file); }
++
++static void port_trace_init()
++{
++    const char * p = getenv("V06X_PORT");
++    const char * path = getenv("V06X_PORT_FILE");
++    if (!p || !path) return;
++    port_watch = (int)strtol(p, nullptr, 0);
++    port_file = fopen(path, "w");
++    atexit(port_dump);
++}
++
++void hal_data_trace_init()
++{
++    const char * lo = getenv("V06X_DATA_LO");
++    const char * hi = getenv("V06X_DATA_HI");
++    const char * path = getenv("V06X_DATA_FILE");
++    if (!lo || !hi || !path) return;
++    data_lo = (int)strtol(lo, nullptr, 0);
++    data_hi = (int)strtol(hi, nullptr, 0);
++    data_file = fopen(path, "w");
++    data_nodedup = getenv("V06X_DATA_ALL") != nullptr;
++    atexit(data_dump);
++}
++
+ void i8080_hal_bind(Memory & _mem, IO & _io, Board & _board)
+ {
+     memory = &_mem;
+     io = &_io;
+     board = &_board;
++    hal_data_trace_init();
++    port_trace_init();
+ }
+ 
+ int i8080_hal_memory_read_byte(int addr, const bool _is_opcode)
+ {
+-    return memory->read(addr, false, _is_opcode);
++    int v = memory->read(addr, false, _is_opcode);
++    if (!_is_opcode) data_trace(addr, 'r', v);
++    return v;
+ }
+ 
+ void i8080_hal_memory_write_byte(int addr, int value)
+ {
++    data_trace(addr, 'w', value);
+     return memory->write(addr, value, false);
+ }
+ 
+ int i8080_hal_memory_read_word(int addr, bool stack)
+ {
++    if (!stack) data_trace(addr, 'r', memory->read(addr, stack));
+     return memory->read(addr, stack) | (memory->read(addr+1, stack) << 8);
+ }
+ 
+ void i8080_hal_memory_write_word(int addr, int word, bool stack)
+ {
++    if (!stack) data_trace(addr, 'w', word & 0377);
+     memory->write(addr, word & 0377, stack);
+     memory->write(addr + 1, word >> 8, stack);
+ }
+@@ -51,6 +113,14 @@ int i8080_hal_io_input(int port)
+ void i8080_hal_io_output(int port, int value)
+ {
+     //printf("output port %02x=%02x\n", port, value);
++    // Port-write trace: V06X_PORT / V06X_PORT_FILE. Every write to the chosen
++    // port is logged with the pc that made it -- used to compare who owns the
++    // quasi-disk bank window (port 10h) and in what state it is left.
++    if (port == 0x10) hal_last_bank = value;
++    if (port_file && port == port_watch) {
++        fprintf(port_file, "%04x out %02x=%02x\n",
++                i8080cpu::i8080_pc(), port, value);
++    }
+     io->output(port, value);
+ }
+ 
+diff --git a/src/memory.cpp b/src/memory.cpp
+index fb0c452..2ce6d93 100644
+--- a/src/memory.cpp
++++ b/src/memory.cpp
+@@ -2,6 +2,7 @@
+ #include <string.h>
+ #include <stdio.h>
+ #include <vector>
++#include <algorithm>
+ 
+ #include "memory.h"
+ #include "i8080.h"
+diff --git a/src/server.cpp b/src/server.cpp
+index b3c0e00..2713ca7 100644
+--- a/src/server.cpp
++++ b/src/server.cpp
+@@ -67,7 +67,7 @@ private:
+ class Session : public std::enable_shared_from_this<Session>
+ {
+ public:
+-    Session(boost::asio::io_service& ios, Board & board)
++    Session(boost::asio::io_context& ios, Board & board)
+         : socket(ios), board(board), closing(false) {}
+ 
+     tcp::socket& get_socket()
+@@ -352,7 +352,7 @@ private:
+ 
+ class Server {
+ public:
+-    Server(boost::asio::io_service& ios, short port, Board & board) 
++    Server(boost::asio::io_context& ios, short port, Board & board) 
+         : ios(ios), acceptor(ios, tcp::endpoint(tcp::v4(), port)), board(board)
+     {
+         std::shared_ptr<Session> session = std::make_shared<Session>(ios, board);
+@@ -379,12 +379,12 @@ public:
+     }
+ 
+ private:
+-    boost::asio::io_service& ios;
++    boost::asio::io_context& ios;
+     tcp::acceptor acceptor;
+     Board & board;
+ };
+ 
+-boost::asio::io_service iosrv;
++boost::asio::io_context iosrv;
+ Server * srv;
+ 
+ void start_gdb_server(Board & board)

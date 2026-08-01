@@ -1,0 +1,5 @@
+/* Boot T-72 without holding УС so the preloaded quasi-disk survives. The loader
+ * looks for CO.COM on C: and hands control to it -- the way CO was meant to run.
+ */
+def framefunc(frameno) { keytyper.onframe() }
+add_callback("frame", framefunc)
