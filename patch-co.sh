@@ -112,12 +112,13 @@ mv "$OUT/co5.com" "$OUT/CO.COM"
 
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
-python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com"
+INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/stderr |
+       sed -n 's/^init=//p')
 mv "$OUT/co4.com" "$OUT/CO.COM"
 
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
-python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com"
+python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com" --init "$INIT"
 mv "$OUT/co6.com" "$OUT/CO.COM"
 
 # 4. На квазидиске должна лежать ТА ЖЕ сборка T-72, что и в .rom. Тёплый старт

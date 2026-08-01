@@ -48,6 +48,11 @@ REREAD = 0x28AE        # хвост «7-Диск»: записать букву 
 MAINLOOP = 0x030F      # вернуться в главный цикл
 BIOS_CMD = 0xE218      # БСВВ: выполнение цифровых команд, номер в A
 PANEL_DRV = 0x3E91     # буквы дисков панелей
+BDOS = 0x0005          # вызов БДОС напрямую: RST 1 к моменту старта ещё не готов
+FCB = 0x005C           # рабочий ФУБ, он же вход команды 9
+PRM_REC = 7            # последняя запись CO.PRM -- она пустая
+PRM_OFF = 0x70         # смещение в записи: файл 03F0, дальше 12 байт наших
+SLOT = 5               # на диск: длина номера + четыре знака
 
 
 class Asm:
@@ -76,68 +81,143 @@ class Asm:
         return bytes(out)
 
 
+build_init_addr = [0]
+
+
 def build(at):
+    """Собрать обработчик. Раскладка данных:
+       pending -- набранный номер: длина + четыре знака;
+       buf     -- запись CO.PRM целиком, в ней по PRM_OFF подпись 'HD' и два слота."""
     a = Asm(at)
-    a.word(0x21, PANEL_DRV); a.word(0xCD, SEL_PANEL); a.db(0x7E)   # LXI H / CALL / MOV A,M
-    a.db(0xFE, 0x41); a.ref(0xCA, 'ok')                            # CPI 'A' / JZ ok
-    a.db(0xFE, 0x42); a.ref(0xC2, 'back')                          # CPI 'B' / JNZ back
+    SIGN = 'sign'
 
+    # ---------------- СС+7: диалог ----------------
+    a.word(0x21, PANEL_DRV); a.word(0xCD, SEL_PANEL); a.db(0x7E)
+    a.db(0xFE, 0x41); a.ref(0xCA, 'ok')                            # A: ?
+    a.db(0xFE, 0x42); a.ref(0xC2, 'back')                          # B: ?  иначе молча
     a.label('ok')
-    # ФУБ по 005C и длина хвоста по 0080 -- рабочие ячейки самого CO, он в них
-    # держит текущий файл. Затрёшь без спроса -- следующая же его операция
-    # ответит «Неверное имя» (на это я и напоролся). Ячейки идут подряд,
-    # 005C..0080 -- сохраняем все 37 и возвращаем после вызова.
-    a.word(0x21, 0x005C); a.ref(0x11, 'save'); a.db(0x0E, 0x25)    # LXI H,005C / LXI D,save / MVI C,37
-    a.db(0xF5)                                                     # PUSH PSW -- буква диска
-    a.label('sav')
-    a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'sav')         # MOV A,M/STAX D/INX H/INX D/DCR C/JNZ
-    a.db(0xF1)                                                     # POP PSW
-    a.db(0xD6, 0x40)                                               # SUI 40h -> 1 или 2
-    a.word(0x32, 0x005C)                                           # STA 005C -- диск в ФУБ
-    a.word(0x21, 0x005D); a.db(0x06, 0x0B, 0x3E, 0x20)             # LXI H,005D / MVI B,11 / MVI A,' '
-    a.label('clr')
-    a.db(0x77, 0x23, 0x05); a.ref(0xC2, 'clr')                     # MOV M,A / INX H / DCR B / JNZ
-    a.ref(0x21, 'msg'); a.db(0xDF)                                 # LXI H,msg / RST 3
-
-    a.word(0x21, 0x005D); a.db(0x06, 0x00)                         # LXI H,005D / MVI B,0
+    a.db(0xD6, 0x40); a.ref(0x32, 'drive')                         # номер диска 1/2
+    a.ref(0xCD, 'clrpend')                                         # очистить набор
+    a.ref(0x21, 'msg'); a.db(0xDF)                                 # приглашение
+    a.ref(0x21, 'pending'); a.db(0x23)                             # HL -> знаки
+    a.db(0x06, 0x00)                                               # B -- сколько набрано
     a.label('inp')
-    a.db(0xC5, 0xE5); a.word(0xCD, GETKEY); a.db(0xE1, 0xC1)       # PUSH B/H / CALL GETKEY / POP H/B
+    a.db(0xC5, 0xE5); a.word(0xCD, GETKEY); a.db(0xE1, 0xC1)
     a.db(0xFE, 0x0D); a.ref(0xCA, 'done')                          # ВК
-    a.db(0xFE, 0x1B); a.ref(0xCA, 'back')                          # АР2 -- отмена
-    a.db(0x4F)                                                     # MOV C,A
-    a.db(0xFE, 0x30); a.ref(0xDA, 'inp')                           # < '0'
-    a.db(0xFE, 0x3A); a.ref(0xDA, 'take')                          # цифра
-    a.db(0xFE, 0x41); a.ref(0xDA, 'inp')                           # между '9' и 'A'
-    a.db(0xFE, 0x47); a.ref(0xD2, 'inp')                           # > 'F'
+    a.db(0xFE, 0x1B); a.ref(0xCA, 'back')                          # АР2
+    a.db(0x4F)
+    a.db(0xFE, 0x30); a.ref(0xDA, 'inp')
+    a.db(0xFE, 0x3A); a.ref(0xDA, 'take')
+    a.db(0xFE, 0x41); a.ref(0xDA, 'inp')
+    a.db(0xFE, 0x47); a.ref(0xD2, 'inp')
     a.label('take')
-    a.db(0x78, 0xFE, 0x04); a.ref(0xCA, 'inp')                     # MOV A,B / CPI 4 / JZ inp
-    a.db(0x71, 0x23, 0x04)                                         # MOV M,C / INX H / INR B
-    a.db(0xC5, 0xE5, 0xE7, 0xE1, 0xC1); a.ref(0xC3, 'inp')         # эхо: RST 4 портит регистры
-
+    a.db(0x78, 0xFE, 0x04); a.ref(0xCA, 'inp')                     # больше четырёх не берём
+    a.db(0x71, 0x23, 0x04)
+    a.db(0xC5, 0xE5, 0xE7, 0xE1, 0xC1); a.ref(0xC3, 'inp')         # эхо
     a.label('done')
-    a.db(0x78, 0xB7); a.ref(0xCA, 'back')                          # MOV A,B / ORA A / JZ back
-    a.word(0x32, 0x0080)                                           # STA 0080 -- длина хвоста
-    # B обязан быть нулём: разбор номера (L_E4BA) складывает цифру инструкцией
-    # DAD B, то есть парой целиком. Оставишь там счётчик введённых цифр -- и
-    # к номеру приедет B*100h: «0» превращается в 0100h.
-    a.db(0x06, 0x00)                                               # MVI B,0
-    a.db(0x3E, 0x09); a.word(0xCD, BIOS_CMD)                       # MVI A,9 / CALL E218
-    a.ref(0x21, 'save'); a.word(0x11, 0x005C); a.db(0x0E, 0x25)    # вернуть ФУБ на место
+    a.db(0x78, 0xB7); a.ref(0xCA, 'back')                          # ничего не набрано
+    a.db(0x78); a.ref(0x32, 'pending')                             # длина в набор
+    a.ref(0xCD, 'docmd')                                           # выполнить команду 9
+    a.ref(0xCD, 'prmsave')                                         # запомнить в CO.PRM
+    a.word(0x21, PANEL_DRV); a.word(0xCD, SEL_PANEL); a.db(0x46)
+    a.word(0xC3, REREAD)                                           # перечитать панель
+    a.label('back')
+    a.word(0xCD, REDRAW); a.word(0xC3, MAINLOOP)
+
+    # ---------------- при старте: применить сохранённое ----------------
+    a.label('init'); build_init_addr[0] = a.labels['init']
+    # запомнить диск, с которого запущен CO: там же лежит и CO.PRM
+    a.word(0x3A, 0x0004); a.db(0x3C); a.ref(0x32, 'homedrv')
+    a.ref(0xCD, 'prmload'); a.db(0xB7, 0xC8)   # ничего не сохранено -- выходим                             # нет файла/подписи
+    a.db(0x3E, 0x01); a.ref(0xCD, 'restore')                       # диск A:
+    a.db(0x3E, 0x02)                                               # диск B:
+    a.label('restore')
+    a.ref(0x32, 'drive')
+    a.ref(0xCD, 'slotptr')
+    a.db(0x7E, 0xB7, 0xC8)                                         # длина 0 -- нечего
+    a.ref(0x11, 'pending'); a.db(0x0E, 0x05)                       # слот -> набор
+    a.label('cps')
+    a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'cps')
+    a.ref(0xC3, 'docmd')
+
+    # ---------------- команда 9 по набранному номеру ----------------
+    a.label('docmd')
+    a.word(0x21, FCB); a.ref(0x11, 'save'); a.db(0x0E, 0x25)       # сохранить ФУБ CO
+    a.label('sav')
+    a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'sav')
+    a.ref(0x3A, 'drive'); a.word(0x32, FCB)                        # диск в ФУБ
+    a.word(0x21, FCB + 1); a.db(0x06, 0x0B, 0x3E, 0x20)            # имя/тип пробелами
+    a.label('clr2')
+    a.db(0x77, 0x23, 0x05); a.ref(0xC2, 'clr2')
+    a.ref(0x3A, 'pending'); a.db(0x4F)                             # C = длина
+    a.ref(0x21, 'pending'); a.db(0x23); a.word(0x11, FCB + 1)
+    a.label('cp')
+    a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'cp')          # знаки в ФУБ
+    a.ref(0x3A, 'pending'); a.word(0x32, 0x0080)                   # длина хвоста
+    a.db(0x06, 0x00)                                               # B=0 -- разбор делает DAD B
+    a.db(0x3E, 0x09); a.word(0xCD, BIOS_CMD)                       # команда 9
+    a.ref(0x21, 'save'); a.word(0x11, FCB); a.db(0x0E, 0x25)       # вернуть ФУБ CO
     a.label('rst')
     a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'rst')
-    # Дискета сменилась -- в панели остался каталог прежней. Перечитываем её
-    # хвостом штатного «7-Диск»: с 28AE он берёт букву из B, кладёт её в панель
-    # и перечитывает. Целиком 2870 звать нельзя -- он ещё и спросит букву.
-    a.word(0x21, PANEL_DRV); a.word(0xCD, SEL_PANEL); a.db(0x46)   # LXI H / CALL / MOV B,M
-    a.word(0xC3, REREAD)
+    a.db(0xC9)
 
-    a.label('back')
-    a.word(0xCD, REDRAW); a.word(0xC3, MAINLOOP)                   # CALL 0FE0 / JMP 030F
+    # ---------------- мелочи ----------------
+    a.label('clrpend')                                             # длина 0, четыре пробела
+    a.ref(0x21, 'pending'); a.db(0x36, 0x00, 0x23, 0x06, 0x04, 0x3E, 0x20)
+    a.label('clr3')
+    a.db(0x77, 0x23, 0x05); a.ref(0xC2, 'clr3')
+    a.db(0xC9)
 
+    a.label('slotptr')                                             # HL -> слот текущего диска
+    a.ref(0x21, SIGN); a.db(0x23, 0x23)                            # за подписью -- слот A:
+    a.ref(0x3A, 'drive'); a.db(0x3D, 0xC8)                         # диск A: -- готово
+    a.word(0x11, SLOT); a.db(0x19, 0xC9)                           # иначе слот B:
+
+    # ---------------- работа с CO.PRM ----------------
+    a.label('prmopen')                                             # A=0, если не вышло
+    a.ref(0x3A, 'homedrv'); a.ref(0x32, 'fcb')
+    a.db(0x0E, 0x0F); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)       # открыть
+    a.db(0x3C, 0xC8)                                               # FF -- файла нет
+    a.db(0x0E, 0x1A); a.ref(0x11, 'buf'); a.word(0xCD, BDOS)       # адрес обмена
+    a.db(0x3E, PRM_REC); a.ref(0x32, 'fcbr')                       # номер записи
+    a.db(0xAF); a.ref(0x32, 'fcbr1'); a.ref(0x32, 'fcbr2')
+    a.db(0x0E, 0x21); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)       # чтение по номеру
+    a.db(0xB7); a.ref(0xC2, 'prmfail')     # БДОС на удачном чтении возвращает НОЛЬ
+    a.db(0x3E, 0xFF, 0xC9)
+    a.label('prmfail')
+    a.db(0xAF, 0xC9)
+
+    a.label('prmload')                                             # A=0, если нечего брать
+    a.ref(0xCD, 'prmopen'); a.db(0xB7, 0xC8)   # ORA A: RZ смотрит флаг, а не A
+    a.ref(0x3A, SIGN); a.db(0xFE, 0x48, 0xC0)                      # подпись 'H'
+    a.ref(0x21, SIGN); a.db(0x23, 0x7E, 0xFE, 0x44, 0xC0)          # и 'D'
+    a.db(0x3E, 0xFF, 0xC9)
+
+    a.label('prmsave')
+    a.ref(0xCD, 'prmopen'); a.db(0xB7, 0xC8)
+    a.db(0x3E, 0x48); a.ref(0x32, SIGN)                            # проставить подпись
+    a.ref(0x21, SIGN); a.db(0x23, 0x36, 0x44)
+    a.ref(0xCD, 'slotptr'); a.db(0xEB)                             # DE -> слот
+    a.ref(0x21, 'pending'); a.db(0x0E, 0x05)
+    a.label('cpp')
+    a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'cpp')         # набор в слот
+    a.db(0x0E, 0x22); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)       # запись по номеру
+    a.db(0x0E, 0x10); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)       # закрыть
+    a.db(0xC9)
+
+    # ---------------- данные ----------------
     a.label('msg')
     a.code += ' Номер дискеты - '.encode('koi8-r') + b'\0'
-    a.label('save')
-    a.code += bytes(37)          # 005C..0080 -- ФУБ целиком и длина хвоста, подряд
+    a.label('drive'); a.db(1)
+    a.label('homedrv'); a.db(1)
+    a.label('pending'); a.code += bytes(5)
+    a.label('save'); a.code += bytes(37)
+    a.label('fcb'); a.code += bytes([0]) + b'CO      PRM' + bytes(21)
+    a.label('fcbr'); a.db(0)
+    a.label('fcbr1'); a.db(0)
+    a.label('fcbr2'); a.db(0)
+    a.label('buf'); a.code += bytes(PRM_OFF)
+    a.label(SIGN); a.code += bytes(128 - PRM_OFF)
     return a.bytes()
 
 
@@ -164,8 +244,9 @@ def main():
     # самого CO, он его затирает при чтении чужого диска.
     if len(d) % 128:
         sys.exit('образ не выровнен по записи: %d байт' % len(d))
-    at = 0xB900 + (len(d) - 0x4000)
+    at = 0xB700 + (len(d) - 0x4000)
     code = build(at)
+    init_at = build_init_addr[0]
     d[slot] = at & 0xFF
     d[slot + 1] = at >> 8
 
@@ -192,6 +273,7 @@ def main():
     open(args.outfile, 'wb').write(bytes(d))
     print('выбор дискеты НЖМД: %d байт, работает по %04X, СС+7 переставлен с %04X'
           % (len(code), at, OLD))
+    print('init=%04X' % init_at)
 
 
 if __name__ == '__main__':

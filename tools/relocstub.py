@@ -18,13 +18,14 @@ import sys
 ORG = 0x100
 STUB = 0x40DB
 FILE_AT = 0x4100
-RUNTIME = 0xB900
+RUNTIME = 0xB700
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('infile')
     p.add_argument('outfile')
+    p.add_argument('--init', help='адрес подпрограммы, которую позвать после переноса')
     args = p.parse_args()
 
     d = bytearray(open(args.infile, 'rb').read())
@@ -33,16 +34,19 @@ def main():
         sys.exit('в хвосте нечего переносить')
 
     loop = STUB + 9
+    init = int(args.init, 16) if args.init else 0
     stub = bytes([0x21, FILE_AT & 0xFF, FILE_AT >> 8,      # LXI H,4100
-                  0x11, RUNTIME & 0xFF, RUNTIME >> 8,      # LXI D,B900
+                  0x11, RUNTIME & 0xFF, RUNTIME >> 8,      # LXI D,B700
                   0x01, n & 0xFF, n >> 8,                  # LXI B,длина
                   0x7E, 0x12, 0x23, 0x13,                  # MOV A,M/STAX D/INX H/INX D
                   0x0B, 0x78, 0xB1,                        # DCX B / MOV A,B / ORA C
                   0xC2, loop & 0xFF, loop >> 8,            # JNZ loop
                   0x2A, 0x06, 0x00,                        # LHLD 0006
                   0x22, 0x09, 0x00,                        # SHLD 0009 -- RST 1 в БДОС
-                  0x31, 0x00, 0xBC,                        # LXI SP,BC00h
-                  0xC3, 0x71, 0x40])                       # JMP 4071
+                  0x31, 0x00, 0xBC])                       # LXI SP,BC00h -- стек до вызова
+    if init:
+        stub += bytes([0xCD, init & 0xFF, init >> 8])      # применить сохранённые номера
+    stub += bytes([0xC3, 0x71, 0x40])                      # JMP 4071
     if STUB - ORG + len(stub) > 0x4100 - ORG:
         sys.exit('стаб не помещается до 4100h: %d байт' % len(stub))
     d[STUB - ORG:STUB - ORG + len(stub)] = stub
