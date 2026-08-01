@@ -177,6 +177,18 @@ def cmd_put(args, g):
            ','.join(str(b) for b in chosen)))
 
 
+def cmd_del(args, g):
+    img = bytearray(open(args.image, 'rb').read())
+    want = '%-8s%-3s' % parse_name(args.name)
+    n = 0
+    for i, e in live_entries(img, g):
+        if bytes(c & 0x7F for c in e[1:12]).decode('ascii', 'replace') == want:
+            img[g.data_start + i * 32] = 0xE5
+            n += 1
+    open(args.image, 'wb').write(bytes(img))
+    print('deleted %s: %d entries' % (args.name, n))
+
+
 def cmd_get(args, g):
     img = bytearray(open(args.image, 'rb').read())
     name, ext = parse_name(args.name)
@@ -210,6 +222,8 @@ def main():
     q = sub.add_parser('put')
     q.add_argument('image'); q.add_argument('file'); q.add_argument('name', nargs='?')
     q.set_defaults(fn=cmd_put)
+    q = sub.add_parser('del')
+    q.add_argument('image'); q.add_argument('name'); q.set_defaults(fn=cmd_del)
     q = sub.add_parser('get')
     q.add_argument('image'); q.add_argument('name'); q.add_argument('outfile')
     q.set_defaults(fn=cmd_get)

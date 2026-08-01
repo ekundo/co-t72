@@ -117,6 +117,10 @@ def build(at):
     a.label('done')
     a.db(0x78, 0xB7); a.ref(0xCA, 'back')                          # MOV A,B / ORA A / JZ back
     a.word(0x32, 0x0080)                                           # STA 0080 -- длина хвоста
+    # B обязан быть нулём: разбор номера (L_E4BA) складывает цифру инструкцией
+    # DAD B, то есть парой целиком. Оставишь там счётчик введённых цифр -- и
+    # к номеру приедет B*100h: «0» превращается в 0100h.
+    a.db(0x06, 0x00)                                               # MVI B,0
     a.db(0x3E, 0x09); a.word(0xCD, BIOS_CMD)                       # MVI A,9 / CALL E218
     a.ref(0x21, 'save'); a.word(0x11, 0x005C); a.db(0x0E, 0x25)    # вернуть ФУБ на место
     a.label('rst')
