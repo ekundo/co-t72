@@ -32,7 +32,8 @@ import argparse
 import sys
 
 ORG = 0x100
-CODE = 0x4100          # первый байт за образом
+RUNTIME = 0xB900       # где код работает: под стеком CO (BC00), выше буферов
+FILE_AT = 0x4100       # где он лежит в файле -- в хвосте за образом
 ROW = 13               # строка списка: имя 8 + пробел + тип 3 + размер 1
 A842, A871, A873 = 0xA842, 0xA871, 0xA873   # начало списка, счётчик, хвост
 
@@ -145,14 +146,17 @@ def main():
         sys.exit('по 1AD1 нет LHLD A873 -- незнакомый выпуск CO')
 
     d[0x1A99 - ORG:0x1A9E - ORG] = bytes([0x00] * 5)     # снять пропуск
-    d[0x1AD1 - ORG:0x1AD4 - ORG] = bytes([0xCD, CODE & 0xFF, CODE >> 8])
-    code = build(CODE)
-    d += bytes([0x1A] * (CODE - ORG - len(d)))           # добить до 4100h
+    d[0x1AD1 - ORG:0x1AD4 - ORG] = bytes([0xCD, 0, 0])   # адрес проставим ниже
+    d += bytes([0x1A] * (FILE_AT - ORG - len(d)))        # добить до 4100h
+    at = RUNTIME + (len(d) - 0x4000)
+    code = build(at)
+    d[0x1AD1 - ORG + 1] = at & 0xFF
+    d[0x1AD1 - ORG + 2] = at >> 8
     d += code
     d += bytes([0x1A] * (-len(d) % 128))                 # до границы записи
     open(args.outfile, 'wb').write(bytes(d))
-    print('склейка экстентов: %d байт по %04X, образ вырос до %d байт'
-          % (len(code), CODE, len(d)))
+    print('склейка экстентов: %d байт, работает по %04X, образ вырос до %d байт'
+          % (len(code), at, len(d)))
 
 
 if __name__ == '__main__':
