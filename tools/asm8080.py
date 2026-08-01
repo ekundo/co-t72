@@ -125,6 +125,8 @@ class Asm:
                 else:
                     py.append(str(self.sym[name]))
                 i = j
+            elif c == '/':
+                py.append('//'); i += 1      # деление только целочисленное
             else:
                 py.append(c); i += 1
         try:
