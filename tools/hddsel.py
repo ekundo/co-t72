@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """СС+7 в CO -- выбор дискеты НЖМД вместо печати файла.
 
+Номер запоминается в файле CO.HDD рядом с CO.PRM. Именно в своём файле, а не в
+хвосте CO.PRM: CO пишет CO.PRM целиком своей копией и затирает там что угодно
+чужое.
+
 Как это работает в CO. Второй набор цифровых клавиш -- это не отдельный режим,
 а просто СС+цифра: `0574` вычитает у кода `10h`, так что СС+7 приходит как
 `27h`. Дальше два уровня таблиц «клавиша -> адрес»: `05DA`, а по умолчанию
@@ -50,8 +54,10 @@ BIOS_CMD = 0xE218      # БСВВ: выполнение цифровых ком�
 PANEL_DRV = 0x3E91     # буквы дисков панелей
 BDOS = 0x0005          # вызов БДОС напрямую: RST 1 к моменту старта ещё не готов
 FCB = 0x005C           # рабочий ФУБ, он же вход команды 9
-PRM_REC = 7            # последняя запись CO.PRM -- она пустая
-PRM_OFF = 0x70         # смещение в записи: файл 03F0, дальше 12 байт наших
+# Свой файл, а не CO.PRM: CO пишет CO.PRM целиком своей копией и затирает
+# в нём что угодно чужое. Файл маленький, одна запись.
+PRM_REC = 0            # единственная запись CO.HDD
+PRM_OFF = 0            # подпись с самого начала, дальше два слота
 SLOT = 5               # на диск: длина номера + четыре знака
 
 
@@ -174,18 +180,30 @@ def build(at):
     a.word(0x11, SLOT); a.db(0x19, 0xC9)                           # иначе слот B:
 
     # ---------------- работа с CO.PRM ----------------
-    a.label('prmopen')                                             # A=0, если не вышло
-    a.ref(0x3A, 'homedrv'); a.ref(0x32, 'fcb')
-    a.db(0x0E, 0x0F); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)       # открыть
-    a.db(0x3C, 0xC8)                                               # FF -- файла нет
+    a.label('prmopenw')                                            # открыть или создать
+    a.ref(0xCD, 'openonly'); a.db(0xB7); a.ref(0xC2, 'prmread')
+    a.db(0x0E, 0x16); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)       # создать
+    a.db(0x3C, 0xC8)                                               # не вышло -- A=0
+    a.ref(0xC3, 'prmread')
+
+    a.label('prmopen')                                             # только открыть
+    a.ref(0xCD, 'openonly'); a.db(0xB7, 0xC8)
+
+    a.label('prmread')                                             # обмен и чтение записи
+    a.ref(0x21, 'buf'); a.db(0x06, 0x80, 0xAF)                     # обнулить буфер
+    a.label('zap')
+    a.db(0x77, 0x23, 0x05); a.ref(0xC2, 'zap')
     a.db(0x0E, 0x1A); a.ref(0x11, 'buf'); a.word(0xCD, BDOS)       # адрес обмена
-    a.db(0x3E, PRM_REC); a.ref(0x32, 'fcbr')                       # номер записи
+    a.db(0x3E, PRM_REC); a.ref(0x32, 'fcbr')
     a.db(0xAF); a.ref(0x32, 'fcbr1'); a.ref(0x32, 'fcbr2')
     a.db(0x0E, 0x21); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)       # чтение по номеру
-    a.db(0xB7); a.ref(0xC2, 'prmfail')     # БДОС на удачном чтении возвращает НОЛЬ
+    a.db(0x3E, 0xFF, 0xC9)     # ошибку не смотрим: у свежего файла буфер нулевой
+
+    a.label('openonly')                                            # A=0, если файла нет
+    a.ref(0x3A, 'homedrv'); a.ref(0x32, 'fcb')
+    a.db(0x0E, 0x0F); a.ref(0x11, 'fcb'); a.word(0xCD, BDOS)
+    a.db(0x3C, 0xC8)
     a.db(0x3E, 0xFF, 0xC9)
-    a.label('prmfail')
-    a.db(0xAF, 0xC9)
 
     a.label('prmload')                                             # A=0, если нечего брать
     a.ref(0xCD, 'prmopen'); a.db(0xB7, 0xC8)   # ORA A: RZ смотрит флаг, а не A
@@ -194,7 +212,7 @@ def build(at):
     a.db(0x3E, 0xFF, 0xC9)
 
     a.label('prmsave')
-    a.ref(0xCD, 'prmopen'); a.db(0xB7, 0xC8)
+    a.ref(0xCD, 'prmopenw'); a.db(0xB7, 0xC8)
     a.db(0x3E, 0x48); a.ref(0x32, SIGN)                            # проставить подпись
     a.ref(0x21, SIGN); a.db(0x23, 0x36, 0x44)
     a.ref(0xCD, 'slotptr'); a.db(0xEB)                             # DE -> слот
@@ -212,7 +230,7 @@ def build(at):
     a.label('homedrv'); a.db(1)
     a.label('pending'); a.code += bytes(5)
     a.label('save'); a.code += bytes(37)
-    a.label('fcb'); a.code += bytes([0]) + b'CO      PRM' + bytes(21)
+    a.label('fcb'); a.code += bytes([0]) + b'CO      HDD' + bytes(21)
     a.label('fcbr'); a.db(0)
     a.label('fcbr1'); a.db(0)
     a.label('fcbr2'); a.db(0)
