@@ -11,15 +11,21 @@ CO считает по последнему экстенту (`1A9E`: RC окр�
 из панели целиком. Поэтому CO никогда не показывает ни самого себя (16384), ни,
 например, ASC.COM с системной дискеты; а DBG.COM (18944) виден.
 
-Чинится так: проверка RC снимается, и вместо неё перед добавлением строки в
-список идёт сверка с предыдущей строкой. Совпало имя с типом -- строка не
-добавляется, а перезаписывается: в списке остаётся последний экстент, то есть
-верный размер. Экстенты одного файла МикроДОС кладёт в каталог подряд, так что
-сравнения с предыдущей строкой достаточно.
+Чинится так: проверка RC снимается, и вместо неё перед добавлением строки CO
+ищет в списке строку с тем же именем и типом. Нашлась -- строка выбрасывается
+из списка, а новая дописывается в конец: в списке остаётся последний экстент,
+то есть верный размер.
 
-Кода на это 65 байт; свободного места в образе нет, поэтому он уезжает в хвост
+Искать надо по ВСЕМУ списку, а не только в предыдущей строке: экстенты одного
+файла лежат в каталоге подряд не всегда -- при копировании поверх удалённого
+файла первый экстент занимает освободившийся слот, а второй уходит в конец
+каталога. Две одинаковые строки в списке смертельны: сортировка CO при
+равенстве всех 12 байт (`1BA0` -> `1BA3`) отступает на 14 байт назад и
+продолжает сравнение, залезая в соседние строки, и переставляет куски чужих.
+
+Кода на это 87 байт; свободного места в образе нет, поэтому он уезжает в хвост
 за 4100h. Проверено трассировкой обращений к памяти: выше 40FFh CO ничего не
-пишет, а образ дочитывается загрузчиком как обычные записи файла.
+пишет, а хвост дочитывается загрузчиком как обычные записи файла.
 """
 
 import argparse
@@ -27,54 +33,101 @@ import sys
 
 ORG = 0x100
 CODE = 0x4100          # первый байт за образом
-ENTRY = 13             # длина строки списка: имя 8 + пробел + тип 3 + размер 1
-A871, A873 = 0xA871, 0xA873   # счётчик файлов и хвост списка
+ROW = 13               # строка списка: имя 8 + пробел + тип 3 + размер 1
+A842, A871, A873 = 0xA842, 0xA871, 0xA873   # начало списка, счётчик, хвост
+
+
+class Asm:
+    """Мини-ассемблер 8080 с метками -- иначе в ссылках легко ошибиться."""
+
+    def __init__(self, org):
+        self.org = org
+        self.code = bytearray()
+        self.labels = {}
+        self.fixups = []
+
+    def label(self, name):
+        self.labels[name] = self.org + len(self.code)
+
+    def db(self, *b):
+        self.code += bytes(b)
+
+    def ref(self, opcode, name):
+        self.code += bytes([opcode])
+        self.fixups.append((len(self.code), name))
+        self.code += b'\0\0'
+
+    def word(self, opcode, value):
+        self.code += bytes([opcode, value & 0xFF, value >> 8])
+
+    def bytes(self):
+        out = bytearray(self.code)
+        for at, name in self.fixups:
+            a = self.labels[name]
+            out[at] = a & 0xFF
+            out[at + 1] = a >> 8
+        return bytes(out)
 
 
 def build(at):
-    """Собрать подпрограмму дедупликации. Вход: DE -- запись каталога.
-    Выход: HL -- куда писать строку; DE сохранён."""
-    c = bytearray()
-    c += bytes([0x3A, A871 & 0xFF, A871 >> 8])           # LDA  A871
-    c += bytes([0x47])                                   # MOV  B,A
-    c += bytes([0x3A, (A871 + 1) & 0xFF, (A871 + 1) >> 8])  # LDA A872
-    c += bytes([0xB0])                                   # ORA  B
-    c += bytes([0x2A, A873 & 0xFF, A873 >> 8])           # LHLD A873
-    c += bytes([0xC8])                                   # RZ  -- список пуст
-    c += bytes([0xD5, 0xE5])                             # PUSH D / PUSH H
-    c += bytes([0x01, 0xF3, 0xFF, 0x09])                 # LXI B,-13 / DAD B
-    c += bytes([0x13])                                   # INX  D  -> имя
-    ne = []                                              # места ссылок на NE
+    a = Asm(at)
+    # Вход: DE -- запись каталога. Выход: HL -- куда писать строку, DE сохранён.
+    a.db(0xEB); a.ref(0x22, 'ent'); a.db(0xEB)      # XCHG / SHLD ENT / XCHG
+    a.word(0x2A, A873); a.ref(0x22, 'tail')         # LHLD A873 / SHLD TAIL
+    a.word(0x2A, A842)                              # LHLD A842 -- начало списка
 
-    def cmp_loop(n, skip_space):
-        nonlocal c
+    a.label('loop')
+    a.ref(0x3A, 'tail'); a.db(0xBD)                 # LDA TAIL / CMP L
+    a.ref(0xC2, 'go')
+    a.ref(0x3A, 'tail1'); a.db(0xBC)                # LDA TAIL+1 / CMP H
+    a.ref(0xCA, 'notfound')
+
+    a.label('go')
+    a.db(0xE5)                                      # PUSH H -- начало строки
+    a.ref(0x2A, 'ent'); a.db(0xEB)                  # LHLD ENT / XCHG -> DE
+    a.db(0xE1, 0xE5)                                # POP H / PUSH H
+    a.db(0x13)                                      # INX D -- имя записи
+    for n, skip_space in ((8, False), (3, True)):
         if skip_space:
-            c += bytes([0x23])                           # INX H -- пробел
-        c += bytes([0x0E, n])                            # MVI  C,n
-        top = at + len(c)
-        c += bytes([0x1A, 0xBE])                         # LDAX D / CMP M
-        ne.append(at + len(c) + 1)
-        c += bytes([0xC2, 0, 0])                         # JNZ  NE
-        c += bytes([0x23, 0x13, 0x0D])                   # INX H / INX D / DCR C
-        c += bytes([0xC2, top & 0xFF, top >> 8])         # JNZ  top
+            a.db(0x23)                              # INX H -- пробел в строке
+        a.db(0x06, n)                               # MVI B,n
+        a.label('cmp%d' % n)
+        a.db(0x1A, 0xBE)                            # LDAX D / CMP M
+        a.ref(0xC2, 'next')
+        a.db(0x23, 0x13, 0x05)                      # INX H / INX D / DCR B
+        a.ref(0xC2, 'cmp%d' % n)
 
-    cmp_loop(8, False)                                   # имя
-    cmp_loop(3, True)                                    # тип
-    # совпало: вернуть указатель на предыдущую строку и отыграть счётчик назад,
-    # потому что вызывающий его всё равно увеличит
-    c += bytes([0xE1, 0xD1])                             # POP H / POP D
-    c += bytes([0x01, 0xF3, 0xFF, 0x09])                 # LXI B,-13 / DAD B
-    c += bytes([0xE5])                                   # PUSH H
-    c += bytes([0x2A, A871 & 0xFF, A871 >> 8])           # LHLD A871
-    c += bytes([0x2B])                                   # DCX  H
-    c += bytes([0x22, A871 & 0xFF, A871 >> 8])           # SHLD A871
-    c += bytes([0xE1, 0xC9])                             # POP H / RET
-    target = at + len(c)                                 # NE:
-    c += bytes([0xE1, 0xD1, 0xC9])                       # POP H / POP D / RET
-    for p in ne:                                         # проставить ссылки
-        c[p - at] = target & 0xFF
-        c[p - at + 1] = target >> 8
-    return bytes(c)
+    # совпало: выбросить найденную строку из списка -- сдвинуть остаток на ROW
+    a.db(0xE1)                                      # POP H -- начало строки
+    a.db(0x44, 0x4D)                                # MOV B,H / MOV C,L
+    a.word(0x21, ROW); a.db(0x09, 0xEB)             # LXI H,ROW / DAD B / XCHG
+    a.db(0x60, 0x69)                                # MOV H,B / MOV L,C
+    a.label('move')
+    a.ref(0x3A, 'tail'); a.db(0xBB)                 # LDA TAIL / CMP E
+    a.ref(0xC2, 'mv')
+    a.ref(0x3A, 'tail1'); a.db(0xBA)                # LDA TAIL+1 / CMP D
+    a.ref(0xCA, 'shrink')
+    a.label('mv')
+    a.db(0x1A, 0x77, 0x23, 0x13)                    # LDAX D / MOV M,A / INX H / INX D
+    a.ref(0xC3, 'move')
+
+    a.label('shrink')                               # список стал короче на строку
+    a.word(0x2A, A871); a.db(0x2B); a.word(0x22, A871)   # LHLD A871 / DCX H / SHLD A871
+    a.ref(0x2A, 'tail'); a.word(0x01, -ROW & 0xFFFF); a.db(0x09)  # LHLD TAIL / LXI B,-ROW / DAD B
+    a.ref(0xC3, 'ret')
+
+    a.label('next')                                 # не совпало -- следующая строка
+    a.db(0xE1); a.word(0x01, ROW); a.db(0x09)       # POP H / LXI B,ROW / DAD B
+    a.ref(0xC3, 'loop')
+
+    a.label('notfound')                             # HL уже равен хвосту
+    a.label('ret')
+    a.db(0xE5); a.ref(0x2A, 'ent'); a.db(0xEB, 0xE1, 0xC9)  # вернуть DE и выйти
+
+    a.label('ent'); a.db(0, 0)
+    a.label('tail'); a.db(0)
+    a.label('tail1'); a.db(0)
+    return a.bytes()
 
 
 def main():
@@ -98,7 +151,7 @@ def main():
     d += code
     d += bytes([0x1A] * (-len(d) % 128))                 # до границы записи
     open(args.outfile, 'wb').write(bytes(d))
-    print('дедупликация экстентов: %d байт по %04X, образ вырос до %d байт'
+    print('склейка экстентов: %d байт по %04X, образ вырос до %d байт'
           % (len(code), CODE, len(d)))
 
 
