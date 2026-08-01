@@ -1,8 +1,8 @@
 diff --git a/src/board.cpp b/src/board.cpp
-index 43a5a25..e9e82c1 100644
+index 43a5a25..7083690 100644
 --- a/src/board.cpp
 +++ b/src/board.cpp
-@@ -16,6 +16,84 @@ extern "C" unsigned int boots_bin_len;
+@@ -16,6 +16,85 @@ extern "C" unsigned int boots_bin_len;
  
  using namespace i8080cpu;
  
@@ -21,6 +21,7 @@ index 43a5a25..e9e82c1 100644
 +static int trace_disarm = -1;
 +static bool trace_armed = true;
 +static int trace_window = 0;
++extern int hal_last_bank;   // last value written to port 10h -- which memory is visible at A000-DFFF
 +// V06X_TRACE_ALL logs every instruction in the range instead of only the first
 +// of a run -- needed to diff two runs instruction by instruction.
 +// V06X_TRACE_MAX caps the number of logged lines so the file stays usable.
@@ -87,7 +88,7 @@ index 43a5a25..e9e82c1 100644
  Board::Board(Memory& _memory, IO& _io, PixelFiller& _filler, Soundnik& _snd,
    TV& _tv, WavPlayer& _tape_player, Debug& _debug)
    : memory(_memory)
-@@ -35,6 +113,7 @@ Board::Board(Memory& _memory, IO& _io, PixelFiller& _filler, Soundnik& _snd,
+@@ -35,6 +114,7 @@ Board::Board(Memory& _memory, IO& _io, PixelFiller& _filler, Soundnik& _snd,
  
  void Board::init()
  {
@@ -95,7 +96,7 @@ index 43a5a25..e9e82c1 100644
      i8080_hal_bind(memory, io, *this);
      cadence::set_cadence(
        this->tv.get_refresh_rate(), cadence_frames, cadence_length);
-@@ -147,6 +226,50 @@ int Board::execute_frame(bool update_screen)
+@@ -147,6 +227,50 @@ int Board::execute_frame(bool update_screen)
          this->filler.irq = false;
          // DBG_FRM(F1,F2,printf("%05d %04x: ", this->between + this->instr_time,
          // i8080_pc()));
@@ -125,9 +126,9 @@ index 43a5a25..e9e82c1 100644
 +                if (!trace_file) break;
 +                int sp = i8080_regs_sp();
 +                fprintf(trace_file,
-+                  "w%d %04x sp=%04x a=%02x bc=%04x de=%04x hl=%04x ret=%04x "
++                  "w%d %04x bank=%02x sp=%04x a=%02x bc=%04x de=%04x hl=%04x ret=%04x "
 +                  "bytes=%02x %02x %02x stack=%04x,%04x,%04x,%04x,%04x,%04x\n",
-+                  trace_window, pc, sp, i8080_regs_a(),
++                  trace_window, pc, hal_last_bank & 0xFF, sp, i8080_regs_a(),
 +                  i8080_regs_bc(), i8080_regs_de(), i8080_regs_hl(),
 +                  this->memory.read(sp, true) |
 +                    (this->memory.read(sp + 1, true) << 8),
@@ -259,8 +260,37 @@ index b6b3651..7673b1f 100644
      io->output(port, value);
  }
  
+diff --git a/src/main.cpp b/src/main.cpp
+index e816b4e..a5a9f7d 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -34,6 +34,15 @@ void load_edd(Memory & memory)
+     }
+ }
+ 
++static void save_edd_at_exit(Memory & memory)
++{
++    const char * path = getenv("V06X_EDD_SAVE");
++    if (path && Options.eddfile.size()) {
++        memory.save_edd(path, 0x10000, 0x40000);
++        fprintf(stderr, "квазидиск сохранён в %s\n", path);
++    }
++}
++
+ void load_rom(Memory & memory)
+ {
+     memory.init_from_vector(util::load_binfile(Options.romfile), 
+@@ -263,6 +272,8 @@ int main(int argc, char ** argv)
+         ProfilerStop();
+     }
+ #endif
++    save_edd_at_exit(memory);
++
+ 
+     return 0;
+ }
 diff --git a/src/memory.cpp b/src/memory.cpp
-index fb0c452..2ce6d93 100644
+index fb0c452..060db73 100644
 --- a/src/memory.cpp
 +++ b/src/memory.cpp
 @@ -2,6 +2,7 @@
@@ -271,6 +301,40 @@ index fb0c452..2ce6d93 100644
  
  #include "memory.h"
  #include "i8080.h"
+@@ -117,6 +118,18 @@ void Memory::write(uint32_t addr, uint8_t w8, bool stackrq)
+     if (debug_onwrite) debug_onwrite(bigaddr, w8);
+ }
+ 
++void Memory::save_edd(const char * path, uint32_t start_addr, uint32_t size) const
++{
++    FILE * f = fopen(path, "wb");
++    if (!f) return;
++    // квазидиск хранится в bytes[] с перемешиванием адресов (tobank), поэтому
++    // выгружаем так же, как init_from_vector его укладывал -- иначе получится каша
++    std::vector<uint8_t> out(size);
++    this->export_bytes(out.data(), start_addr, size);
++    fwrite(out.data(), 1, size, f);
++    fclose(f);
++}
++
+ void Memory::init_from_vector(const vector<uint8_t> & from, uint32_t start_addr)
+ {
+     // clear the main ram because otherwise switching roms is a pain
+diff --git a/src/memory.h b/src/memory.h
+index 4a56c22..56f4fce 100644
+--- a/src/memory.h
++++ b/src/memory.h
+@@ -43,6 +43,10 @@ public:
+     uint8_t read(uint32_t addr, bool stackrq, const bool _is_opcode = false) const;
+     void write(uint32_t addr, uint8_t w8, bool stackrq);
+     void init_from_vector(const std::vector<uint8_t> & from, uint32_t start_addr);
++    // Выгрузка квазидиска: он живёт в bytes[] сразу за основным ОЗУ, но обратно
++    // в .edd эмулятор его не пишет, поэтому всё, что программа записала на C:,
++    // терялось при выходе. V06X_EDD_SAVE сохраняет его в файл.
++    void save_edd(const char * path, uint32_t start_addr, uint32_t size) const;
+     void attach_boot(std::vector<uint8_t> boot);
+     void detach_boot();
+     uint8_t * buffer();
 diff --git a/src/server.cpp b/src/server.cpp
 index b3c0e00..2713ca7 100644
 --- a/src/server.cpp

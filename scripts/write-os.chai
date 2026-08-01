@@ -1,0 +1,16 @@
+/* MicroDOS command "1" writes the OS from memory to disk:
+ *     1 <size in 256-byte pages> <drive>:<name>
+ * For a 15K OS that is 3C -- the T-34 manual gives exactly "1 3C C:OS.COM".
+ * OS.COM already exists on the quasi-disk, so be ready to confirm the replace.
+ */
+def framefunc(frameno) {
+    if (frameno == 200) {
+        keytyper.types([60,
+            "1", 12, "Space", 12, "3", 12, "C", 12, "Space", 12,
+            "C", 12, "'", 12, "O", 12, "S", 12, ".", 12,
+            "C", 12, "O", 12, "M", 12, "Return", 250,
+            "Y", 12, "Return", 250])
+    }
+    keytyper.onframe()
+}
+add_callback("frame", framefunc)

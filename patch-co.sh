@@ -10,9 +10,14 @@ set -e
 
 CO=${1:?оригинальный co.com}
 EDD=${2:?подлинный os-t72.edd как основа}
-OUT=${3:-out}
 HERE=$(cd "$(dirname "$0")" && pwd)
-mkdir -p "$OUT"
+mkdir -p "${3:-out}"
+# все пути -- абсолютные: шаг записи ОС выполняется со сменой каталога, и
+# относительный путь там молча превращается в «файла нет» (эмулятор в таком
+# случае поднимается с пустым квазидиском, а не сообщает об ошибке)
+OUT=$(cd "${3:-out}" && pwd)
+CO=$(cd "$(dirname "$CO")" && pwd)/$(basename "$CO")
+EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
 
 # 1. Адрес дискового обработчика БСВВ. CO перехватывает вектор дисковых операций
 #    (SHLD E213h), ставит свой фильтр по 0185 и пропускает вызовы дальше по
@@ -49,9 +54,25 @@ open(sys.argv[2], 'wb').write(bytes(d))
 PY
 rm -f "$OUT/co1.com" "$OUT/co2.com"
 
-# 4. Установка: CO со служебными файлами и INITIALC.SUB (autoexec МикроДОС),
-#    чтобы система стартовала прямо в менеджер.
-cp "$EDD" "$OUT/co-t72.edd"
+# 4. На квазидиске должна лежать ТА ЖЕ сборка T-72, что и в .rom. Тёплый старт
+#    (F12) перечитывает систему из C:OS.COM, и если там чужая сборка -- поднимется
+#    она, а CO, пропатченный под нашу, начнёт сыпать ошибками диска. Подлинный
+#    os-t72.edd несёт сборку 1995 года, поэтому переписываем OS.COM из памяти
+#    командой МикроДОС "1 3C C:OS.COM" и забираем получившийся квазидиск.
+V06X=$HERE/tools/vector06sdl/build/v06x
+ROM=$HERE/tools/MDOS_T-72/BIN/os-t72f.rom
+if [ -x "$V06X" ] && [ -f "$ROM" ]; then
+    echo "переписываю OS.COM на квазидиске под текущую сборку T-72..."
+    ( cd "$HERE/run" && V06X_EDD_SAVE="$OUT/co-t72.edd" "$V06X" --rom "$ROM" \
+        --edd "$EDD" --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
+        --script "$HERE/scripts/write-os.chai" \
+        --max-frame 1400 --novideo --nosound >/dev/null 2>&1 ) || true
+fi
+# без OS.COM образ бесполезен: тёплый старт поднимет мусор, а не систему
+if ! python3 "$HERE/tools/kdimg.py" list "$OUT/co-t72.edd" 2>/dev/null | grep -q 'OS *\.COM'; then
+    echo "не удалось переписать OS.COM -- беру подлинный образ как есть" >&2
+    cp "$EDD" "$OUT/co-t72.edd"
+fi
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
     [ -f "$HERE/work/co/co.$f" ] && \
@@ -74,5 +95,6 @@ echo
 echo "готово: $OUT/co-t72.edd (квазидиск C:) и $OUT/co-t72.fdd (дискета A:)"
 echo "запуск: v06x --rom os-t72f.rom --fdd $OUT/co-t72.fdd --edd $OUT/co-t72.edd"
 echo
-echo "T-72 грузится из .rom, а не с дискеты: аппаратный сброс (F11/F12) её не"
-echo "перезагрузит -- после сброса эмулятор надо запустить заново."
+echo "Сброс: F12 (БЛК+СБР) поднимает систему заново из C:OS.COM -- работает."
+echo "F11 (БЛК+ВВОД) подключает ПЗУ и ищет систему на дискете, а дискета"
+echo "намеренно не загрузочная -- после F11 эмулятор надо запустить заново."
