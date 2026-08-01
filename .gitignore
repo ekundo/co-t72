@@ -9,3 +9,5 @@ out*/
 # распакованные архивы и промежуточные образы
 work/
 archives/
+.DS_Store
+__pycache__/
