@@ -3,13 +3,17 @@
  * For a 15K OS that is 3C -- the T-34 manual gives exactly "1 3C C:OS.COM".
  * OS.COM already exists on the quasi-disk, so be ready to confirm the replace.
  */
+/* Набирать надо неспешно: ССР теряет символы, пока печатает приглашение, а
+ * сборки с НЖМД (h, hx) грузятся дольше -- на прежних 12 кадрах команда
+ * приезжала обкусанной ("1 3C C:OM") и на диск ложился файл-огрызок.
+ */
 def framefunc(frameno) {
-    if (frameno == 200) {
+    if (frameno == 400) {
         keytyper.types([60,
-            "1", 12, "Space", 12, "3", 12, "C", 12, "Space", 12,
-            "C", 12, "'", 12, "O", 12, "S", 12, ".", 12,
-            "C", 12, "O", 12, "M", 12, "Return", 250,
-            "Y", 12, "Return", 250])
+            "1", 25, "Space", 25, "3", 25, "C", 25, "Space", 25,
+            "C", 25, "'", 25, "O", 25, "S", 25, ".", 25,
+            "C", 25, "O", 25, "M", 25, "Return", 300,
+            "Y", 25, "Return", 300])
     }
     keytyper.onframe()
 }

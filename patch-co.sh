@@ -2,7 +2,11 @@
 # Собрать из оригинального CO v2.0 (Шишатский С.М., 1993, требует T-34) сборку,
 # работающую под MDOS T-72, и положить её на образ квазидиска.
 #
-#   ./patch-co.sh work/co/co.com work/os-t72/os-t72.edd out/
+#   ./patch-co.sh work/co/co.com work/os-t72/os-t72.edd out/ [os-t72f.rom]
+#
+# Четвёртый аргумент -- ПЗУ, под которое собираем: у сборок f/k/h/hx разные
+# адреса в БСВВ, и адрес дискового обработчика скрипт снимает с живой машины,
+# а не берёт из таблицы.
 #
 # Правок три: две обязательные и одна косметическая. Список отвергнутых
 # кандидатов -- в README, чтобы не проверять заново.
@@ -11,6 +15,10 @@ set -e
 CO=${1:?оригинальный co.com}
 EDD=${2:?подлинный os-t72.edd как основа}
 HERE=$(cd "$(dirname "$0")" && pwd)
+V06X=$HERE/tools/vector06sdl/build/v06x
+ROM=${4:-$HERE/tools/MDOS_T-72/BIN/os-t72f.rom}
+[ -f "$ROM" ] || { echo "нет ПЗУ: $ROM" >&2; exit 1; }
+ROM=$(cd "$(dirname "$ROM")" && pwd)/$(basename "$ROM")
 mkdir -p "${3:-out}"
 # все пути -- абсолютные: шаг записи ОС выполняется со сменой каталога, и
 # относительный путь там молча превращается в «файла нет» (эмулятор в таком
@@ -21,10 +29,25 @@ EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
 
 # 1. Адрес дискового обработчика БСВВ. CO перехватывает вектор дисковых операций
 #    (SHLD E213h), ставит свой фильтр по 0185 и пропускает вызовы дальше по
-#    жёстко зашитому адресу. У T-34 обработчик на E2BD, у T-72 -- на E2ED.
+#    жёстко зашитому адресу. У T-34 обработчик на E2BD; у T-72 он свой в каждой
+#    сборке (f -- E2ED, h и hx -- E2FF), поэтому читаем его прямо из таблицы
+#    переходов на живой машине: E212 -- это JMP, операнд лежит по E213.
+#    Читать надо ПОСЛЕ первого обращения к диску -- см. scripts/dump-bios.chai.
 #    Это единственный зашитый адрес БСВВ во всём CO.
+( cd "$HERE/run" && rm -f bios-vectors.bin && "$V06X" --rom "$ROM" \
+    --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
+    --edd "$EDD" --script "$HERE/scripts/dump-bios.chai" \
+    --max-frame 1200 --novideo --nosound >/dev/null 2>&1 ) || true
+DISK=$(python3 - "$HERE/run/bios-vectors.bin" <<'PY'
+import sys
+d = open(sys.argv[1], 'rb').read()
+assert d[0x12] == 0xC3, 'E212 не JMP -- сборка не похожа на T-72'
+print('%04X' % (d[0x13] | d[0x14] << 8))
+PY
+)
+echo "ПЗУ $(basename "$ROM"): дисковый обработчик БСВВ на $DISK"
 python3 "$HERE/tools/patchaddr.py" "$CO" "$OUT/co1.com" \
-    --listing "$HERE/co-cov.asm" --map E2BD:E2ED
+    --listing "$HERE/co-cov.asm" --map "E2BD:$DISK"
 
 # 2. Заставка хранится в КОИ-7 и переключает набор однобайтным кодом 0Eh.
 #    У T-72 нет ни такого кода, ни шрифта КОИ-7 (на 1B 5C у него CP866).
@@ -59,17 +82,18 @@ rm -f "$OUT/co1.com" "$OUT/co2.com"
 #    она, а CO, пропатченный под нашу, начнёт сыпать ошибками диска. Подлинный
 #    os-t72.edd несёт сборку 1995 года, поэтому переписываем OS.COM из памяти
 #    командой МикроДОС "1 3C C:OS.COM" и забираем получившийся квазидиск.
-V06X=$HERE/tools/vector06sdl/build/v06x
-ROM=$HERE/tools/MDOS_T-72/BIN/os-t72f.rom
 if [ -x "$V06X" ] && [ -f "$ROM" ]; then
     echo "переписываю OS.COM на квазидиске под текущую сборку T-72..."
     ( cd "$HERE/run" && V06X_EDD_SAVE="$OUT/co-t72.edd" "$V06X" --rom "$ROM" \
         --edd "$EDD" --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$HERE/scripts/write-os.chai" \
-        --max-frame 1400 --novideo --nosound >/dev/null 2>&1 ) || true
+        --max-frame 1800 --novideo --nosound >/dev/null 2>&1 ) || true
 fi
-# без OS.COM образ бесполезен: тёплый старт поднимет мусор, а не систему
-if ! python3 "$HERE/tools/kdimg.py" list "$OUT/co-t72.edd" 2>/dev/null | grep -q 'OS *\.COM'; then
+# Без OS.COM образ бесполезен: тёплый старт поднимет мусор, а не систему.
+# В подлинном образе ровно один файл, значит и после записи должен быть один:
+# лишняя запись означает, что ССР потерял символы и команда приехала обкусанной.
+if [ "$(python3 "$HERE/tools/kdimg.py" list "$OUT/co-t72.edd" 2>/dev/null | grep -c .)" != 1 ] ||
+   ! python3 "$HERE/tools/kdimg.py" list "$OUT/co-t72.edd" 2>/dev/null | grep -q 'OS *\.COM'; then
     echo "не удалось переписать OS.COM -- беру подлинный образ как есть" >&2
     cp "$EDD" "$OUT/co-t72.edd"
 fi
@@ -93,7 +117,7 @@ done
 
 echo
 echo "готово: $OUT/co-t72.edd (квазидиск C:) и $OUT/co-t72.fdd (дискета A:)"
-echo "запуск: v06x --rom os-t72f.rom --fdd $OUT/co-t72.fdd --edd $OUT/co-t72.edd"
+echo "запуск: v06x --rom $ROM --fdd $OUT/co-t72.fdd --edd $OUT/co-t72.edd"
 echo
 echo "Сброс: F12 (БЛК+СБР) поднимает систему заново из C:OS.COM -- работает."
 echo "F11 (БЛК+ВВОД) подключает ПЗУ и ищет систему на дискете, а дискета"
