@@ -131,7 +131,7 @@ def build(at):
     a.word(0xCD, REDRAW); a.word(0xC3, MAINLOOP)                   # CALL 0FE0 / JMP 030F
 
     a.label('msg')
-    a.code += ' Дискета НЖМД: '.encode('koi8-r') + b'\0'
+    a.code += ' Номер дискеты - '.encode('koi8-r') + b'\0'
     a.label('save')
     a.code += bytes(37)          # 005C..0080 -- ФУБ целиком и длина хвоста, подряд
     return a.bytes()
@@ -161,6 +161,25 @@ def main():
     code = build(at)
     d[slot] = at & 0xFF
     d[slot + 1] = at >> 8
+
+    # Заодно поправить нижнюю строку второго набора. Строка сплошная, до нуля,
+    # и её длина держит разметку -- «Атрибуты» ровно на столько же длиннее,
+    # на сколько «Hdd» короче «Печати», так что суммарно ничего не съезжает.
+    RENAME = [('2-Атриб.', '2-Атрибуты '), ('7-Печать', '7-Hdd'), ('0-Выйти', '0-Выход')]
+    beg = d.find('1-40/60'.encode('koi8-r'))
+    if beg < 0:
+        sys.exit('не нашёл строку клавиш второго набора -- незнакомый выпуск CO')
+    end = d.index(b'\0', beg)
+    bar = bytes(d[beg:end])
+    for old, new in RENAME:
+        o, n = old.encode('koi8-r'), new.encode('koi8-r')
+        if o not in bar:
+            sys.exit('в строке клавиш нет «%s»' % old)
+        bar = bar.replace(o, n)
+    if len(bar) != end - beg:
+        sys.exit('строка клавиш изменила длину: было %d, стало %d -- разметка съедет'
+                 % (end - beg, len(bar)))
+    d[beg:end] = bar
     d += code
     d += bytes([0x1A] * (-len(d) % 128))
     open(args.outfile, 'wb').write(bytes(d))
