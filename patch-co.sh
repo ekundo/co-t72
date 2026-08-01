@@ -26,6 +26,7 @@ mkdir -p "${3:-out}"
 OUT=$(cd "${3:-out}" && pwd)
 CO=$(cd "$(dirname "$CO")" && pwd)/$(basename "$CO")
 EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
+CODIR=$(dirname "$CO")   # CO.PRM/MNU/EXT/HLP/ZGR берём рядом с бинарником
 
 # 1. Адрес дискового обработчика БСВВ. CO перехватывает вектор дисковых операций
 #    (SHLD E213h), ставит свой фильтр по 0185 и пропускает вызовы дальше по
@@ -46,8 +47,17 @@ print('%04X' % (d[0x13] | d[0x14] << 8))
 PY
 )
 echo "ПЗУ $(basename "$ROM"): дисковый обработчик БСВВ на $DISK"
+# Выпусков CO два: в раннем зашит адрес T-34 E2BD, в позднем -- E2C4.
+# Ссылки в обоих на одних и тех же местах (0189, 0206, 02F6, 205E).
+OLDADDR=$(python3 - "$CO" <<'PY'
+import sys
+d = open(sys.argv[1], 'rb').read()
+at = 0x0189 - 0x100
+print('%02X%02X' % (d[at + 1], d[at]))
+PY
+)
 python3 "$HERE/tools/patchaddr.py" "$CO" "$OUT/co1.com" \
-    --listing "$HERE/co-cov.asm" --map "E2BD:$DISK"
+    --listing "$HERE/co-cov.asm" --map "$OLDADDR:$DISK"
 
 # 2. Заставка хранится в КОИ-7 и переключает набор однобайтным кодом 0Eh.
 #    У T-72 нет ни такого кода, ни шрифта КОИ-7 (на 1B 5C у него CP866).
@@ -64,15 +74,26 @@ python3 - "$OUT/co2.com" "$OUT/CO.COM" <<'PY'
 import sys
 d = bytearray(open(sys.argv[1], 'rb').read())
 O = 0x100
-# 406A: LHLD 0006 / SPHL / SHLD 0009  ->  JMP 40DB
-d[0x406A-O:0x4070-O] = bytes([0xC3, 0xDB, 0x40, 0x00, 0x00, 0x00])
-# в свободном хвосте образа -- то же самое, но со стеком ниже буфера дисковода.
 # [0006] нужен дважды: и как вершина стека, и как цель RST 1, поэтому просто
-# заменить LHLD на LXI H,BC00 нельзя -- сломается вызов БДОС.
-d[0x40DB-O:0x40E7-O] = bytes([0x2A, 0x06, 0x00,    # LHLD 0006
-                              0x22, 0x09, 0x00,    # SHLD 0009  (RST 1 -> БДОС)
-                              0x31, 0x00, 0xBC,    # LXI SP,BC00h
-                              0xC3, 0x71, 0x40])   # JMP 4071
+# заменить LHLD на LXI H,BC00 нельзя -- сломается вызов БДОС. Инструкции не
+# помещаются на место исходных семи байт, поэтому уводим точку входа на 40DB.
+STACK = bytes([0x2A, 0x06, 0x00,    # LHLD 0006
+               0x22, 0x09, 0x00,    # SHLD 0009  (RST 1 -> БДОС)
+               0x31, 0x00, 0xBC,    # LXI SP,BC00h
+               0xC3, 0x71, 0x40])   # JMP 4071 -- дальше как было
+entry = d[0x0101-O] | d[0x0102-O] << 8
+if entry == 0x406A:
+    # ранний выпуск: 0100 ведёт прямо на установку стека, а 40DB -- нули
+    pass
+elif entry == 0x40DB:
+    # поздний выпуск: по 40DB стоит проверка верхней границы ОЗУ
+    # (LDA 0002 / CPI C0 -> «смените ДОС»). От неё толку нет: T-72 сообщает
+    # C000 и проверку проходит, а буфер дисковода всё равно на BC00.
+    pass
+else:
+    sys.exit('незнакомая точка входа CO: %04X' % entry)
+d[0x0101-O:0x0103-O] = bytes([0xDB, 0x40])
+d[0x40DB-O:0x40DB-O+len(STACK)] = STACK
 open(sys.argv[2], 'wb').write(bytes(d))
 PY
 rm -f "$OUT/co1.com" "$OUT/co2.com"
@@ -99,8 +120,8 @@ if [ "$(python3 "$HERE/tools/kdimg.py" list "$OUT/co-t72.edd" 2>/dev/null | grep
 fi
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
-    [ -f "$HERE/work/co/co.$f" ] && \
-        python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$HERE/work/co/co.$f"
+    [ -f "$CODIR/co.$f" ] && \
+        python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$CODIR/co.$f"
 done
 printf 'CO\r\n' > "$OUT/initialc.sub"
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIALC.SUB
@@ -111,8 +132,8 @@ python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIAL
 python3 "$HERE/tools/cpmimg.py" --geom fdd create "$OUT/co-t72.fdd"
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
-    [ -f "$HERE/work/co/co.$f" ] && \
-        python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$HERE/work/co/co.$f"
+    [ -f "$CODIR/co.$f" ] && \
+        python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$CODIR/co.$f"
 done
 
 echo
