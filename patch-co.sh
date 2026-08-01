@@ -60,6 +60,19 @@ done
 printf 'CO\r\n' > "$OUT/initialc.sub"
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIALC.SUB
 
+# 5. Дискета A: с тем же комплектом -- НЕ загрузочная. Если взять за основу
+#    os-t34.fdd, в её системных дорожках останется T-34, и после аппаратного
+#    сброса ПЗУ поднимет с дискеты именно её, а наш CO под T-34 уже не работает.
+python3 "$HERE/tools/cpmimg.py" --geom fdd create "$OUT/co-t72.fdd"
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
+for f in prm mnu ext hlp zgr; do
+    [ -f "$HERE/work/co/co.$f" ] && \
+        python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$HERE/work/co/co.$f"
+done
+
 echo
-echo "готово: $OUT/co-t72.edd"
-echo "запуск: v06x --rom os-t72f.rom --edd $OUT/co-t72.edd"
+echo "готово: $OUT/co-t72.edd (квазидиск C:) и $OUT/co-t72.fdd (дискета A:)"
+echo "запуск: v06x --rom os-t72f.rom --fdd $OUT/co-t72.fdd --edd $OUT/co-t72.edd"
+echo
+echo "T-72 грузится из .rom, а не с дискеты: аппаратный сброс (F11/F12) её не"
+echo "перезагрузит -- после сброса эмулятор надо запустить заново."
