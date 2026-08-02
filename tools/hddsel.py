@@ -161,8 +161,18 @@ def build(at):
     a.db(0xC5, 0xD5, 0xE5)                                         # сохранить регистры CO
     a.ref(0xCD, 'restoreall')
     a.db(0xE1, 0xD1, 0xC1)
+    a.ref(0x3A, 'applied'); a.db(0xB7); a.ref(0xC2, 'reread')
     a.label('go')
     a.word(0xC3, MAINCALL)                                         # и дальше как было
+
+    a.label('reread')
+    # Панели к этому моменту нарисованы прежней дискетой. Перечитываем активную
+    # хвостом штатного «7-Диск»: он берёт букву из B и в конце уходит на 0FE0,
+    # откуда возврат придёт туда же, куда пришёл бы от 0583 -- главный цикл
+    # подмены не заметит.
+    a.db(0xAF); a.ref(0x32, 'applied')                             # только один раз
+    a.word(0x21, PANEL_DRV); a.word(0xCD, SEL_PANEL); a.db(0x46)
+    a.word(0xC3, REREAD)
 
     a.label('restoreall')
     # запомнить диск, с которого запущен CO: там же лежит и CO.HDD
