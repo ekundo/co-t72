@@ -51,7 +51,6 @@ KEYCODE = 0xB693       # код нажатой клавиши
 PANEL_CNT = 0xB689     # счётчик файлов панели -- по нему CO и отсекает клавиши
 TABLE2 = 0x0637        # вторая таблица «клавиша -> адрес»
 NOFILES = 0x0F86       # куда CO уходит при пустой панели
-MAINCALL = 0x0583      # что делает CO в главном цикле (030F: CALL 0583)
 OLD = 0x06E5           # штатный обработчик печати
 
 # точки входа самого CO
@@ -152,29 +151,7 @@ def build(at):
     a.word(0x3A, KEYCODE); a.word(0x21, TABLE2); a.word(0xC3, 0x0562)
 
     # ---------------- при старте: применить сохранённое ----------------
-    # Главный цикл CO: 030F -- CALL 0583 / JMP 030F. Влезаем в этот CALL, чтобы
-    # восстановление шло не из стаба (там ОС ещё не определилась с текущим
-    # диском, и обращение уходило на несуществующий A:), а когда CO уже поднят.
     a.label('init'); build_init_addr[0] = a.labels['init']
-    a.ref(0x3A, 'once'); a.db(0xB7); a.ref(0xC2, 'go')
-    a.db(0x3C); a.ref(0x32, 'once')                                # больше не повторять
-    a.db(0xC5, 0xD5, 0xE5)                                         # сохранить регистры CO
-    a.ref(0xCD, 'restoreall')
-    a.db(0xE1, 0xD1, 0xC1)
-    a.ref(0x3A, 'applied'); a.db(0xB7); a.ref(0xC2, 'reread')
-    a.label('go')
-    a.word(0xC3, MAINCALL)                                         # и дальше как было
-
-    a.label('reread')
-    # Панели к этому моменту нарисованы прежней дискетой. Перечитываем активную
-    # хвостом штатного «7-Диск»: он берёт букву из B и в конце уходит на 0FE0,
-    # откуда возврат придёт туда же, куда пришёл бы от 0583 -- главный цикл
-    # подмены не заметит.
-    a.db(0xAF); a.ref(0x32, 'applied')                             # только один раз
-    a.word(0x21, PANEL_DRV); a.word(0xCD, SEL_PANEL); a.db(0x46)
-    a.word(0xC3, REREAD)
-
-    a.label('restoreall')
     # запомнить диск, с которого запущен CO: там же лежит и CO.HDD
     a.word(0x3A, 0x0004); a.db(0x3C); a.ref(0x32, 'homedrv')
     a.ref(0xCD, 'prmload'); a.db(0xB7, 0xC8)   # ничего не сохранено -- выходим                             # нет файла/подписи
@@ -187,7 +164,6 @@ def build(at):
     a.ref(0x11, 'pending'); a.db(0x0E, 0x05)                       # слот -> набор
     a.label('cps')
     a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'cps')
-    a.db(0x3E, 0xFF); a.ref(0x32, 'applied')                       # было что применять
     a.ref(0xC3, 'docmd')
 
     # ---------------- команда 9 по набранному номеру ----------------
@@ -277,8 +253,6 @@ def build(at):
     a.code += ' Номер дискеты - '.encode('koi8-r') + b'\0'
     a.label('drive'); a.db(1)
     a.label('homedrv'); a.db(1)
-    a.label('once'); a.db(0)
-    a.label('applied'); a.db(0)
     a.label('pending'); a.code += bytes(5)
     a.label('save'); a.code += bytes(37)
     a.label('fcb'); a.code += bytes([0]) + b'CO      '
@@ -323,8 +297,6 @@ def main():
     # и увести разбор клавиши на свою проверку
     hook = build_keyhook_addr[0]
     d[DISPATCH - ORG:DISPATCH - ORG + 3] = bytes([0xC3, hook & 0xFF, hook >> 8])
-    # а восстановление -- на первый заход главного цикла
-    d[0x030F - ORG:0x030F - ORG + 3] = bytes([0xCD, init_at & 0xFF, init_at >> 8])
 
     # Заодно поправить нижнюю строку второго набора. Строка сплошная, до нуля,
     # и её длина держит разметку -- «Атрибуты» ровно на столько же длиннее,
