@@ -11,3 +11,4 @@ work/
 archives/
 .DS_Store
 __pycache__/
+release/

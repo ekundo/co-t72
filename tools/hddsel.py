@@ -51,6 +51,7 @@ KEYCODE = 0xB693       # код нажатой клавиши
 PANEL_CNT = 0xB689     # счётчик файлов панели -- по нему CO и отсекает клавиши
 TABLE2 = 0x0637        # вторая таблица «клавиша -> адрес»
 NOFILES = 0x0F86       # куда CO уходит при пустой панели
+MAINCALL = 0x0583      # что делает CO в главном цикле (030F: CALL 0583)
 OLD = 0x06E5           # штатный обработчик печати
 
 # точки входа самого CO
@@ -151,8 +152,20 @@ def build(at):
     a.word(0x3A, KEYCODE); a.word(0x21, TABLE2); a.word(0xC3, 0x0562)
 
     # ---------------- при старте: применить сохранённое ----------------
+    # Главный цикл CO: 030F -- CALL 0583 / JMP 030F. Влезаем в этот CALL, чтобы
+    # восстановление шло не из стаба (там ОС ещё не определилась с текущим
+    # диском, и обращение уходило на несуществующий A:), а когда CO уже поднят.
     a.label('init'); build_init_addr[0] = a.labels['init']
-    # запомнить диск, с которого запущен CO: там же лежит и CO.PRM
+    a.ref(0x3A, 'once'); a.db(0xB7); a.ref(0xC2, 'go')
+    a.db(0x3C); a.ref(0x32, 'once')                                # больше не повторять
+    a.db(0xC5, 0xD5, 0xE5)                                         # сохранить регистры CO
+    a.ref(0xCD, 'restoreall')
+    a.db(0xE1, 0xD1, 0xC1)
+    a.label('go')
+    a.word(0xC3, MAINCALL)                                         # и дальше как было
+
+    a.label('restoreall')
+    # запомнить диск, с которого запущен CO: там же лежит и CO.HDD
     a.word(0x3A, 0x0004); a.db(0x3C); a.ref(0x32, 'homedrv')
     a.ref(0xCD, 'prmload'); a.db(0xB7, 0xC8)   # ничего не сохранено -- выходим                             # нет файла/подписи
     a.db(0x3E, 0x01); a.ref(0xCD, 'restore')                       # диск A:
@@ -253,6 +266,7 @@ def build(at):
     a.code += ' Номер дискеты - '.encode('koi8-r') + b'\0'
     a.label('drive'); a.db(1)
     a.label('homedrv'); a.db(1)
+    a.label('once'); a.db(0)
     a.label('pending'); a.code += bytes(5)
     a.label('save'); a.code += bytes(37)
     a.label('fcb'); a.code += bytes([0]) + b'CO      '
@@ -289,6 +303,7 @@ def main():
     if len(d) % 128:
         sys.exit('образ не выровнен по записи: %d байт' % len(d))
     at = 0xB700 + (len(d) - 0x4000)
+    globals()['_at'] = at
     code = build(at)
     init_at = build_init_addr[0]
     d[slot] = at & 0xFF
@@ -296,6 +311,8 @@ def main():
     # и увести разбор клавиши на свою проверку
     hook = build_keyhook_addr[0]
     d[DISPATCH - ORG:DISPATCH - ORG + 3] = bytes([0xC3, hook & 0xFF, hook >> 8])
+    # а восстановление -- на первый заход главного цикла
+    d[0x030F - ORG:0x030F - ORG + 3] = bytes([0xCD, init_at & 0xFF, init_at >> 8])
 
     # Заодно поправить нижнюю строку второго набора. Строка сплошная, до нуля,
     # и её длина держит разметку -- «Атрибуты» ровно на столько же длиннее,

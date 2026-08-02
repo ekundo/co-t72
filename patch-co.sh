@@ -122,7 +122,7 @@ mv "$OUT/co4.com" "$OUT/CO.COM"
 
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
-python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com" --init "$INIT"
+python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com"
 mv "$OUT/co6.com" "$OUT/CO.COM"
 
 # 4. На квазидиске должна лежать ТА ЖЕ сборка T-72, что и в .rom. Тёплый старт
