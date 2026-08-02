@@ -65,6 +65,10 @@ python3 "$HERE/tools/patchaddr.py" "$CO" "$OUT/co1.com" \
 python3 "$HERE/tools/koi7to8.py" "$OUT/co1.com" "$OUT/co2.com" \
     --at 0x3FB8 --len 0x67
 
+# 2a. Заставка -- свой текст вместо авторского.
+python3 "$HERE/tools/banner.py" "$OUT/co2.com" "$OUT/co2b.com"
+mv "$OUT/co2b.com" "$OUT/co2.com"
+
 # 3. Стек. CO ставит его по правилам CP/M -- на вершину TPA из ячейки 0006,
 #    то есть на C000 вниз. Но T-72 держит килобайтный буфер дисковода по
 #    BC00-BFFF (D_FD_B в Source/_E200h.asm; в исходной МикроДОС он был на EB00),
