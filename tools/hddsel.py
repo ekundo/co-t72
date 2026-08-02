@@ -234,8 +234,9 @@ def build(at):
     a.label('prmsave')
     a.ref(0xCD, 'prmopenw'); a.db(0xB7, 0xC8)
     # Защита от записи -- это фича: закрыл файл, и выбранные дискеты
-    # зафиксированы. Признак «только чтение» БДОС кладёт в ФУБ при открытии,
-    # это старший бит первого знака типа.
+    # зафиксированы. Признак «только чтение» -- старший бит ПЕРВОГО знака типа
+    # (fcb+9). Не третьего: туда БДОС ставит «архивный» после каждой записи, и
+    # проверка по нему запрещала сохранение сразу после первого же раза.
     a.ref(0x3A, 'fcbro'); a.db(0xE6, 0x80, 0xC0)
     a.db(0x3E, 0x48); a.ref(0x32, SIGN)                            # проставить подпись
     a.ref(0x21, SIGN); a.db(0x23, 0x36, 0x44)
@@ -254,8 +255,8 @@ def build(at):
     a.label('homedrv'); a.db(1)
     a.label('pending'); a.code += bytes(5)
     a.label('save'); a.code += bytes(37)
-    a.label('fcb'); a.code += bytes([0]) + b'CO      HD'
-    a.label('fcbro'); a.code += b'D' + bytes(21)
+    a.label('fcb'); a.code += bytes([0]) + b'CO      '
+    a.label('fcbro'); a.code += b'HDD' + bytes(21)   # старший бит первого знака типа
     a.label('fcbr'); a.db(0)
     a.label('fcbr1'); a.db(0)
     a.label('fcbr2'); a.db(0)
