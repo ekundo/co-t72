@@ -177,6 +177,7 @@ def build(at):
     a.ref(0x11, 'pending'); a.db(0x0E, 0x05)                       # слот -> набор
     a.label('cps')
     a.db(0x7E, 0x12, 0x23, 0x13, 0x0D); a.ref(0xC2, 'cps')
+    a.db(0x3E, 0xFF); a.ref(0x32, 'applied')                       # было что применять
     a.ref(0xC3, 'docmd')
 
     # ---------------- команда 9 по набранному номеру ----------------
@@ -267,6 +268,7 @@ def build(at):
     a.label('drive'); a.db(1)
     a.label('homedrv'); a.db(1)
     a.label('once'); a.db(0)
+    a.label('applied'); a.db(0)
     a.label('pending'); a.code += bytes(5)
     a.label('save'); a.code += bytes(37)
     a.label('fcb'); a.code += bytes([0]) + b'CO      '
