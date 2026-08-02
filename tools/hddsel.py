@@ -46,6 +46,11 @@ import sys
 ORG = 0x100
 TABLE = 0x0637         # таблица «клавиша -> адрес» второго уровня
 KEY = 0x27             # СС+7
+DISPATCH = 0x05AA      # разбор клавиши, когда её нет в первой таблице
+KEYCODE = 0xB693       # код нажатой клавиши
+PANEL_CNT = 0xB689     # счётчик файлов панели -- по нему CO и отсекает клавиши
+TABLE2 = 0x0637        # вторая таблица «клавиша -> адрес»
+NOFILES = 0x0F86       # куда CO уходит при пустой панели
 OLD = 0x06E5           # штатный обработчик печати
 
 # точки входа самого CO
@@ -92,6 +97,7 @@ class Asm:
 
 
 build_init_addr = [0]
+build_keyhook_addr = [0]
 
 
 def build(at):
@@ -133,6 +139,16 @@ def build(at):
     a.word(0xC3, REREAD)                                           # перечитать панель
     a.label('back')
     a.word(0xCD, REDRAW); a.word(0xC3, MAINLOOP)
+
+    # ---------------- пропустить СС+7 при пустой панели ----------------
+    # CO отсекает клавиши второй таблицы, если в панели нет файлов
+    # (05B1: CPI 0 / JZ 0F86), а выбор дискеты от файлов не зависит.
+    a.label('keyhook'); build_keyhook_addr[0] = a.labels['keyhook']
+    a.word(0x3A, KEYCODE); a.db(0xFE, KEY); a.ref(0xCA, 'totable')
+    a.word(0x21, PANEL_CNT); a.word(0xCD, 0x0E47); a.db(0x7E, 0xB7)
+    a.word(0xCA, NOFILES)                                          # пусто -- как было
+    a.label('totable')
+    a.word(0x3A, KEYCODE); a.word(0x21, TABLE2); a.word(0xC3, 0x0562)
 
     # ---------------- при старте: применить сохранённое ----------------
     a.label('init'); build_init_addr[0] = a.labels['init']
@@ -276,6 +292,9 @@ def main():
     init_at = build_init_addr[0]
     d[slot] = at & 0xFF
     d[slot + 1] = at >> 8
+    # и увести разбор клавиши на свою проверку
+    hook = build_keyhook_addr[0]
+    d[DISPATCH - ORG:DISPATCH - ORG + 3] = bytes([0xC3, hook & 0xFF, hook >> 8])
 
     # Заодно поправить нижнюю строку второго набора. Строка сплошная, до нуля,
     # и её длина держит разметку -- «Атрибуты» ровно на столько же длиннее,
