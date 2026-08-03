@@ -27,8 +27,16 @@ JMP -- он не трогает стек, так что RET в трамплин�
 а такой команды в CO нет вовсе (`OUT 11h` в образе не встречается ни разу).
 Каталог при этом читается через БДОС, поэтому панель D: работает.
 
-Чтобы заработала и запись, эти места придётся параметризовать: держать номер
-порта в ячейке и править константу в коде при смене диска. Восемь мест с
+Параметризация порта написана (build_ports: правит операнд всех десяти OUT на
+10h или 11h) и вызывается из трамплина по букве диска, но запись на D: от неё
+пока не заработала, а места на дальнейшие опыты нет: хвост под стеком CO
+закончился. Резидент живёт с B700, стек стоит на BC00 -- под hddsel уже уходит
+килобайт, и меню с трамплинами упираются ровно в BC00. Прежде чем продолжать,
+надо расчистить место: ужать hddsel, увести часть кода в освободившиеся байты
+самого образа (после переезда меню там 62 байта, из них 40 уже заняты
+переключателем) или пересмотреть раскладку целиком.
+
+Восемь мест с
 `CPI 43h` тут ни при чём -- проверено по одному: с ними копирование ломается так
 же, а два из них (0262 и 027A, выбор диска для чтения каталога) вдобавок
 разваливают панели. Список сохранён в CHECKS_OFF как разобранный тупик.
@@ -56,6 +64,7 @@ DISK_B = 0x3E97        # настройка «Диск B доступен» -- '
 
 MENU_ENTRY = 0x2870    # начало обработчика «7-Диск»
 MENU_END = 0x28AE      # общий хвост, его оставляем на месте
+MENU_REF = 0x0600      # запись «клавиша 7 -> обработчик» в таблице клавиш
 
 # Места, где 'C' означает «это квазидиск». Для каждого: адрес, сколько байт
 # занимает проверка вместе с тем, что к ней прицеплено, и как её пересобрать.
@@ -74,7 +83,14 @@ CHECKS_OFF = [
 ]
 # Разобранный тупик, см. шапку: ни по одному, ни все вместе эти места
 # копирование на D: не чинят, а 0262 и 027A ещё и ломают чтение каталога.
-CHECKS = []
+# Порт переключаем в одном месте -- там, где CO запоминает букву текущего диска
+# (3E9B: STA B673h). Семь трамплинов сразу не помещаются: хвост упирается в стек.
+CHECKS = [c for c in CHECKS_OFF if c[0] == 0x3E9B]
+
+# Прямые обращения к квазидиску: XRA A / OUT 10h -- подключить страницу диска,
+# MVI A,23h / OUT 10h -- вернуть память. Второй квазидиск сидит на порту 11h,
+# косвенного OUT у 8080 нет, поэтому операнд правим на месте.
+PORTS = [0x03BA, 0x03DB, 0x03FB, 0x040D, 0x0D9B, 0x0DEB, 0x1CEE, 0x1CF3, 0x3490, 0x34B5]
 
 
 class Asm:
@@ -108,9 +124,42 @@ class Asm:
         return bytes(out)
 
 
-def build(at, image, flag_addr=None):
+def build_ports(at):
+    """Переключатель порта квазидиска -- в месте, освободившемся от меню.
+
+    Хвост под стеком тесный, а тут после переезда меню осталось полсотни байт, и
+    код исполняется прямо на месте. Вызывается по условию Z из трамплина, так что
+    флаги надо сохранить: тот же признак «это C:» проверяется сразу после
+    возврата.
+    """
+    a = Asm(at)
+    a.label('port10')
+    a.db(0xF5, 0x3E, 0x10); a.ref(0xC3, 'setport')      # PUSH PSW / MVI A,10h
+    a.label('port11')
+    a.db(0xF5, 0x3E, 0x11)                              # PUSH PSW / MVI A,11h
+    a.label('setport')
+    a.db(0xE5, 0xD5, 0xC5)                              # PUSH H / PUSH D / PUSH B
+    a.db(0x47)                                          # MOV B,A -- номер порта
+    a.ref(0x21, 'ports')
+    a.db(0x0E, len(PORTS))                              # MVI C,сколько
+    a.label('setloop')
+    a.db(0x5E, 0x23, 0x56, 0x23)                        # DE := адрес операнда
+    a.db(0xEB)                                          # XCHG -- HL на операнд
+    a.db(0x70)                                          # MOV M,B
+    a.db(0xEB)                                          # XCHG обратно
+    a.db(0x0D); a.ref(0xC2, 'setloop')                  # DCR C / JNZ
+    a.db(0xC1, 0xD1, 0xE1)                              # POP B / POP D / POP H
+    a.db(0xF1, 0xC9)                                    # POP PSW / RET
+    a.label('ports')
+    for p in PORTS:
+        a.code += bytes([p & 0xFF, p >> 8])
+    return a.bytes(), a.labels
+
+
+def build(at, image, ports_labels, flag_addr=None):
     """Собрать хвост: трамплины проверок и меню выбора диска."""
     a = Asm(at)
+    a.labels.update(ports_labels)
     trampolines = {}
 
     # Данные держим в начале хвоста: конец резидента вплотную подходит к стеку
@@ -127,21 +176,23 @@ def build(at, image, flag_addr=None):
         assert image[off:off + 2] == b'\xfe\x43', hex(addr)
         back = addr + size
         trampolines[addr] = a.here()
+        # Для D: только переключаем порт и идём дальше обычным путём: увести его
+        # в ветку C: нельзя -- проверено, панели начинают сыпать ошибками диска.
         if kind == 'ret':
-            a.db(0xFE, 0x43); a.db(0xC8)            # CPI 'C' / RZ
-            a.db(0xFE, 0x44); a.db(0xC8)            # CPI 'D' / RZ
+            a.db(0xFE, 0x43); a.ref(0xCC, 'port10'); a.db(0xC8)   # 'C' -- порт 10h и назад
+            a.db(0xFE, 0x44); a.ref(0xCC, 'port11')               # 'D' -- порт 11h
             a.word(0xC3, back)
         elif kind == 'jz':
             target = image[off + 3] | image[off + 4] << 8
-            a.db(0xFE, 0x43); a.word(0xCA, target)
-            a.db(0xFE, 0x44); a.word(0xCA, target)
+            a.db(0xFE, 0x43); a.ref(0xCC, 'port10'); a.word(0xCA, target)
+            a.db(0xFE, 0x44); a.ref(0xCC, 'port11')
             a.word(0xC3, back)
         elif kind == 'jz+a':
             val = image[off + 3]
             target = image[off + 5] | image[off + 6] << 8
             name = 'q%04x' % addr
-            a.db(0xFE, 0x43); a.ref(0xCA, name)
-            a.db(0xFE, 0x44); a.ref(0xCA, name)
+            a.db(0xFE, 0x43); a.ref(0xCC, 'port10'); a.ref(0xCA, name)
+            a.db(0xFE, 0x44); a.ref(0xCC, 'port11')
             a.word(0xC3, back)
             a.label(name)
             a.db(0x3E, val); a.word(0xC3, target)
@@ -150,8 +201,8 @@ def build(at, image, flag_addr=None):
             hl = image[off + 5] | image[off + 6] << 8
             target = image[off + 8] | image[off + 9] << 8
             name = 'q%04x' % addr
-            a.db(0xFE, 0x43); a.ref(0xCA, name)
-            a.db(0xFE, 0x44); a.ref(0xCA, name)
+            a.db(0xFE, 0x43); a.ref(0xCC, 'port10'); a.ref(0xCA, name)
+            a.db(0xFE, 0x44); a.ref(0xCC, 'port11')
             a.word(0xC3, back)
             a.label(name)
             a.db(0x3E, val); a.word(0x21, hl); a.word(0xC3, target)
@@ -234,14 +285,21 @@ def main():
     if len(d) % 128:
         sys.exit('образ не выровнен по записи: %d байт' % len(d))
     at = 0xB700 + (len(d) - 0x4000)
-    code, tramp, menu = build(at, d, int(args.flag, 16) if args.flag else None)
+    ports_code, ports_labels = build_ports(MENU_ENTRY + 3)   # первые три байта -- переход в меню
+    code, tramp, menu = build(at, d, ports_labels, int(args.flag, 16) if args.flag else None)
 
     for addr, kind, size in CHECKS:
         off = addr - ORG
         d[off:off + size] = bytes([0xC3, tramp[addr] & 0xFF, tramp[addr] >> 8]) + b'\x00' * (size - 3)
-    # меню целиком уезжает в хвост, общий хвост на 28AE остаётся на месте
+    # Меню целиком уезжает в хвост, общий хвост на 28AE остаётся на месте, а в
+    # освободившиеся байты ложится переключатель порта.
+    if len(ports_code) > MENU_END - MENU_ENTRY - 3:
+        sys.exit('переключатель порта не влезает: %d байт при %d свободных'
+                 % (len(ports_code), MENU_END - MENU_ENTRY - 3))
     d[MENU_ENTRY - ORG:MENU_ENTRY - ORG + 3] = bytes([0xC3, menu & 0xFF, menu >> 8])
-    d[MENU_ENTRY - ORG + 3:MENU_END - ORG] = b'\x00' * (MENU_END - MENU_ENTRY - 3)
+    d[MENU_ENTRY - ORG + 3:MENU_ENTRY - ORG + 3 + len(ports_code)] = ports_code
+    d[MENU_ENTRY - ORG + 3 + len(ports_code):MENU_END - ORG] = \
+        b'\x00' * (MENU_END - MENU_ENTRY - 3 - len(ports_code))
 
     d += code
     while len(d) % 128:
