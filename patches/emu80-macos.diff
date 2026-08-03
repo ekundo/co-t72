@@ -1,3 +1,316 @@
+diff --git a/src/EmuAuto.h b/src/EmuAuto.h
+new file mode 100644
+index 0000000..d4b7db9
+--- /dev/null
++++ b/src/EmuAuto.h
+@@ -0,0 +1,11 @@
++#ifndef EMUAUTO_H
++#define EMUAUTO_H
++
++#include <cstdint>
++
++class PalWindow;
++
++// Стенд: инструментовка для прогонов без человека -- см. sdl/emuAuto.cpp.
++void autoOnFrame(PalWindow* wnd, uint32_t* pixels, int w, int h);
++
++#endif
+diff --git a/src/Emulation.cpp b/src/Emulation.cpp
+index b23d434..6cbce8b 100644
+--- a/src/Emulation.cpp
++++ b/src/Emulation.cpp
+@@ -224,14 +224,20 @@ void Emulation::processCmdLine()
+         emuSetPropertyValue(platformName + ".hdd", "fileName", hdd);
+ 
+     // EDD
++    // У Вектора квазидиск в конфиге зовётся ramDisk, а не edd, поэтому --edd
++    // молча проходил мимо и загрузчик уходил на дисковод. Пробуем оба имени.
+     string edd = m_cmdLine["edd"];
+     if (!edd.empty())
+-        emuSetPropertyValue(platformName + ".edd", "fileName", edd);
++        if (!emuSetPropertyValue(platformName + ".edd", "fileName", edd) &&
++            !emuSetPropertyValue(platformName + ".ramDisk", "fileName", edd))
++            palMsgBox("Нет квазидиска, куда подключить " + edd, true);
+ 
+     // EDD2
+     string edd2 = m_cmdLine["edd2"];
+     if (!edd2.empty())
+-        emuSetPropertyValue(platformName + ".edd2", "fileName", edd2);
++        if (!emuSetPropertyValue(platformName + ".edd2", "fileName", edd2) &&
++            !emuSetPropertyValue(platformName + ".ramDisk2", "fileName", edd2))
++            palMsgBox("Нет второго квазидиска, куда подключить " + edd2, true);
+ }
+ 
+ 
+diff --git a/src/sdl/emuAuto.cpp b/src/sdl/emuAuto.cpp
+new file mode 100644
+index 0000000..6abacae
+--- /dev/null
++++ b/src/sdl/emuAuto.cpp
+@@ -0,0 +1,238 @@
++/*
++ *  Автоматизация Emu80 для стенда: выход по счётчику кадров, снимки экрана и
++ *  ввод по сценарию. Всё через переменные окружения, чтобы не трогать разбор
++ *  командной строки:
++ *
++ *    EMU80_MAX_FRAME=2000            выйти после N кадров
++ *    EMU80_AUTOSTART=1               нажать F12 самому, как только можно
++ *    EMU80_KEYS="boot+900:SS+7"      нажатия: момент:клавиша
++ *    EMU80_SAVE_FRAME=boot+1200,1900 сохранить эти кадры
++ *    EMU80_FRAME_FILE=/tmp/shot      имена будут /tmp/shot-1200.ppm
++ *    EMU80_QUIET_FRAMES=50           сколько кадров покоя считать концом загрузки
++ *    EMU80_TRACE=1                   печатать, что видит детектор загрузки
++ *
++ *  Момент задаётся номером кадра или как `boot+N` -- через N кадров после того,
++ *  как система догрузилась. Абсолютные кадры для этого не годятся: загрузка
++ *  идёт разное время, а F12 до неё уводит машину в мусор.
++ *
++ *  Кадр берётся там, где готовая картинка уходит в окно (PalWindow::drawImage),
++ *  поэтому снимок не зависит от того, работает ли вывод через OpenGL. Прогон
++ *  ведём с SDL_VIDEODRIVER=dummy -- окно не открывается, снимки те же.
++ *
++ *  Формат PPM выбран нарочно: пишется в двадцать строк без внешних библиотек,
++ *  а в PNG его переводит хоть sips, хоть что угодно.
++ */
++
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <string>
++#include <vector>
++#include <map>
++
++#include "../PalKeys.h"
++#include "../PalWindow.h"
++#include "../EmuCalls.h"
++#include "../EmuAuto.h"
++
++using namespace std;
++
++namespace {
++
++// Момент: либо кадр N, либо N кадров после того, как система догрузилась.
++struct Moment { int offset; bool afterBoot; };
++
++struct KeyEvent { Moment at; PalKeyCode key; bool press; };
++
++bool inited = false;
++int frameNo = 0;
++int bootFrame = 0;              // кадр готовности системы (0 -- ещё не было)
++uint32_t screenHash = 0;        // хеш последнего кадра
++int screenFrame = 0;            // кадр, на котором картинка менялась в последний раз
++int screenChanges = 0;          // сколько раз она вообще менялась
++const int MIN_CHANGES = 5;      // меньше -- загрузка ещё и не начиналась
++int quietFrames = 50;           // столько кадров покоя считаем концом загрузки
++bool autostart = false;
++int maxFrame = 0;
++string framePath = "emu80-frame";
++vector<Moment> saveFrames;
++vector<KeyEvent> keyEvents;
++
++bool trace()
++{
++    static bool on = getenv("EMU80_TRACE") != nullptr;
++    return on;
++}
++
++PalKeyCode keyByName(const string& n)
++{
++    static const map<string, PalKeyCode> tbl = {
++        {"F1", PK_F1}, {"F2", PK_F2}, {"F3", PK_F3}, {"F4", PK_F4},
++        {"F5", PK_F5}, {"F6", PK_F6}, {"F7", PK_F7}, {"F8", PK_F8},
++        {"F9", PK_F9}, {"F10", PK_F10}, {"F11", PK_F11}, {"F12", PK_F12},
++        {"ENTER", PK_ENTER}, {"ESC", PK_ESC}, {"SPACE", PK_SPACE}, {"TAB", PK_TAB},
++        {"BSP", PK_BSP}, {"UP", PK_UP}, {"DOWN", PK_DOWN},
++        {"LEFT", PK_LEFT}, {"RIGHT", PK_RIGHT},
++        {"SS", PK_LSHIFT},   // на Векторе это СС
++        {"US", PK_LCTRL},    // и УС
++        {"0", PK_0}, {"1", PK_1}, {"2", PK_2}, {"3", PK_3}, {"4", PK_4},
++        {"5", PK_5}, {"6", PK_6}, {"7", PK_7}, {"8", PK_8}, {"9", PK_9},
++        {"A", PK_A}, {"B", PK_B}, {"C", PK_C}, {"D", PK_D}, {"E", PK_E},
++        {"F", PK_F}, {"G", PK_G}, {"H", PK_H}, {"I", PK_I}, {"J", PK_J},
++        {"K", PK_K}, {"L", PK_L}, {"M", PK_M}, {"N", PK_N}, {"O", PK_O},
++        {"P", PK_P}, {"Q", PK_Q}, {"R", PK_R}, {"S", PK_S}, {"T", PK_T},
++        {"U", PK_U}, {"V", PK_V}, {"W", PK_W}, {"X", PK_X}, {"Y", PK_Y},
++        {"Z", PK_Z}, {"SEMICOLON", PK_SEMICOLON}, {"PERIOD", PK_PERIOD},
++        {"COMMA", PK_COMMA}, {"MINUS", PK_MINUS}, {"SLASH", PK_SLASH},
++    };
++    auto it = tbl.find(n);
++    return it == tbl.end() ? PK_NONE : it->second;
++}
++
++vector<string> split(const string& s, char sep)
++{
++    vector<string> out;
++    size_t pos = 0;
++    while (pos <= s.size()) {
++        size_t next = s.find(sep, pos);
++        if (next == string::npos) { out.push_back(s.substr(pos)); break; }
++        out.push_back(s.substr(pos, next - pos));
++        pos = next + 1;
++    }
++    return out;
++}
++
++Moment parseMoment(const string& s)      // "1500" или "boot+400"
++{
++    if (s.compare(0, 4, "boot") == 0) {
++        size_t plus = s.find('+');
++        return {plus == string::npos ? 0 : atoi(s.c_str() + plus + 1), true};
++    }
++    return {atoi(s.c_str()), false};
++}
++
++bool isNow(const Moment& m)
++{
++    if (!m.afterBoot)
++        return m.offset == frameNo;
++    return bootFrame && frameNo == bootFrame + m.offset;
++}
++
++// "boot+900:SS+7" -- нажать и через HOLD кадров отпустить.
++// SS+7 значит: держать СС, нажать 7, отпустить обоих.
++const int HOLD = 4;
++
++void parseKeys(const string& spec)
++{
++    for (const string& item : split(spec, ',')) {
++        size_t colon = item.find(':');
++        if (colon == string::npos) continue;
++        Moment at = parseMoment(item.substr(0, colon));
++        for (const string& name : split(item.substr(colon + 1), '+')) {
++            PalKeyCode k = keyByName(name);
++            if (k == PK_NONE) {
++                fprintf(stderr, "стенд: неизвестная клавиша «%s»\n", name.c_str());
++                continue;
++            }
++            keyEvents.push_back({at, k, true});
++            keyEvents.push_back({{at.offset + HOLD, at.afterBoot}, k, false});
++        }
++    }
++}
++
++void init()
++{
++    inited = true;
++    if (const char* s = getenv("EMU80_MAX_FRAME")) maxFrame = atoi(s);
++    if (const char* s = getenv("EMU80_FRAME_FILE")) framePath = s;
++    if (const char* s = getenv("EMU80_QUIET_FRAMES")) quietFrames = atoi(s);
++    if (const char* s = getenv("EMU80_SAVE_FRAME"))
++        for (const string& f : split(s, ',')) saveFrames.push_back(parseMoment(f));
++    if (const char* s = getenv("EMU80_KEYS")) parseKeys(s);
++    autostart = getenv("EMU80_AUTOSTART") != nullptr;
++    if (maxFrame || !saveFrames.empty() || !keyEvents.empty() || autostart)
++        fprintf(stderr, "стенд: кадров %d, снимков %zu, нажатий %zu, автостарт %s\n",
++                maxFrame, saveFrames.size(), keyEvents.size() / 2, autostart ? "да" : "нет");
++}
++
++void saveFrame(uint32_t* pixels, int w, int h)
++{
++    char name[512];
++    snprintf(name, sizeof name, "%s-%d.ppm", framePath.c_str(), frameNo);
++    FILE* f = fopen(name, "wb");
++    if (!f) { fprintf(stderr, "стенд: не пишется %s\n", name); return; }
++    fprintf(f, "P6\n%d %d\n255\n", w, h);
++    for (int i = 0; i < w * h; ++i) {
++        uint32_t p = pixels[i];
++        uint8_t rgb[3] = {uint8_t(p >> 16), uint8_t(p >> 8), uint8_t(p)};
++        fwrite(rgb, 1, 3, f);
++    }
++    fclose(f);
++    fprintf(stderr, "стенд: кадр %d -> %s\n", frameNo, name);
++}
++
++// Конец загрузки: картинка замерла. Пока начальный загрузчик перекладывает
++// систему из квазидиска в память, он рисует сетку прогресса снизу вверх;
++// перестала расти -- значит, он дочитал и ждёт F12.
++//
++// Верхнюю пятую часть экрана не смотрим: там значок диска и содержимое стека,
++// они меняются всё время и покоя не будет никогда. Диод РУС/ЛАТ, по которому
++// автостартует v06x, для этого ПЗУ не годится -- за всю загрузку он дёргается
++// один раз.
++void watchScreen(uint32_t* pixels, int w, int h)
++{
++    if (!pixels)
++        return;
++
++    uint32_t hash = 2166136261u;
++    for (int i = w * (h / 5); i < w * h; i += 7)
++        hash = (hash ^ pixels[i]) * 16777619u;
++    if (hash != screenHash) {
++        screenHash = hash;
++        screenFrame = frameNo;
++        ++screenChanges;
++    }
++
++    if (trace() && frameNo % 100 == 0)
++        fprintf(stderr, "стенд: кадр %d, хеш %08X, изменений %d, покой %d\n",
++                frameNo, screenHash, screenChanges, frameNo - screenFrame);
++
++    if (!bootFrame && screenChanges > MIN_CHANGES && frameNo - screenFrame == quietFrames) {
++        bootFrame = frameNo;
++        fprintf(stderr, "стенд: система загрузилась на кадре %d\n", frameNo);
++    }
++}
++
++} // namespace
++
++
++void autoOnFrame(PalWindow* wnd, uint32_t* pixels, int w, int h)
++{
++    if (!inited) init();
++    ++frameNo;
++
++    watchScreen(pixels, w, h);
++
++    // Автостарт: F12 -- это сброс с отключённым ПЗУ, то есть запуск того, что
++    // загрузчик положил в память.
++    if (autostart && bootFrame) {
++        if (frameNo == bootFrame + 1)
++            emuKeyboard(wnd, PK_F12, true, 0);
++        else if (frameNo == bootFrame + 1 + HOLD)
++            emuKeyboard(wnd, PK_F12, false, 0);
++    }
++
++    for (const KeyEvent& e : keyEvents)
++        if (isNow(e.at))
++            emuKeyboard(wnd, e.key, e.press, 0);
++
++    for (const Moment& m : saveFrames)
++        if (isNow(m) && pixels)
++            saveFrame(pixels, w, h);
++
++    if (maxFrame && frameNo >= maxFrame) {
++        fprintf(stderr, "стенд: отработано %d кадров, выходим\n", frameNo);
++        fflush(stderr);
++        exit(0);
++    }
++}
+diff --git a/src/sdl/sdlPalWindow.cpp b/src/sdl/sdlPalWindow.cpp
+index 204ba1c..9365c4a 100644
+--- a/src/sdl/sdlPalWindow.cpp
++++ b/src/sdl/sdlPalWindow.cpp
+@@ -20,6 +20,7 @@
+ #include <cstring>
+ 
+ #include "sdlPalWindow.h"
++#include "../EmuAuto.h"
+ #include "sdlGlExt.h"
+ 
+ #include "sdlPal.h"
+@@ -266,6 +267,12 @@ void PalWindow::drawFillGl(uint32_t color)
+ 
+ void PalWindow::drawImage(uint32_t* pixels, int imageWidth, int imageHeight, double aspectRatio, bool blend, bool useAlpha)
+ {
++    // Стенд: счёт кадров, снимки и ввод по сценарию -- см. sdl/emuAuto.cpp.
++    // Взято здесь, потому что сюда приходит уже готовая картинка, независимо от
++    // того, рисуется она через OpenGL или нет.
++    if (!blend && !useAlpha)
++        autoOnFrame(this, pixels, imageWidth, imageHeight);
++
+     if (m_glAvailable) {
+         drawImageGl(pixels, imageWidth, imageHeight, aspectRatio, blend, useAlpha);
+         return;
 diff --git a/src/sdl/sdlPalWindow.h b/src/sdl/sdlPalWindow.h
 index ca1446c..dbca0ce 100644
 --- a/src/sdl/sdlPalWindow.h
