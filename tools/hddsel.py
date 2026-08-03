@@ -260,8 +260,10 @@ def build(at):
     a.label('fcbr'); a.db(0)
     a.label('fcbr1'); a.db(0)
     a.label('fcbr2'); a.db(0)
-    a.label('buf'); a.code += bytes(PRM_OFF)
-    a.label(SIGN); a.code += bytes(128 - PRM_OFF)
+    # Буфер обмена с диском -- штатный по 0080: своя запись на 128 байт съедала
+    # восьмую часть всего места под стеком, а этот в наших операциях свободен.
+    a.labels['buf'] = 0x0080
+    a.labels[SIGN] = 0x0080 + PRM_OFF
     return a.bytes()
 
 
