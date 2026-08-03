@@ -1,9 +1,30 @@
+diff --git a/src/Cpu8080.cpp b/src/Cpu8080.cpp
+index ffd5d02..a19929b 100644
+--- a/src/Cpu8080.cpp
++++ b/src/Cpu8080.cpp
+@@ -22,6 +22,7 @@
+ #include "Globals.h"
+ #include "Cpu.h"
+ #include "Cpu8080.h"
++#include "EmuAuto.h"
+ #include "CpuHook.h"
+ #include "CpuWaits.h"
+ #include "PlatformCore.h"
+@@ -1730,6 +1731,8 @@ Cpu8080::Cpu8080() {
+ 
+ 
+ void Cpu8080::operate() {
++    autoTrace(PC);      // стенд: карта исполненных адресов, см. sdl/emuAuto.cpp
++
+     if (!m_hooksDisabled) {
+         bool retFlag = false;
+         list<CpuHook*>* hookList = m_hookArray[PC];
 diff --git a/src/EmuAuto.h b/src/EmuAuto.h
 new file mode 100644
-index 0000000..d4b7db9
+index 0000000..24b0862
 --- /dev/null
 +++ b/src/EmuAuto.h
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
 +#ifndef EMUAUTO_H
 +#define EMUAUTO_H
 +
@@ -13,6 +34,7 @@ index 0000000..d4b7db9
 +
 +// Стенд: инструментовка для прогонов без человека -- см. sdl/emuAuto.cpp.
 +void autoOnFrame(PalWindow* wnd, uint32_t* pixels, int w, int h);
++void autoTrace(uint16_t pc);
 +
 +#endif
 diff --git a/src/Emulation.cpp b/src/Emulation.cpp
@@ -44,10 +66,10 @@ index b23d434..6cbce8b 100644
  
 diff --git a/src/sdl/emuAuto.cpp b/src/sdl/emuAuto.cpp
 new file mode 100644
-index 0000000..500a901
+index 0000000..106f32b
 --- /dev/null
 +++ b/src/sdl/emuAuto.cpp
-@@ -0,0 +1,240 @@
+@@ -0,0 +1,289 @@
 +/*
 + *  Автоматизация Emu80 для стенда: выход по счётчику кадров, снимки экрана и
 + *  ввод по сценарию. Всё через переменные окружения, чтобы не трогать разбор
@@ -60,6 +82,11 @@ index 0000000..500a901
 + *    EMU80_FRAME_FILE=/tmp/shot      имена будут /tmp/shot-1200.ppm
 + *    EMU80_QUIET_FRAMES=50           сколько кадров покоя считать концом загрузки
 + *    EMU80_TRACE=1                   печатать, что видит детектор загрузки
++ *    EMU80_COV_LO=0100 EMU80_COV_HI=BFFF EMU80_COV_FILE=/tmp/cov.bin
++ *    EMU80_COV_FROM=boot+1900 EMU80_COV_TO=boot+3500
++ *                                    карта исполненных адресов за окно кадров:
++ *                                    байт на адрес, потом diff двух прогонов
++ *                                    показывает, где пути разошлись
 + *
 + *  Момент задаётся номером кадра или как `boot+N` -- через N кадров после того,
 + *  как система догрузилась. Абсолютные кадры для этого не годятся: загрузка
@@ -107,6 +134,26 @@ index 0000000..500a901
 +string framePath = "emu80-frame";
 +vector<Moment> saveFrames;
 +vector<KeyEvent> keyEvents;
++
++// Карта исполненных адресов. Пишем байт на адрес, а не последовательность:
++// сравнивать два прогона куда проще по множеству адресов, чем по миллионам
++// строк, а нам нужно ровно одно -- где путь на D: свернул не туда.
++unsigned char* cov = nullptr;
++int covLo = 0, covHi = -1;
++Moment covFrom = {0, false}, covTo = {0, false};
++string covPath;
++
++
++bool inWindow()
++{
++    if (covTo.offset || covTo.afterBoot) {
++        int from = covFrom.afterBoot ? (bootFrame ? bootFrame + covFrom.offset : 1 << 30) : covFrom.offset;
++        int to = covTo.afterBoot ? (bootFrame ? bootFrame + covTo.offset : 1 << 30) : covTo.offset;
++        return frameNo >= from && frameNo <= to;
++    }
++    return true;
++}
++
 +
 +bool trace()
 +{
@@ -202,6 +249,15 @@ index 0000000..500a901
 +        for (const string& f : split(s, ',')) saveFrames.push_back(parseMoment(f));
 +    if (const char* s = getenv("EMU80_KEYS")) parseKeys(s);
 +    autostart = getenv("EMU80_AUTOSTART") != nullptr;
++    if (const char* s = getenv("EMU80_COV_FILE")) {
++        covPath = s;
++        covLo = strtol(getenv("EMU80_COV_LO") ? getenv("EMU80_COV_LO") : "0100", nullptr, 16);
++        covHi = strtol(getenv("EMU80_COV_HI") ? getenv("EMU80_COV_HI") : "BFFF", nullptr, 16);
++        if (const char* f = getenv("EMU80_COV_FROM")) covFrom = parseMoment(f);
++        if (const char* t = getenv("EMU80_COV_TO")) covTo = parseMoment(t);
++        cov = new unsigned char[covHi - covLo + 1]();
++        fprintf(stderr, "стенд: карта адресов %04X..%04X -> %s\n", covLo, covHi, s);
++    }
 +    if (maxFrame || !saveFrames.empty() || !keyEvents.empty() || autostart)
 +        fprintf(stderr, "стенд: кадров %d, снимков %zu, нажатий %zu, автостарт %s\n",
 +                maxFrame, saveFrames.size(), keyEvents.size() / 2, autostart ? "да" : "нет");
@@ -283,10 +339,25 @@ index 0000000..500a901
 +            saveFrame(pixels, w, h);
 +
 +    if (maxFrame && frameNo >= maxFrame) {
++        if (cov) {
++            FILE* f = fopen(covPath.c_str(), "wb");
++            if (f) {
++                fwrite(cov, 1, covHi - covLo + 1, f);
++                fclose(f);
++                fprintf(stderr, "стенд: карта адресов записана\n");
++            }
++        }
 +        fprintf(stderr, "стенд: отработано %d кадров, выходим\n", frameNo);
 +        fflush(stderr);
 +        exit(0);
 +    }
++}
++
++
++void autoTrace(uint16_t pc)
++{
++    if (cov && pc >= covLo && pc <= covHi && inWindow())
++        cov[pc - covLo] = 1;
 +}
 diff --git a/src/sdl/sdlPalWindow.cpp b/src/sdl/sdlPalWindow.cpp
 index 204ba1c..9365c4a 100644
