@@ -44,10 +44,10 @@ index b23d434..6cbce8b 100644
  
 diff --git a/src/sdl/emuAuto.cpp b/src/sdl/emuAuto.cpp
 new file mode 100644
-index 0000000..6abacae
+index 0000000..500a901
 --- /dev/null
 +++ b/src/sdl/emuAuto.cpp
-@@ -0,0 +1,238 @@
+@@ -0,0 +1,240 @@
 +/*
 + *  Автоматизация Emu80 для стенда: выход по счётчику кадров, снимки экрана и
 + *  ввод по сценарию. Всё через переменные окружения, чтобы не трогать разбор
@@ -134,6 +134,8 @@ index 0000000..6abacae
 +        {"U", PK_U}, {"V", PK_V}, {"W", PK_W}, {"X", PK_X}, {"Y", PK_Y},
 +        {"Z", PK_Z}, {"SEMICOLON", PK_SEMICOLON}, {"PERIOD", PK_PERIOD},
 +        {"COMMA", PK_COMMA}, {"MINUS", PK_MINUS}, {"SLASH", PK_SLASH},
++        {"EQU", PK_EQU}, {"LBRACKET", PK_LBRACKET}, {"RBRACKET", PK_RBRACKET},
++        {"BSLASH", PK_BSLASH}, {"APOSTROPHE", PK_APOSTROPHE}, {"TILDE", PK_TILDE},
 +    };
 +    auto it = tbl.find(n);
 +    return it == tbl.end() ? PK_NONE : it->second;
