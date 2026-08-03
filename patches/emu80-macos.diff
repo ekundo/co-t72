@@ -66,7 +66,7 @@ index b23d434..6cbce8b 100644
  
 diff --git a/src/sdl/emuAuto.cpp b/src/sdl/emuAuto.cpp
 new file mode 100644
-index 0000000..a80ea2b
+index 0000000..c12e2c1
 --- /dev/null
 +++ b/src/sdl/emuAuto.cpp
 @@ -0,0 +1,304 @@
@@ -251,6 +251,8 @@ index 0000000..a80ea2b
 +        for (const string& f : split(s, ',')) saveFrames.push_back(parseMoment(f));
 +    if (const char* s = getenv("EMU80_KEYS")) parseKeys(s);
 +    autostart = getenv("EMU80_AUTOSTART") != nullptr;
++    if (const char* f = getenv("EMU80_COV_FROM")) covFrom = parseMoment(f);
++    if (const char* t = getenv("EMU80_COV_TO")) covTo = parseMoment(t);
 +    if (const char* s = getenv("EMU80_TRACE_FILE")) {
 +        traceLo = strtol(getenv("EMU80_TRACE_LO") ? getenv("EMU80_TRACE_LO") : "0000", nullptr, 16);
 +        traceHi = strtol(getenv("EMU80_TRACE_HI") ? getenv("EMU80_TRACE_HI") : "FFFF", nullptr, 16);
@@ -262,8 +264,6 @@ index 0000000..a80ea2b
 +        covPath = s;
 +        covLo = strtol(getenv("EMU80_COV_LO") ? getenv("EMU80_COV_LO") : "0100", nullptr, 16);
 +        covHi = strtol(getenv("EMU80_COV_HI") ? getenv("EMU80_COV_HI") : "BFFF", nullptr, 16);
-+        if (const char* f = getenv("EMU80_COV_FROM")) covFrom = parseMoment(f);
-+        if (const char* t = getenv("EMU80_COV_TO")) covTo = parseMoment(t);
 +        cov = new unsigned char[covHi - covLo + 1]();
 +        fprintf(stderr, "стенд: карта адресов %04X..%04X -> %s\n", covLo, covHi, s);
 +    }
