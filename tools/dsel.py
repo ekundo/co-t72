@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+"""Диск D: в CO -- второй квазидиск.
+
+CO знает три диска: A:, B: и квазидиск C:. Каталоги он читает через БДОС, так
+что четвёртый диск ему по силам -- упирается всё в две вещи.
+
+Первая: восемь мест, где буква сравнивается с 'C' и это значит «квазидиск,
+физических операций не надо». Для D: ответ такой же, поэтому каждое такое место
+уводится трамплином в хвост, где проверяются обе буквы. Вместо сравнения ставим
+JMP -- он не трогает стек, так что RET в трамплине работает ровно как RZ на
+прежнем месте.
+
+Вторая: меню выбора диска по клавише 7. У CO оно собрано из блока строк, за
+которым сразу идёт код -- четвёртую строку дописать некуда, а пункты B: и D:
+включаются независимо, так что порядок строк меняется. Поэтому меню целиком
+переехало в хвост: список собирается в буфере под текущие настройки, буквы
+лежат в такой же таблице рядом.
+
+Что сделано и проверено на стенде с двумя квазидисками:
+  * панель открывает D:, читает каталог и показывает его верно;
+  * меню собирается под настройки: B: и D: появляются каждый по своему признаку.
+
+Что ещё не работает: копирование НА D:. Экран при этом съезжает, а в шапке
+целевой панели оказываются чужие числа; на C: тот же сценарий проходит чисто,
+так что дело именно в пути записи. Восемь мест с `CPI 43h` тут ни при чём --
+проверено по одному: с ними копирование ломается так же, а два из них (0262 и
+027A, выбор диска для чтения каталога) вдобавок разваливают панели. Поэтому
+CHECKS сейчас пуст, а список сохранён в CHECKS_OFF как разобранный тупик.
+
+Доступность D: пока зашита в самом коде ('Y' по адресу метки dflag). Настройку в
+параметрах и её хранение ещё предстоит сделать: в CO.PRM для флага годится
+только хвост файла за пределами читаемого старым CO, а буква панели там
+упакована в два бита (1=A, 2=B, 3=C) -- под D: остаётся свободный бит 6.
+"""
+
+import argparse
+import sys
+
+ORG = 0x100
+
+# точки входа CO
+SEL_PANEL = 0x0E4D     # HL += 1, если активна вторая панель
+MENU = 0x0CF1          # выбор из горизонтального меню: HL -- строки, D -- сколько, E -- текущий
+REDRAW = 0x0FE0        # перерисовать панели
+REREAD = 0x28AE        # хвост «7-Диск»: записать букву из B и перечитать панель
+PANEL_DRV = 0x3E91     # буквы дисков панелей
+DISK_B = 0x3E97        # настройка «Диск B доступен» -- 'Y' или 'N'
+
+MENU_ENTRY = 0x2870    # начало обработчика «7-Диск»
+MENU_END = 0x28AE      # общий хвост, его оставляем на месте
+
+# Места, где 'C' означает «это квазидиск». Для каждого: адрес, сколько байт
+# занимает проверка вместе с тем, что к ней прицеплено, и как её пересобрать.
+#   'ret'  -- CPI 'C' / RZ
+#   'jz'   -- CPI 'C' / JZ target
+#   'jz+a' -- CPI 'C' / MVI A,n / JZ target        (MVI выполняется всегда)
+#   'jz+ah'-- CPI 'C' / MVI A,n / LXI H,nn / JZ target
+CHECKS_OFF = [
+    (0x0262, 'ret', 3),
+    (0x027A, 'ret', 3),
+    (0x0B5F, 'jz', 5),
+    (0x0B6E, 'jz', 5),
+    (0x1DE7, 'jz+a', 7),
+    (0x1EC5, 'jz+ah', 10),
+    (0x3E9B, 'jz', 5),
+]
+# Разобранный тупик, см. шапку: ни по одному, ни все вместе эти места
+# копирование на D: не чинят, а 0262 и 027A ещё и ломают чтение каталога.
+CHECKS = []
+
+
+class Asm:
+    def __init__(self, org):
+        self.org, self.code, self.labels, self.fixups = org, bytearray(), {}, []
+
+    def label(self, name):
+        self.labels[name] = self.org + len(self.code)
+
+    def here(self):
+        return self.org + len(self.code)
+
+    def db(self, *b):
+        self.code += bytes(b)
+
+    def word(self, op, value):
+        self.code += bytes([op, value & 0xFF, value >> 8])
+
+    def ref(self, op, name):
+        self.code += bytes([op])
+        self.fixups.append((len(self.code), name))
+        self.code += b'\0\0'
+
+    def bytes(self):
+        out = bytearray(self.code)
+        for at, name in self.fixups:
+            if name not in self.labels:
+                sys.exit('нет метки %s' % name)
+            out[at] = self.labels[name] & 0xFF
+            out[at + 1] = self.labels[name] >> 8
+        return bytes(out)
+
+
+def build(at, image, flag_addr=None):
+    """Собрать хвост: трамплины проверок и меню выбора диска."""
+    a = Asm(at)
+    trampolines = {}
+
+    # Данные держим в начале хвоста: конец резидента вплотную подходит к стеку
+    # CO на BC00, и всё, что окажется под ним, стек рано или поздно затрёт.
+    a.ref(0xC3, 'start')
+    a.label('dflag'); a.db(0x59)         # 'Y' -- пока настройка не заведена
+    a.label('letters'); a.code += bytes(6)
+    a.label('strbuf'); a.code += bytes(24)
+    a.label('start')
+
+    # ---------------- трамплины «C: или D:» ----------------
+    for addr, kind, size in CHECKS:
+        off = addr - ORG
+        assert image[off:off + 2] == b'\xfe\x43', hex(addr)
+        back = addr + size
+        trampolines[addr] = a.here()
+        if kind == 'ret':
+            a.db(0xFE, 0x43); a.db(0xC8)            # CPI 'C' / RZ
+            a.db(0xFE, 0x44); a.db(0xC8)            # CPI 'D' / RZ
+            a.word(0xC3, back)
+        elif kind == 'jz':
+            target = image[off + 3] | image[off + 4] << 8
+            a.db(0xFE, 0x43); a.word(0xCA, target)
+            a.db(0xFE, 0x44); a.word(0xCA, target)
+            a.word(0xC3, back)
+        elif kind == 'jz+a':
+            val = image[off + 3]
+            target = image[off + 5] | image[off + 6] << 8
+            name = 'q%04x' % addr
+            a.db(0xFE, 0x43); a.ref(0xCA, name)
+            a.db(0xFE, 0x44); a.ref(0xCA, name)
+            a.word(0xC3, back)
+            a.label(name)
+            a.db(0x3E, val); a.word(0xC3, target)
+        elif kind == 'jz+ah':
+            val = image[off + 3]
+            hl = image[off + 5] | image[off + 6] << 8
+            target = image[off + 8] | image[off + 9] << 8
+            name = 'q%04x' % addr
+            a.db(0xFE, 0x43); a.ref(0xCA, name)
+            a.db(0xFE, 0x44); a.ref(0xCA, name)
+            a.word(0xC3, back)
+            a.label(name)
+            a.db(0x3E, val); a.word(0x21, hl); a.word(0xC3, target)
+
+    # ---------------- меню выбора диска ----------------
+    # Собираем список пунктов под текущие настройки: A: и C: есть всегда, B: и
+    # D: -- по своим признакам. Строки складываем в буфер, буквы -- в таблицу
+    # рядом, чтобы по номеру пункта сразу получить букву.
+    menu = a.here()
+    a.ref(0x21, 'strbuf')
+    a.db(0x36, 0x00)                     # первая строка пустая -- это заголовок
+    a.db(0x23)                           # HL -> первый пункт
+    a.ref(0x11, 'letters')               # DE -> таблица букв
+    a.db(0x0E, 0x02)                     # C -- сколько пунктов набрали
+
+    a.db(0x3E, 0x41); a.ref(0xCD, 'add')          # "A"
+    a.db(0x3E, 0x43); a.ref(0xCD, 'add')          # "C"
+    a.word(0x3A, DISK_B); a.db(0xFE, 0x59)        # диск B доступен?
+    a.ref(0xC2, 'noB')
+    a.db(0x3E, 0x42); a.ref(0xCD, 'add'); a.db(0x0C)
+    a.label('noB')
+    if flag_addr is None:
+        a.ref(0x3A, 'dflag')
+    else:
+        a.word(0x3A, flag_addr)
+    a.db(0xFE, 0x59)                              # диск D доступен?
+    a.ref(0xC2, 'noD')
+    a.db(0x3E, 0x44); a.ref(0xCD, 'add'); a.db(0x0C)
+    a.label('noD')
+
+    # текущий пункт: ищем букву активной панели в таблице букв
+    a.word(0x21, PANEL_DRV); a.word(0xCD, SEL_PANEL); a.db(0x7E)   # A -- буква панели
+    a.ref(0x21, 'letters')
+    a.db(0x1E, 0x01)                     # E -- номер пункта
+    a.db(0x41)                           # MOV B,C -- сколько всего пунктов
+    a.label('find')
+    a.db(0xBE); a.ref(0xCA, 'found')     # CMP M / JZ
+    a.db(0x23, 0x1C)                     # INX H / INR E
+    a.db(0x05); a.ref(0xC2, 'find')      # DCR B / JNZ
+    a.db(0x1E, 0x01)                     # не нашли -- встанем на первый пункт
+    a.label('found')
+
+    a.db(0x79, 0x57)                     # MOV A,C / MOV D,A -- пунктов
+    a.db(0x14)                           # INR D -- и заголовок
+    a.ref(0x21, 'strbuf')
+    a.word(0xCD, MENU)
+    a.db(0xFE, 0x1B); a.word(0xCA, REDRAW)        # АР2 -- ничего не меняем
+    a.db(0x3D)                                    # номер пункта с нуля
+    a.ref(0x21, 'letters')
+    a.db(0x5F, 0x16, 0x00, 0x19)                  # HL += A
+    a.db(0x46)                                    # B -- выбранная буква
+    a.word(0xC3, REREAD)
+
+    # add: положить строку «"X"» в буфер по HL и букву из A в таблицу по DE
+    a.label('add')
+    a.db(0xF5)                                    # PUSH PSW
+    a.db(0x36, 0x22, 0x23)                        # '"'
+    a.db(0x77, 0x23)                              # буква
+    a.db(0x36, 0x22, 0x23)                        # '"'
+    a.db(0x36, 0x00, 0x23)                        # конец строки
+    a.db(0xF1)                                    # POP PSW
+    a.db(0x12, 0x13)                              # STAX D / INX D
+    a.db(0xC9)
+
+    return a.bytes(), trampolines, menu
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument('infile')
+    p.add_argument('outfile')
+    p.add_argument('--flag', help='адрес байта «диск D доступен» (Y/N); по умолчанию свой')
+    p.add_argument('--only', help='включить только эту проверку (адрес), для разбора по одной')
+    args = p.parse_args()
+
+    if args.only:
+        global CHECKS
+        CHECKS = [c for c in CHECKS_OFF if c[0] == int(args.only, 16)]
+    d = bytearray(open(args.infile, 'rb').read())
+    if len(d) % 128:
+        sys.exit('образ не выровнен по записи: %d байт' % len(d))
+    at = 0xB700 + (len(d) - 0x4000)
+    code, tramp, menu = build(at, d, int(args.flag, 16) if args.flag else None)
+
+    for addr, kind, size in CHECKS:
+        off = addr - ORG
+        d[off:off + size] = bytes([0xC3, tramp[addr] & 0xFF, tramp[addr] >> 8]) + b'\x00' * (size - 3)
+    # меню целиком уезжает в хвост, общий хвост на 28AE остаётся на месте
+    d[MENU_ENTRY - ORG:MENU_ENTRY - ORG + 3] = bytes([0xC3, menu & 0xFF, menu >> 8])
+    d[MENU_ENTRY - ORG + 3:MENU_END - ORG] = b'\x00' * (MENU_END - MENU_ENTRY - 3)
+
+    d += code
+    while len(d) % 128:
+        d += b'\0'
+    open(args.outfile, 'wb').write(bytes(d))
+    print('диск D: код по %04X, меню %04X, трамплинов %d' % (at, menu, len(tramp)))
+
+
+if __name__ == '__main__':
+    main()
