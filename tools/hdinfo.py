@@ -38,6 +38,14 @@ BODY = 0xA600           # а накладка -- вот отсюда, в дыр�
 HOOK = 0x091B           # отрисовка панели
 HOOK_OLD = bytes([0xCD, 0xE8, 0x19])    # CALL 19E8 -- то, что там стоит
 
+# Признак ">CO.PTK" (режим «ПС») CO рисует в нижней рамке двумя строками -- сам
+# признак и девять горизонталей рамки, чтобы его стереть. Обе начинаются с
+# «ESC Y строка колонка»; двигаем их на три знака левее, к самому уголку, --
+# столько же добавляется нашей надписи справа.
+PTK = (0x2932, 0x2940)  # байты колонки в этих строках
+PTK_OLD = 0x20 + 5
+PTK_NEW = 0x20 + 2
+
 
 def main():
     p = argparse.ArgumentParser()
@@ -66,6 +74,12 @@ def main():
         sys.exit('по %04X не CALL 19E8, а %s -- это не тот CO'
                  % (HOOK, d[at:at + 3].hex()))
     d[at:at + 3] = bytes([0xC3, BODY & 0xFF, BODY >> 8])
+
+    for at_ptk in PTK:
+        if d[at_ptk - ORG] != PTK_OLD:
+            sys.exit('по %04X не колонка признака >CO.PTK, а %02X'
+                     % (at_ptk, d[at_ptk - ORG]))
+        d[at_ptk - ORG] = PTK_NEW
 
     nxt = int(a.init, 16) if a.init else 0
     at_copy = org                       # копировщик встанет первым
