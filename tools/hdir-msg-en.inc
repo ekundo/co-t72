@@ -23,12 +23,27 @@ msgnohd:DB 'HDD does not answer',0
 msgnodk:DB 'No disks on the HDD',0
 msgmore:DB 'Press a key, Esc to stop',0
 msgclr: DB '                        ',0
+msgwerr:DB 'Cannot write disk ',0
+msgnodq:DB 'No such disk ',0
+msgswap:DB 'Exchange disks ',0
+msgand: DB ' and ',0
+msgeras:DB 'Erase disk ',0
+msgyn:  DB '? (Y/N) ',0
+msgdone:DB 'Done',0
+msgcanc:DB 'Cancelled',0
+msgtwo: DB 'An exchange needs the numbers of two disks',0
+msgone: DB 'A disk number is needed',0
+msgsame:DB 'That is one and the same disk',0
+msghalf:DB 'The exchange stopped halfway -- both disks are half rewritten',0
 msghelp:DB 'HDIR -- HDD disk directories',CH_VK,0Ah
         DB '  HDIR            every disk',CH_VK,0Ah
         DB '  HDIR 5          disk 5 (hex number, as in command 9)',CH_VK,0Ah
         DB '  HDIR 5-1F 40    disks 5..1F and 40',CH_VK,0Ah
         DB '  HDIR *.COM      search every disk',CH_VK,0Ah
         DB '  HDIR 10-20 DIZ* search disks 10..20',CH_VK,0Ah
+        DB '  HDIR /X 5 9     exchange disks 5 and 9',CH_VK,0Ah
+        DB '  HDIR /Z 5       erase disk 5 (file data is left alone)',CH_VK,0Ah
+        DB '  HDIR /M 5 GAMES label of disk 5; no text removes it',CH_VK,0Ah
         DB '  /N              do not stop at every page',CH_VK,0Ah
         DB '  HDIR *.COM >F.TXT   to a file; stops are dropped there anyway',CH_VK,0Ah
         DB 0
