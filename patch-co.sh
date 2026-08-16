@@ -120,13 +120,6 @@ INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/s
        sed -n 's/^init=//p')
 mv "$OUT/co4.com" "$OUT/CO.COM"
 
-# 3bb. Диск D: -- второй квазидиск. Пока не в общей сборке: панель его читает,
-#      а копирование на него сбивает вывод, см. шапку tools/dsel.py.
-if [ -n "$DSEL" ]; then
-    python3 "$HERE/tools/dsel.py" "$OUT/CO.COM" "$OUT/co7.com"
-    mv "$OUT/co7.com" "$OUT/CO.COM"
-fi
-
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
 python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com" --init "$INIT"
