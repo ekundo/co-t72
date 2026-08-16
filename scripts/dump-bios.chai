@@ -22,7 +22,7 @@ def framefunc(frameno) {
     if (frameno == 1100) {
         var v = VectorInt()
         var i = 0
-        while (i < 0x20) { v.push_back(read_memory(0xE200 + i, 0)); i = i + 1 }
+        while (i < 0x1000) { v.push_back(read_memory(0xE200 + i, 0)); i = i + 1 }
         write_file("bios-vectors.bin", v)
     }
     keytyper.onframe()

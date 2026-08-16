@@ -120,6 +120,27 @@ INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/s
        sed -n 's/^init=//p')
 mv "$OUT/co4.com" "$OUT/CO.COM"
 
+# 3bb. Номер дискеты НЖМД и её метка -- в рамке панели. Таблицу дискет ОС
+#      находим на живой машине: у каждой сборки она в своём месте, а первые
+#      секторы дискет 1 и 5 (2 и 188Ah) в ней всегда одни и те же.
+TDRVA=$(python3 - "$HERE/run/bios-vectors.bin" <<'PY'
+import sys
+d = open(sys.argv[1], 'rb').read()
+hits = [0xE200 + i - 2 for i in range(len(d) - 8)
+        if d[i:i+3] == b'\x02\x00\x00' and d[i+5:i+8] == b'\x8a\x18\x00']
+print('%04X' % hits[0] if len(hits) == 1 else '')
+PY
+)
+if [ -n "$TDRVA" ]; then
+    echo "ПЗУ $(basename "$ROM"): таблица дискет НЖМД на $TDRVA"
+    INIT=$(python3 "$HERE/tools/hdinfo.py" "$OUT/CO.COM" "$OUT/co7.com" \
+        --tdrva "$TDRVA" --disk "$DISK" --init "$INIT" | tee /dev/stderr |
+        sed -n 's/^init=//p')
+    mv "$OUT/co7.com" "$OUT/CO.COM"
+else
+    echo "таблицу дискет НЖМД не нашёл -- номер и метка в рамке не встроены" >&2
+fi
+
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
 python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com" --init "$INIT"

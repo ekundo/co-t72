@@ -244,9 +244,15 @@ def main():
     p.add_argument('source')
     p.add_argument('-o', '--out', required=True)
     p.add_argument('-l', '--listing')
+    p.add_argument('-D', '--define', action='append', default=[],
+                   metavar='ИМЯ=ЗНАЧЕНИЕ',
+                   help='задать имя снаружи: адреса, разные у сборок T-72')
     a = p.parse_args()
 
     asm = Asm()
+    for d in a.define:
+        name, _, val = d.partition('=')
+        asm.sym[name.strip()] = asm.value(val, 0)
     org, code = asm.assemble(a.source)
     open(a.out, 'wb').write(code)
     if a.listing:
