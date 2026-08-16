@@ -21,7 +21,7 @@ msgtot3:DB ' disk(s)',0
 msgerr: DB 'Cannot read disk ',0
 msgnohd:DB 'HDD does not answer',0
 msgnodk:DB 'No disks on the HDD',0
-msgmore:DB 'Press a key, AR2 to stop',0
+msgmore:DB 'Press a key, Esc to stop',0
 msgclr: DB '                        ',0
 msghelp:DB 'HDIR -- HDD disk directories',CH_VK,0Ah
         DB '  HDIR            every disk',CH_VK,0Ah
