@@ -6,7 +6,7 @@
 Синтаксис как в исходниках T-72 (TASM): метка в начале строки, точка с запятой
 -- комментарий, числа `1234h` / `0FFh` / десятичные / `'A'`. Директивы:
 
-    ORG, EQU, DB (.db), DW (.dw), DS (.ds), END
+    ORG, EQU, DB (.db), DW (.dw), DS (.ds), INCLUDE, END
 
 Строки в DB пишутся в UTF-8, а в файл идут в КОИ-8: это кодировка экрана
 Вектора, других русских букв система не понимает.
@@ -18,6 +18,7 @@
 
 import argparse
 import itertools
+import os
 import re
 import sys
 
@@ -203,19 +204,35 @@ class Asm:
         self.pc = self.org or 0x100
         self.out = bytearray()
         self.listing = []
-        for n, raw in enumerate(lines, 1):
+        for where, raw in lines:
             try:
                 code = self.line(raw, resolve)
             except Error as ex:
-                sys.exit('строка %d: %s\n  %s' % (n, ex, raw.rstrip()))
+                sys.exit('%s: %s\n  %s' % (where, ex, raw.rstrip()))
             if resolve:
                 self.listing.append('%04X %-14s %s' %
                                     (self.pc, code[:5].hex().upper(), raw.rstrip()))
             self.out += code
             self.pc += len(code)
 
-    def assemble(self, text):
-        lines = text.splitlines()
+    def read(self, path, seen=()):
+        """Прочитать файл, разворачивая INCLUDE. Имя в INCLUDE -- относительно
+           того файла, где он написан."""
+        if path in seen:
+            sys.exit('%s: INCLUDE сам на себя' % path)
+        out = []
+        for n, raw in enumerate(open(path, encoding='utf-8').read().splitlines(), 1):
+            m = re.match(r"\s*#?INCLUDE\s+['\"]?([^'\"]+)['\"]?\s*$",
+                         strip_comment(raw), re.I)
+            if m:
+                out += self.read(os.path.join(os.path.dirname(path), m.group(1)),
+                                 tuple(seen) + (path,))
+            else:
+                out.append(('%s:%d' % (os.path.basename(path), n), raw))
+        return out
+
+    def assemble(self, path):
+        lines = self.read(path)
         self.pass_over(lines, False)
         start = self.org
         self.pass_over(lines, True)
@@ -230,7 +247,7 @@ def main():
     a = p.parse_args()
 
     asm = Asm()
-    org, code = asm.assemble(open(a.source, encoding='utf-8').read())
+    org, code = asm.assemble(a.source)
     open(a.out, 'wb').write(code)
     if a.listing:
         open(a.listing, 'w', encoding='utf-8').write('\n'.join(asm.listing) + '\n')
