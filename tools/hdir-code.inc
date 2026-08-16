@@ -142,6 +142,9 @@ dnext:  LHLD dcur
 total:  LDA  col
         ORA  A
         CNZ  crlf
+        LDA  mode
+        CPI  'L'
+        JZ   totlab
         LXI  H,msgtot
         CALL puts
         LHLD totf
@@ -155,6 +158,14 @@ total:  LDA  col
         LXI  H,msgtot3
         CALL puts
         CALL crlf
+totlab: LXI  H,msgtotl
+        CALL puts
+        LHLD totd
+        MVI  A,1
+        STA  pwid
+        CALL pdec
+        CALL crlf
+
 exit:   LHLD oldsp
         SPHL
         RET
@@ -175,7 +186,10 @@ help:   LXI  H,msghelp
 
 ; Читает каталог дискеты dcur, считает и печатает. Дискету без совпадений
 ; не показывает вовсе -- иначе за пустыми дискетами не видно занятых.
-onedisk:CALL rddir
+onedisk:LDA  mode
+        CPI  'L'
+        JZ   onelab
+        CALL rddir
         JNZ  oderr
         CALL count
         LDA  nmatch
@@ -186,6 +200,17 @@ onedisk:CALL rddir
         SHLD totd
         CALL diskhdr
         JMP  list
+; Одна строка списка меток: номер и метка. Дискеты без метки пропускаем.
+onelab: CALL getlab
+        RNZ
+        LHLD dcur
+        CALL phex4
+        CALL prlab
+        LHLD totd
+        INX  H
+        SHLD totd
+        JMP  crlf
+
 oderr:  LXI  H,msgerr           ; «дискета NNNN -- ошибка НЖМД»
         CALL puts
         LHLD dcur
@@ -866,7 +891,7 @@ gl1:    LDAX D
 ; Напечатать метку дискеты dcur, если она есть. Хвостовые пробелы съедаем.
 putlab: CALL getlab
         RNZ
-        LXI  H,sbuf1+SIGNLEN+LABLEN-1
+prlab:  LXI  H,sbuf1+SIGNLEN+LABLEN-1
         MVI  B,LABLEN
 pl1:    MOV  A,M
         CPI  ' '
@@ -974,14 +999,27 @@ up2:    INX  H
         RET
 
 ; Одинокий вопросительный знак -- просьба о подсказке. Z -- да.
+; Просьба о подсказке: пустая командная строка или одинокий вопросительный знак.
+; Z -- да.
 ishelp: LDA  TAIL
-        CPI  2
-        RNZ
-        LDA  TAIL+1
+        ORA  A
+        RZ
+        MOV  B,A
+        LXI  H,TAIL+1
+hlp1:   MOV  A,M                ; одни пробелы -- всё равно что пусто
         CPI  ' '
+        JNZ  hlp2
+        INX  H
+        DCR  B
+        JNZ  hlp1
+        XRA  A
+        RET
+hlp2:   CPI  '?'
         RNZ
-        LDA  TAIL+2
-        CPI  '?'
+        DCR  B                  ; и ничего после него
+        RZ
+        MVI  A,1
+        ORA  A
         RET
 
 parse:  LDA  TAIL
@@ -1043,6 +1081,8 @@ pa3:    CALL adv                ; ключ
 pa3b:   CPI  'X'                ; обмен
         JZ   pa3c
         CPI  'Z'                ; очистка
+        JZ   pa3c
+        CPI  'L'                ; список меток
         JZ   pa3c
         CPI  'M'                ; метка
         JNZ  pa4
