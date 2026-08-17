@@ -29,6 +29,7 @@ used:   DW 0
 recs:   DW 0
 nall:   DB 0
 nmatch: DB 0
+inbuf:  DS 2+LABLEN             ; ответ на запрос метки: длина, счётчик, знаки
 curnam: DS 11
 numbuf: DS 6
 pwid:   DB 0

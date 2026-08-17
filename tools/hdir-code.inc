@@ -840,6 +840,9 @@ dolabel:LDA  nrng
         LHLD rng
         CALL chkdisk
         SHLD dcur
+        LDA  label              ; текста в строке нет -- спросим отдельно: ПКК
+        CPI  ' '                ; приводит командную строку к заглавным, а через
+        CZ   asklab             ; свой запрос метка вводится как набрана
         CALL fillE5             ; пустой сектор -- это и есть «метки нет»
         LDA  label              ; метка из одних пробелов считается пустой
         CPI  ' '
@@ -869,6 +872,44 @@ dlb3:   CALL seeklab
         CALL puts
         CALL crlf
         JMP  exit
+
+; Спросить текст метки. Ввод идёт через БДОС, а он, в отличие от ПКК, регистр
+; не трогает -- так метка и сохраняет строчные буквы. Пустой ответ снимает метку.
+asklab: LXI  H,msgask
+        CALL puts
+        MVI  A,LABLEN
+        STA  inbuf
+        PUSH B
+        LXI  D,inbuf
+        MVI  C,10
+        CALL BDOS
+        POP  B
+        CALL crlf
+        LXI  H,inbuf+2
+        LXI  D,label
+        LDA  inbuf+1            ; сколько набрали
+        MOV  B,A
+        MVI  A,LABLEN
+        SUB  B                  ; ... и сколько добить пробелами
+        MOV  C,A
+        MOV  A,B
+        ORA  A
+        JZ   as2
+as1:    MOV  A,M
+        STAX D
+        INX  H
+        INX  D
+        DCR  B
+        JNZ  as1
+as2:    MOV  A,C
+        ORA  A
+        RZ
+        MVI  A,' '
+as3:    STAX D
+        INX  D
+        DCR  C
+        JNZ  as3
+        RET
 
 ; Прочитать метку дискеты dcur в sbuf1. Z -- метка есть.
 getlab: CALL seeklab
