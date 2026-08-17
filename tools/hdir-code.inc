@@ -159,6 +159,8 @@ total:  LDA  col
         LXI  H,msgtot3
         CALL puts
         CALL crlf
+        JMP  exit               ; ... и мимо итога для /L
+
 totlab: LXI  H,msgtotl
         CALL puts
         LHLD totd
