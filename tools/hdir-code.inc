@@ -197,6 +197,10 @@ onedisk:LDA  mode
         ORA  A
         RZ
         LHLD totd
+        MOV  A,H                ; дискеты отделяем друг от друга пустой строкой
+        ORA  L
+        CNZ  crlf
+        LHLD totd
         INX  H
         SHLD totd
         CALL diskhdr
