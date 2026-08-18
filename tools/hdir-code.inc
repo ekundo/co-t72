@@ -982,15 +982,27 @@ forget: PUSH B
         POP  B
         RET
 
-; Спросить согласия. Z -- ответили «да».
+; Спросить согласия. Z -- ответили «да» (набрали Y и ВК).
+; Ввод через БДОС-10, а не одиночной клавишей (функция 6): перенаправление
+; ввода -- и SUBMIT, и <файл из меню CO -- подаёт символы только функции 10,
+; функцию 6 не кормит. Так подтверждение обмена и очистки проходит из .SUB
+; или пункта CO.MNU; вручную это Y и ВК.
 ask:    LXI  H,msgyn
         CALL puts
-        CALL getkey
-        ANI  5Fh                ; заглавную из любой
-        PUSH PSW
-        CALL putc
+        MVI  A,4
+        STA  inbuf
+        LXI  D,inbuf
+        MVI  C,10
+        CALL BDOS
         CALL crlf
-        POP  PSW
+        LDA  inbuf+1            ; сколько набрали
+        ORA  A
+        JZ   askno             ; пустой ответ -- не «да»
+        LDA  inbuf+2
+        ANI  5Fh               ; заглавную из любой
+        CPI  'Y'
+        RET
+askno:  XRA  A                 ; A=0, при CPI 'Y' сбросит Z -- «нет»
         CPI  'Y'
         RET
 
