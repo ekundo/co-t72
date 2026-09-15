@@ -17,6 +17,12 @@
 делом обработчик СС+7, и он после этого уводил машину в мусор. Ловилось это как
 «после копирования нескольких файлов что-то ломается»: строки CO.EXT разбираются
 как раз при копировании.
+
+Под стеком тесно: от B740 до буфера дисковода ОС на BC00 всего 1216 байт.
+Поэтому переносится не весь хвост, а только до границы --keep: то, что лежит
+в файле выше неё, грузится по своему адресу и работает на месте. Так живёт
+накладка с номером дискеты -- она встаёт на 4600, между концом образа и
+буферами CO, и хвост под стеком на неё не тратится.
 """
 
 import argparse
@@ -33,10 +39,14 @@ def main():
     p.add_argument('infile')
     p.add_argument('outfile')
     p.add_argument('--init', help='адрес подпрограммы, которую позвать после переноса')
+    p.add_argument('--keep', help='адрес, с которого хвост НЕ переносится, 16-рично')
     args = p.parse_args()
 
     d = bytearray(open(args.infile, 'rb').read())
-    n = len(d) - (FILE_AT - ORG)
+    end = int(args.keep, 16) if args.keep else ORG + len(d)
+    if not FILE_AT < end <= ORG + len(d):
+        sys.exit('граница переноса %04X вне хвоста' % end)
+    n = end - FILE_AT
     if n <= 0:
         sys.exit('в хвосте нечего переносить')
 
@@ -59,8 +69,9 @@ def main():
     d[STUB - ORG:STUB - ORG + len(stub)] = stub
     d[0x0101 - ORG:0x0103 - ORG] = bytes([STUB & 0xFF, STUB >> 8])
     open(args.outfile, 'wb').write(bytes(d))
-    print('перенос хвоста: %d байт с %04X на %04X, стаб %d байт по %04X'
-          % (n, FILE_AT, RUNTIME, len(stub), STUB))
+    print('перенос хвоста: %d байт с %04X на %04X, стаб %d байт по %04X%s'
+          % (n, FILE_AT, RUNTIME, len(stub), STUB,
+             '' if end == ORG + len(d) else ', с %04X остаётся на месте' % end))
 
 
 if __name__ == '__main__':

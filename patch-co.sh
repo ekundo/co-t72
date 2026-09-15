@@ -140,9 +140,12 @@ PY
 )
 if [ -n "$TDRVA" ]; then
     echo "ПЗУ $(basename "$ROM"): таблица дискет НЖМД на $TDRVA"
-    INIT=$(python3 "$HERE/tools/hdinfo.py" "$OUT/CO.COM" "$OUT/co7.com" \
-        --tdrva "$TDRVA" --disk "$DISK" --init "$INIT" | tee /dev/stderr |
-        sed -n 's/^init=//p')
+    python3 "$HERE/tools/hdinfo.py" "$OUT/CO.COM" "$OUT/co7.com" \
+        --tdrva "$TDRVA" --disk "$DISK" --init "$INIT" >"$OUT/hdinfo.log"
+    cat "$OUT/hdinfo.log"
+    INIT=$(sed -n 's/^init=//p' "$OUT/hdinfo.log")
+    KEEP=$(sed -n 's/^keep=//p' "$OUT/hdinfo.log")
+    rm -f "$OUT/hdinfo.log"
     mv "$OUT/co7.com" "$OUT/CO.COM"
 else
     echo "таблицу дискет НЖМД не нашёл -- номер и метка в рамке не встроены" >&2
@@ -150,7 +153,10 @@ fi
 
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
-python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com" --init "$INIT"
+# Накладка с номером дискеты грузится по своему адресу, поэтому переносится
+# только то, что лежит ниже её границы.
+python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com" --init "$INIT" \
+    ${KEEP:+--keep "$KEEP"}
 mv "$OUT/co6.com" "$OUT/CO.COM"
 
 # 4. На квазидиске должна лежать ТА ЖЕ сборка T-72, что и в .rom. Тёплый старт
