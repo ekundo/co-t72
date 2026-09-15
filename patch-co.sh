@@ -114,13 +114,6 @@ mv "$OUT/co3.com" "$OUT/CO.COM"
 python3 "$HERE/tools/kdprobe.py" "$OUT/CO.COM" "$OUT/co5.com"
 mv "$OUT/co5.com" "$OUT/CO.COM"
 
-# 3b0. Буферы CO из подэкранной области A000-DFFF переезжают на 4800, а длина
-#      чтения ограничивается: иначе большой файл настроек сносит CO стек, а
-#      кусок копирования хвостом заходит в окно квазидиска. Подробности и
-#      замеры -- в tools/bufmove.py.
-python3 "$HERE/tools/bufmove.py" "$OUT/CO.COM" "$OUT/co8.com"
-mv "$OUT/co8.com" "$OUT/CO.COM"
-
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
 INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/stderr |
@@ -131,6 +124,14 @@ mv "$OUT/co4.com" "$OUT/CO.COM"
 #      исходном диске. Подробности -- в tools/zgrcheck.asm.
 python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com"
 mv "$OUT/co9.com" "$OUT/CO.COM"
+
+# 3bd. Дисковый обработчик БСВВ -- из вектора E213 при старте, а не зашитый.
+#      Подробности -- в tools/diskvec.py.
+python3 "$HERE/tools/diskvec.py" "$OUT/CO.COM" "$OUT/coA.com" --init "$INIT" >"$OUT/diskvec.log"
+cat "$OUT/diskvec.log"
+INIT=$(sed -n 's/^init=//p' "$OUT/diskvec.log")
+rm -f "$OUT/diskvec.log"
+mv "$OUT/coA.com" "$OUT/CO.COM"
 
 # 3bb. Номер дискеты НЖМД и её метка -- в рамке панели. Таблицу дискет ОС
 #      находим на живой машине: у каждой сборки она в своём месте, а первые
@@ -146,7 +147,7 @@ PY
 if [ -n "$TDRVA" ]; then
     echo "ПЗУ $(basename "$ROM"): таблица дискет НЖМД на $TDRVA"
     python3 "$HERE/tools/hdinfo.py" "$OUT/CO.COM" "$OUT/co7.com" \
-        --tdrva "$TDRVA" --disk "$DISK" --init "$INIT" >"$OUT/hdinfo.log"
+        --tdrva "$TDRVA" --disk 0189 --init "$INIT" >"$OUT/hdinfo.log"
     cat "$OUT/hdinfo.log"
     INIT=$(sed -n 's/^init=//p' "$OUT/hdinfo.log")
     KEEP=$(sed -n 's/^keep=//p' "$OUT/hdinfo.log")
@@ -158,8 +159,7 @@ fi
 
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
-# Накладка с номером дискеты грузится по своему адресу, поэтому переносится
-# только то, что лежит ниже её границы.
+# Тело накладки остаётся на месте загрузки, под стек едет только то, что ниже.
 python3 "$HERE/tools/relocstub.py" "$OUT/CO.COM" "$OUT/co6.com" --init "$INIT" \
     ${KEEP:+--keep "$KEEP"}
 mv "$OUT/co6.com" "$OUT/CO.COM"
