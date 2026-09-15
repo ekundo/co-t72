@@ -31,6 +31,7 @@ ORG = 0x100
 FILE_AT = 0x4100        # с этого адреса в файле лежит переносимый хвост
 D_HDDD = 0xFFCA         # количество дискет НЖМД, 0 -- НЖМД нет
 D_DrvA = 0xFFCC         # адрес таблицы дискет: по нему и проверяем таблицу
+D_FRAM = 0xFFD0         # верх памяти: BCh -- драйверы флоповодов есть, C0h -- нет
 
 
 def main():
@@ -42,6 +43,7 @@ def main():
     p.add_argument('--old', required=True, help='штатный обработчик печати')
     p.add_argument('--bar', required=True, help='адрес:шестнадцатеричная строка подсказки')
     p.add_argument('--dflag', help='адрес признака «второй квазидиск есть» (dsel.py)')
+    p.add_argument('--aflag', help='адрес признака «дисководы или НЖМД есть» (dsel.py)')
     p.add_argument('--init', help='адрес подпрограммы, которую позвать следом')
     a = p.parse_args()
 
@@ -58,6 +60,7 @@ def main():
     bar = bytes.fromhex(bar_hex)
     nxt = int(a.init, 16) if a.init else 0
     dflag = int(a.dflag, 16) if a.dflag else 0
+    aflag = int(a.aflag, 16) if a.aflag else 0
 
     def w(op, v):
         return bytes([op, v & 0xFF, v >> 8])
@@ -71,6 +74,22 @@ def main():
     jz1 = len(head); head += b'\0\0\0'          # JNZ done
     head += bytes([0x7C, 0xBA])                 # MOV A,H / CMP D
     jz2 = len(head); head += b'\0\0\0'          # JNZ done
+    # A: и B: -- дисководы либо дискеты НЖМД. Драйверы флоповодов система
+    # отмечает верхней границей памяти: BCh -- есть (килобайт под буфер
+    # дисковода), C0h -- нет. Нет ни их, ни дискет НЖМД -- и оба диска надо
+    # прятать: панель на них открывается с ошибкой диска.
+    jz5 = jz6 = None
+    if aflag:
+        head += w(0x3A, D_FRAM)                 # LDA FFD0
+        head += bytes([0xFE, 0xBC])             # драйверы флоповодов есть?
+        jz5 = len(head); head += b'\0\0\0'      # JZ have
+        head += w(0x2A, D_HDDD)                 # LHLD FFCA
+        head += bytes([0x7C, 0xB5])             # MOV A,H / ORA L
+        jz6 = len(head); head += b'\0\0\0'      # JNZ have
+        head += bytes([0x3E, 0x4E])             # MVI A,'N'
+        head += w(0x32, aflag)
+        have = len(head)
+
     head += w(0x2A, D_HDDD)                     # LHLD FFCA -- сколько дискет НЖМД
     head += bytes([0x7C, 0xB5])                 # MOV A,H / ORA L
     jz3 = len(head); head += b'\0\0\0'          # JNZ done -- есть, ничего не трогаем
@@ -112,6 +131,9 @@ def main():
 
     for at in (jz1, jz2, jz3):
         head[at:at + 3] = w(0xC2, org + done)
+    if aflag:
+        head[jz5:jz5 + 3] = w(0xCA, org + have)
+        head[jz6:jz6 + 3] = w(0xC2, org + have)
     head[src:src + 3] = w(0x21, org + saved)
 
     body = bytes(head) + bar
@@ -119,7 +141,8 @@ def main():
     open(a.outfile, 'wb').write(bytes(d))
     print('проба оборудования: %d байт по %04X, СС+7 вернётся на %04X при FFCA=0%s'
           % (len(body), org, old,
-             ', признак диска D: по %04X' % dflag if dflag else ''))
+             ''.join((', признак D: по %04X' % dflag if dflag else '',
+                      ', признак A:/B: по %04X' % aflag if aflag else ''))))
     print('init=%04X' % org)
 
 

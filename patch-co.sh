@@ -118,8 +118,9 @@ mv "$OUT/co5.com" "$OUT/CO.COM"
 #      появляется, только если система о втором квазидиске знает, а на машине с
 #      одним он просто не показывается. Подробности -- в tools/dsel.py.
 python3 "$HERE/tools/dsel.py" "$OUT/CO.COM" "$OUT/coD.com" >"$OUT/dsel.log"
-grep -v '^dflag=' "$OUT/dsel.log"
+grep -v '^dflag=\|^aflag=' "$OUT/dsel.log"
 DFLAG=$(sed -n 's/^dflag=//p' "$OUT/dsel.log")
+AFLAG=$(sed -n 's/^aflag=//p' "$OUT/dsel.log")
 rm -f "$OUT/dsel.log"
 mv "$OUT/coD.com" "$OUT/CO.COM"
 
@@ -174,7 +175,8 @@ fi
 if [ -n "$TDRVA" ] && [ -n "$HDSLOT" ]; then
     python3 "$HERE/tools/hdprobe.py" "$OUT/CO.COM" "$OUT/co8.com" \
         --tdrva "$TDRVA" --slot "$HDSLOT" --old "$HDOLD" --bar "$HDBAR" \
-        ${DFLAG:+--dflag "$DFLAG"} --init "$INIT" >"$OUT/hdprobe.log"
+        ${DFLAG:+--dflag "$DFLAG"} ${AFLAG:+--aflag "$AFLAG"} \
+        --init "$INIT" >"$OUT/hdprobe.log"
     cat "$OUT/hdprobe.log"
     INIT=$(sed -n 's/^init=//p' "$OUT/hdprobe.log")
     rm -f "$OUT/hdprobe.log"
