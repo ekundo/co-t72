@@ -127,6 +127,11 @@ INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/s
        sed -n 's/^init=//p')
 mv "$OUT/co4.com" "$OUT/CO.COM"
 
+# 3ba. Список CO.ZGR: не заводить на C: пустышки для файлов, которых нет на
+#      исходном диске. Подробности -- в tools/zgrcheck.asm.
+python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com"
+mv "$OUT/co9.com" "$OUT/CO.COM"
+
 # 3bb. Номер дискеты НЖМД и её метка -- в рамке панели. Таблицу дискет ОС
 #      находим на живой машине: у каждой сборки она в своём месте, а первые
 #      секторы дискет 1 и 5 (2 и 188Ah) в ней всегда одни и те же.
