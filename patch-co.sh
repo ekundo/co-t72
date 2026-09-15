@@ -28,36 +28,15 @@ CO=$(cd "$(dirname "$CO")" && pwd)/$(basename "$CO")
 EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
 CODIR=$(dirname "$CO")   # CO.PRM/MNU/EXT/HLP/ZGR берём рядом с бинарником
 
-# 1. Адрес дискового обработчика БСВВ. CO перехватывает вектор дисковых операций
-#    (SHLD E213h), ставит свой фильтр по 0185 и пропускает вызовы дальше по
-#    жёстко зашитому адресу. У T-34 обработчик на E2BD; у T-72 он свой в каждой
-#    сборке (f -- E2ED, h и hx -- E2FF), поэтому читаем его прямо из таблицы
-#    переходов на живой машине: E212 -- это JMP, операнд лежит по E213.
-#    Читать надо ПОСЛЕ первого обращения к диску -- см. scripts/dump-bios.chai.
-#    Это единственный зашитый адрес БСВВ во всём CO.
-( cd "$HERE/run" && rm -f bios-vectors.bin && "$V06X" --rom "$ROM" \
-    --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
-    --edd "$EDD" --script "$HERE/scripts/dump-bios.chai" \
-    --max-frame 1200 --novideo --nosound >/dev/null 2>&1 ) || true
-DISK=$(python3 - "$HERE/run/bios-vectors.bin" <<'PY'
-import sys
-d = open(sys.argv[1], 'rb').read()
-assert d[0x12] == 0xC3, 'E212 не JMP -- сборка не похожа на T-72'
-print('%04X' % (d[0x13] | d[0x14] << 8))
-PY
-)
-echo "ПЗУ $(basename "$ROM"): дисковый обработчик БСВВ на $DISK"
-# Выпусков CO два: в раннем зашит адрес T-34 E2BD, в позднем -- E2C4.
-# Ссылки в обоих на одних и тех же местах (0189, 0206, 02F6, 205E).
-OLDADDR=$(python3 - "$CO" <<'PY'
-import sys
-d = open(sys.argv[1], 'rb').read()
-at = 0x0189 - 0x100
-print('%02X%02X' % (d[at + 1], d[at]))
-PY
-)
-python3 "$HERE/tools/patchaddr.py" "$CO" "$OUT/co1.com" \
-    --listing "$HERE/co-cov.asm" --map "$OLDADDR:$DISK"
+# 1. Адрес дискового обработчика БСВВ в образе не правится вовсе. CO
+#    перехватывает вектор дисковых операций (SHLD E213h), ставит свой фильтр по
+#    0185 и пропускает вызовы дальше по жёстко зашитому адресу -- у T-34 это
+#    E2BD или E2C4, смотря какой выпуск CO. Раньше сборка снимала адрес с живой
+#    машины и правила четыре ссылки; теперь это делает при старте сам CO --
+#    tools/diskvec.py читает вектор E213 и раскладывает прочитанное по тем же
+#    четырём операндам. Зашитое значение так и остаётся от T-34 и никого не
+#    трогает, зато CO.COM выходит один на все сборки T-72.
+cp "$CO" "$OUT/co1.com"
 
 # 2. Заставка хранится в КОИ-7 и переключает набор однобайтным кодом 0Eh.
 #    У T-72 нет ни такого кода, ни шрифта КОИ-7 (на 1B 5C у него CP866).
@@ -145,37 +124,24 @@ INIT=$(sed -n 's/^init=//p' "$OUT/diskvec.log")
 rm -f "$OUT/diskvec.log"
 mv "$OUT/coA.com" "$OUT/CO.COM"
 
-# 3bb. Номер дискеты НЖМД и её метка -- в рамке панели. Таблицу дискет ОС
-#      находим на живой машине: у каждой сборки она в своём месте, а первые
-#      секторы дискет 1 и 5 (2 и 188Ah) в ней всегда одни и те же.
-TDRVA=$(python3 - "$HERE/run/bios-vectors.bin" <<'PY'
-import sys
-d = open(sys.argv[1], 'rb').read()
-hits = [0xE200 + i - 2 for i in range(len(d) - 8)
-        if d[i:i+3] == b'\x02\x00\x00' and d[i+5:i+8] == b'\x8a\x18\x00']
-print('%04X' % hits[0] if len(hits) == 1 else '')
-PY
-)
-if [ -n "$TDRVA" ]; then
-    echo "ПЗУ $(basename "$ROM"): таблица дискет НЖМД на $TDRVA"
-    python3 "$HERE/tools/hdinfo.py" "$OUT/CO.COM" "$OUT/co7.com" \
-        --tdrva "$TDRVA" --disk 0189 --init "$INIT" >"$OUT/hdinfo.log"
-    cat "$OUT/hdinfo.log"
-    INIT=$(sed -n 's/^init=//p' "$OUT/hdinfo.log")
-    KEEP=$(sed -n 's/^keep=//p' "$OUT/hdinfo.log")
-    rm -f "$OUT/hdinfo.log"
-    mv "$OUT/co7.com" "$OUT/CO.COM"
-else
-    echo "таблицу дискет НЖМД не нашёл -- номер и метка в рамке не встроены" >&2
-fi
+# 3bb. Номер дискеты НЖМД и её метка -- в рамке панели. Адрес таблицы дискет
+#      система сообщает сама, в таблице состава оборудования по FFCC, поэтому в
+#      сборке он не зашит и CO.COM годится для любой сборки T-72.
+python3 "$HERE/tools/hdinfo.py" "$OUT/CO.COM" "$OUT/co7.com" \
+    --disk 0189 --init "$INIT" >"$OUT/hdinfo.log"
+cat "$OUT/hdinfo.log"
+INIT=$(sed -n 's/^init=//p' "$OUT/hdinfo.log")
+KEEP=$(sed -n 's/^keep=//p' "$OUT/hdinfo.log")
+rm -f "$OUT/hdinfo.log"
+mv "$OUT/co7.com" "$OUT/CO.COM"
 
 # 3bc. СС+7 переставлен на выбор дискеты НЖМД безусловно, а винчестера в машине
 #      может и не быть. Проба при старте возвращает печать, если ОС говорит, что
 #      дискет НЖМД ноль. Идёт ПОСЛЕ hdinfo: всё, что дописано после него,
 #      остаётся по адресу загрузки и хвост под стеком не занимает.
-if [ -n "$TDRVA" ] && [ -n "$HDSLOT" ]; then
+if [ -n "$HDSLOT" ]; then
     python3 "$HERE/tools/hdprobe.py" "$OUT/CO.COM" "$OUT/co8.com" \
-        --tdrva "$TDRVA" --slot "$HDSLOT" --old "$HDOLD" --bar "$HDBAR" \
+        --slot "$HDSLOT" --old "$HDOLD" --bar "$HDBAR" \
         ${DFLAG:+--dflag "$DFLAG"} ${AFLAG:+--aflag "$AFLAG"} ${PDTAB:+--pdtab "$PDTAB"} \
         --init "$INIT" >"$OUT/hdprobe.log"
     cat "$OUT/hdprobe.log"

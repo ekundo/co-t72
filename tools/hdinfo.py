@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Номер дискеты НЖМД и её метка в рамке панели CO.
 
-    ./hdinfo.py CO.COM out.com --tdrva EBDC --disk E2FF
+    ./hdinfo.py CO.COM out.com --disk E2FF
 
 Сам код -- в hdinfo.asm, здесь только сборка и врезка.
 
@@ -64,7 +64,6 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('infile')
     p.add_argument('outfile')
-    p.add_argument('--tdrva', required=True, help='таблица дискет НЖМД, 16-рично')
     p.add_argument('--disk', required=True, help='дисковый обработчик БСВВ, 16-рично')
     p.add_argument('--init', help='пусковая подпрограмма, которую звать следом')
     a = p.parse_args()
@@ -77,7 +76,6 @@ def main():
 
     asm = asm8080.Asm()
     asm.sym.update({'ORIGIN': BODY,
-                    'TDRVA': int(a.tdrva, 16),
                     'DISK': int(a.disk, 16)})
     src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hdinfo.asm')
     _, body = asm.assemble(src)
