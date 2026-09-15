@@ -369,16 +369,26 @@ def build(at, image, ports_labels, flag_addr=None):
     a.db(0x1E, 0x01)                     # не нашли -- встанем на первый пункт
     a.label('found')
 
-    a.db(0x79, 0x57)                     # MOV A,C / MOV D,A -- пунктов
+    a.db(0x79); a.ref(0x32, 'nitems')    # MOV A,C / запомнить, сколько пунктов
+    a.db(0x57)                           # MOV D,A
     a.db(0x14)                           # INR D -- и заголовок
     a.ref(0x21, 'strbuf')
     a.word(0xCD, MENU)
     a.db(0xFE, 0x1B); a.word(0xCA, REDRAW)        # АР2 -- ничего не меняем
+    # Номер пункта должен быть от 1 до числа пунктов. Ноль или больше нужного
+    # меню отдаёт, если выбор отменили краем: без проверки DCR A давал бы FFh,
+    # а выборка по таблице букв читала бы байт ПЕРЕД ней. Такая буква уходила в
+    # панель и сохранялась в CO.PRM -- после перезапуска панель открывалась на
+    # несуществующем диске.
+    a.db(0xB7); a.word(0xCA, REDRAW)              # ORA A / JZ -- ноль
     a.db(0x3D)                                    # номер пункта с нуля
+    a.ref(0x21, 'nitems'); a.db(0xBE)             # CMP M
+    a.word(0xD2, REDRAW)                          # JNC -- за краем
     a.ref(0x21, 'letters')
     a.db(0x5F, 0x16, 0x00, 0x19)                  # HL += A
     a.db(0x46)                                    # B -- выбранная буква
     a.word(0xC3, REREAD)
+    a.label('nitems'); a.db(0x00)
 
     # add: положить строку «"X"» в буфер по HL и букву из A в таблицу по DE
     a.label('add')
