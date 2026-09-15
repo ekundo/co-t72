@@ -114,16 +114,14 @@ mv "$OUT/co3.com" "$OUT/CO.COM"
 python3 "$HERE/tools/kdprobe.py" "$OUT/CO.COM" "$OUT/co5.com"
 mv "$OUT/co5.com" "$OUT/CO.COM"
 
-# 3ab. Диск D: -- второй квазидиск. В общую сборку пока не входит: панель его
-#      читает и копирование идёт, но обмен, попадающий на буфер CO в A000,
-#      пишет и читает экран вместо данных. Подробности -- в tools/dsel.py.
-if [ -n "$DSEL" ]; then
-    python3 "$HERE/tools/dsel.py" "$OUT/CO.COM" "$OUT/coD.com" >"$OUT/dsel.log"
-    grep -v '^dflag=' "$OUT/dsel.log"
-    DFLAG=$(sed -n 's/^dflag=//p' "$OUT/dsel.log")
-    rm -f "$OUT/dsel.log"
-    mv "$OUT/coD.com" "$OUT/CO.COM"
-fi
+# 3ab. Диск D: -- второй квазидиск. Входит в сборку всегда: пункт «D» в меню
+#      появляется, только если система о втором квазидиске знает, а на машине с
+#      одним он просто не показывается. Подробности -- в tools/dsel.py.
+python3 "$HERE/tools/dsel.py" "$OUT/CO.COM" "$OUT/coD.com" >"$OUT/dsel.log"
+grep -v '^dflag=' "$OUT/dsel.log"
+DFLAG=$(sed -n 's/^dflag=//p' "$OUT/dsel.log")
+rm -f "$OUT/dsel.log"
+mv "$OUT/coD.com" "$OUT/CO.COM"
 
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
@@ -137,14 +135,6 @@ rm -f "$OUT/hddsel.log"
 mv "$OUT/co4.com" "$OUT/CO.COM"
 
 # 3ba. Список CO.ZGR: не заводить на C: пустышки для файлов, которых нет на
-#      исходном диске. Подробности -- в tools/zgrcheck.asm. Со сборкой без
-#      диска D: код едет под стек, с ней -- остаётся по адресу загрузки: вдвоём
-#      они за BC00 не влезают, а разбирается список один раз при старте.
-if [ -z "$DSEL" ]; then
-    python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com"
-    mv "$OUT/co9.com" "$OUT/CO.COM"
-fi
-
 # 3bd. Дисковый обработчик БСВВ -- из вектора E213 при старте, а не зашитый.
 #      Подробности -- в tools/diskvec.py.
 python3 "$HERE/tools/diskvec.py" "$OUT/CO.COM" "$OUT/coA.com" --init "$INIT" >"$OUT/diskvec.log"
@@ -191,11 +181,12 @@ if [ -n "$TDRVA" ] && [ -n "$HDSLOT" ]; then
     mv "$OUT/co8.com" "$OUT/CO.COM"
 fi
 
-# 3be. Проверка CO.ZGR для сборки с диском D: -- по адресу загрузки, см. 3ba.
-if [ -n "$DSEL" ]; then
-    python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com" --inplace
-    mv "$OUT/co9.com" "$OUT/CO.COM"
-fi
+# 3be. Список CO.ZGR: не заводить на C: пустышки для файлов, которых нет на
+#      исходном диске. Подробности -- в tools/zgrcheck.asm. Код остаётся по
+#      адресу загрузки: под стеком места вместе с диском D: не хватает, а список
+#      разбирается один раз при старте, до первого чтения каталога в 4100.
+python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com" --inplace
+mv "$OUT/co9.com" "$OUT/CO.COM"
 
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
