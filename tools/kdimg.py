@@ -63,6 +63,26 @@ def parse_name(s):
     return nm[:8].ljust(8), ex[:3].ljust(3)
 
 
+def cmd_format(args):
+    """Пустой размеченный квазидиск -- так же, как это делает команда ОС «8 D: F».
+
+    Она пишет через обычный дисковый обмен сектор из 128 байт 0E5h на каждую
+    дорожку и сектор, а БСВВ попутно считает и кладёт контрольную сумму. Здесь
+    то же самое, только без эмулятора: перебрать все записи и заполнить.
+
+    Нулевой образ, которым подмывает обойтись, по суммам сходится (сумма ста
+    двадцати восьми нулей -- ноль), но каталог из нулей -- это не пустой
+    каталог: нулевой первый байт для CP/M значит «запись занята, пользователь
+    0», и на диске обнаруживается файл с пустым именем.
+    """
+    img = bytearray(0x40000)
+    for r in range(BLOCKS * RECS_PER_BLOCK):
+        write_rec(img, r, b'\xE5' * RECORD)
+    open(args.image, 'wb').write(bytes(img))
+    print('размечен %s: %d записей, %d блоков'
+          % (args.image, BLOCKS * RECS_PER_BLOCK, BLOCKS))
+
+
 def cmd_list(args):
     img = bytearray(open(args.image, 'rb').read())
     for i, e, _ in dir_entries(img):
@@ -138,6 +158,8 @@ def cmd_put(args):
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest='cmd', required=True)
+    q = sub.add_parser('format'); q.add_argument('image')
+    q.set_defaults(fn=cmd_format)
     q = sub.add_parser('list'); q.add_argument('image'); q.set_defaults(fn=cmd_list)
     q = sub.add_parser('put')
     q.add_argument('image'); q.add_argument('file'); q.add_argument('name', nargs='?')

@@ -130,8 +130,14 @@ mv "$OUT/co4.com" "$OUT/CO.COM"
 
 # 3ba. Список CO.ZGR: не заводить на C: пустышки для файлов, которых нет на
 #      исходном диске. Подробности -- в tools/zgrcheck.asm.
-python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com"
-mv "$OUT/co9.com" "$OUT/CO.COM"
+#      С диском D: вместе не помещается: под стеком 1216 байт, и опытная
+#      сборка с D: выходит за BC00 на 86 байт. Пока D: опытный, уступает он.
+if [ -z "$DSEL" ]; then
+    python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com"
+    mv "$OUT/co9.com" "$OUT/CO.COM"
+else
+    echo "проверка CO.ZGR пропущена: с диском D: хвост не помещается под стек"
+fi
 
 # 3bd. Дисковый обработчик БСВВ -- из вектора E213 при старте, а не зашитый.
 #      Подробности -- в tools/diskvec.py.
