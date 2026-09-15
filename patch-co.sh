@@ -114,6 +114,14 @@ mv "$OUT/co3.com" "$OUT/CO.COM"
 python3 "$HERE/tools/kdprobe.py" "$OUT/CO.COM" "$OUT/co5.com"
 mv "$OUT/co5.com" "$OUT/CO.COM"
 
+# 3ab. Диск D: -- второй квазидиск. В общую сборку пока не входит: панель его
+#      читает и копирование идёт, но обмен, попадающий на буфер CO в A000,
+#      пишет и читает экран вместо данных. Подробности -- в tools/dsel.py.
+if [ -n "$DSEL" ]; then
+    python3 "$HERE/tools/dsel.py" "$OUT/CO.COM" "$OUT/coD.com"
+    mv "$OUT/coD.com" "$OUT/CO.COM"
+fi
+
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
 INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/stderr |
