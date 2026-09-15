@@ -114,6 +114,13 @@ mv "$OUT/co3.com" "$OUT/CO.COM"
 python3 "$HERE/tools/kdprobe.py" "$OUT/CO.COM" "$OUT/co5.com"
 mv "$OUT/co5.com" "$OUT/CO.COM"
 
+# 3b0. Буферы CO из подэкранной области A000-DFFF переезжают на 4800, а длина
+#      чтения ограничивается: иначе большой файл настроек сносит CO стек, а
+#      кусок копирования хвостом заходит в окно квазидиска. Подробности и
+#      замеры -- в tools/bufmove.py.
+python3 "$HERE/tools/bufmove.py" "$OUT/CO.COM" "$OUT/co8.com"
+mv "$OUT/co8.com" "$OUT/CO.COM"
+
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
 INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/stderr |
