@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""СС+7 остаётся выбором дискеты НЖМД, только если винчестер в системе есть.
+"""Проба состава оборудования при старте: НЖМД и второй квазидиск.
 
     ./hdprobe.py CO.COM out.com --tdrva EBEA --slot 0658 --old 06E5 \
                  --bar 3A1C:313d34302f... [--init 0B8D5]
@@ -41,6 +41,7 @@ def main():
     p.add_argument('--slot', required=True, help='адрес записи в таблице клавиш')
     p.add_argument('--old', required=True, help='штатный обработчик печати')
     p.add_argument('--bar', required=True, help='адрес:шестнадцатеричная строка подсказки')
+    p.add_argument('--dflag', help='адрес признака «второй квазидиск есть» (dsel.py)')
     p.add_argument('--init', help='адрес подпрограммы, которую позвать следом')
     a = p.parse_args()
 
@@ -56,6 +57,7 @@ def main():
     bar_at = int(bar_at, 16)
     bar = bytes.fromhex(bar_hex)
     nxt = int(a.init, 16) if a.init else 0
+    dflag = int(a.dflag, 16) if a.dflag else 0
 
     def w(op, v):
         return bytes([op, v & 0xFF, v >> 8])
@@ -83,6 +85,28 @@ def main():
     head += bytes([0xC2, 0, 0])                 # JNZ loop
     head[-2:] = bytes([(org + loop) & 0xFF, (org + loop) >> 8])
     done = len(head)
+
+    # Второй квазидиск: спрашиваем у самой ОС. БСВВ «выбрать диск» (C01B) с
+    # номером 3 возвращает ноль, если диска нет; число дисков система
+    # подставляет себе при старте, поэтому ответ верен на любой сборке T-72, а
+    # не только на новой с таблицей по FFC9.
+    #
+    # Делать это надо именно при старте. Вызов «выбрать диск» кладёт номер в
+    # описатель дисковой операции БСВВ, то есть меняет выбранный диск за спиной
+    # БДОС; из работающей программы это уводит следующее чтение каталога не на
+    # тот диск. Выбор всё равно возвращаем -- по младшей тетраде ячейки 0004.
+    if dflag:
+        head += bytes([0x0E, 0x03]) + w(0xCD, 0xC01B)   # MVI C,3 / CALL SELDSK
+        head += bytes([0x7C, 0xB5])                     # MOV A,H / ORA L
+        head += bytes([0x3E, 0x4E])                     # MVI A,'N'
+        jz4 = len(head); head += b'\0\0\0'             # JZ set
+        head += bytes([0x3E, 0x59])                     # MVI A,'Y'
+        setp = len(head)
+        head += w(0x32, dflag)
+        head += w(0x3A, 0x0004) + bytes([0xE6, 0x0F, 0x4F])
+        head += w(0xCD, 0xC01B)                         # вернуть выбор
+        head[jz4:jz4 + 3] = w(0xCA, org + setp)
+
     head += (w(0xC3, nxt) if nxt else bytes([0xC9]))
     saved = len(head)                           # тут ляжет прежняя подсказка
 
@@ -93,8 +117,9 @@ def main():
     body = bytes(head) + bar
     d += body
     open(a.outfile, 'wb').write(bytes(d))
-    print('проба НЖМД: %d байт по %04X, СС+7 вернётся на %04X, если FFCA=0'
-          % (len(body), org, old))
+    print('проба оборудования: %d байт по %04X, СС+7 вернётся на %04X при FFCA=0%s'
+          % (len(body), org, old,
+             ', признак диска D: по %04X' % dflag if dflag else ''))
     print('init=%04X' % org)
 
 

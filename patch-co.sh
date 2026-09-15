@@ -118,7 +118,10 @@ mv "$OUT/co5.com" "$OUT/CO.COM"
 #      читает и копирование идёт, но обмен, попадающий на буфер CO в A000,
 #      пишет и читает экран вместо данных. Подробности -- в tools/dsel.py.
 if [ -n "$DSEL" ]; then
-    python3 "$HERE/tools/dsel.py" "$OUT/CO.COM" "$OUT/coD.com"
+    python3 "$HERE/tools/dsel.py" "$OUT/CO.COM" "$OUT/coD.com" >"$OUT/dsel.log"
+    grep -v '^dflag=' "$OUT/dsel.log"
+    DFLAG=$(sed -n 's/^dflag=//p' "$OUT/dsel.log")
+    rm -f "$OUT/dsel.log"
     mv "$OUT/coD.com" "$OUT/CO.COM"
 fi
 
@@ -181,7 +184,7 @@ fi
 if [ -n "$TDRVA" ] && [ -n "$HDSLOT" ]; then
     python3 "$HERE/tools/hdprobe.py" "$OUT/CO.COM" "$OUT/co8.com" \
         --tdrva "$TDRVA" --slot "$HDSLOT" --old "$HDOLD" --bar "$HDBAR" \
-        --init "$INIT" >"$OUT/hdprobe.log"
+        ${DFLAG:+--dflag "$DFLAG"} --init "$INIT" >"$OUT/hdprobe.log"
     cat "$OUT/hdprobe.log"
     INIT=$(sed -n 's/^init=//p' "$OUT/hdprobe.log")
     rm -f "$OUT/hdprobe.log"
