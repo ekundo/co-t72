@@ -44,6 +44,7 @@ def main():
     p.add_argument('--bar', required=True, help='адрес:шестнадцатеричная строка подсказки')
     p.add_argument('--dflag', help='адрес признака «второй квазидиск есть» (dsel.py)')
     p.add_argument('--aflag', help='адрес признака «дисководы или НЖМД есть» (dsel.py)')
+    p.add_argument('--pdtab', help='адрес таблицы «слот CO.PRM -> буква» (dsel.py)')
     p.add_argument('--init', help='адрес подпрограммы, которую позвать следом')
     a = p.parse_args()
 
@@ -61,6 +62,7 @@ def main():
     nxt = int(a.init, 16) if a.init else 0
     dflag = int(a.dflag, 16) if a.dflag else 0
     aflag = int(a.aflag, 16) if a.aflag else 0
+    pdtab = int(a.pdtab, 16) if a.pdtab else 0
 
     def w(op, v):
         return bytes([op, v & 0xFF, v >> 8])
@@ -126,6 +128,31 @@ def main():
         head += w(0xCD, 0xC01B)                         # вернуть выбор
         head[jz4:jz4 + 3] = w(0xCA, org + setp)
 
+    # Таблица «слот CO.PRM -> буква». CO.PRM переносят с машины на машину, и
+    # записанный в нём диск на этой может отсутствовать вовсе -- панель тогда
+    # открывается с ошибкой диска. Недоступный заменяем первым доступным, а это
+    # всегда C:: квазидиск есть в любой машине, с него система и грузится.
+    if pdtab:
+        head += bytes([0x3E, 0x43])             # MVI A,'C'
+        head += w(0x32, pdtab + 0)              # слот 0 -- D:, пока C:
+        head += w(0x32, pdtab + 1)              # слот 1 -- A:
+        head += w(0x32, pdtab + 2)              # слот 2 -- B:
+        if aflag:
+            head += w(0x3A, aflag)
+            head += bytes([0xFE, 0x59])         # дисководы или НЖМД есть?
+            jz7 = len(head); head += b'\0\0\0'  # JNZ noab
+            head += bytes([0x3E, 0x41]) + w(0x32, pdtab + 1)   # A:
+            head += bytes([0x3E, 0x42]) + w(0x32, pdtab + 2)   # B:
+            noab = len(head)
+            head[jz7:jz7 + 3] = w(0xC2, org + noab)
+        if dflag:
+            head += w(0x3A, dflag)
+            head += bytes([0xFE, 0x59])         # второй квазидиск есть?
+            jz8 = len(head); head += b'\0\0\0'  # JNZ nod
+            head += bytes([0x3E, 0x44]) + w(0x32, pdtab + 0)   # D:
+            nod = len(head)
+            head[jz8:jz8 + 3] = w(0xC2, org + nod)
+
     head += (w(0xC3, nxt) if nxt else bytes([0xC9]))
     saved = len(head)                           # тут ляжет прежняя подсказка
 
@@ -142,7 +169,8 @@ def main():
     print('проба оборудования: %d байт по %04X, СС+7 вернётся на %04X при FFCA=0%s'
           % (len(body), org, old,
              ''.join((', признак D: по %04X' % dflag if dflag else '',
-                      ', признак A:/B: по %04X' % aflag if aflag else ''))))
+                      ', признак A:/B: по %04X' % aflag if aflag else '',
+                      ', таблица дисков по %04X' % pdtab if pdtab else ''))))
     print('init=%04X' % org)
 
 
