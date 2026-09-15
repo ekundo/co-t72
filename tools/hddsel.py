@@ -361,6 +361,11 @@ def main():
     print('выбор дискеты НЖМД: %d байт, работает по %04X, СС+7 переставлен с %04X'
           % (len(code), at, OLD))
     print('init=%04X' % init_at)
+    # Для hdprobe.py: что именно переставлено, чтобы он мог вернуть как было,
+    # если система скажет, что винчестера нет.
+    print('slot=%04X' % (slot + ORG))
+    print('old=%04X' % OLD)
+    print('bar=%04X:%s' % (beg + ORG, d[beg:end].hex()))
 
 
 if __name__ == '__main__':

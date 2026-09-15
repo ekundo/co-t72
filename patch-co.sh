@@ -124,19 +124,22 @@ fi
 
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
-INIT=$(python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" | tee /dev/stderr |
-       sed -n 's/^init=//p')
+python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" >"$OUT/hddsel.log"
+grep -v '^slot=\|^old=\|^bar=' "$OUT/hddsel.log"
+INIT=$(sed -n 's/^init=//p' "$OUT/hddsel.log")
+HDSLOT=$(sed -n 's/^slot=//p' "$OUT/hddsel.log")
+HDOLD=$(sed -n 's/^old=//p' "$OUT/hddsel.log")
+HDBAR=$(sed -n 's/^bar=//p' "$OUT/hddsel.log")
+rm -f "$OUT/hddsel.log"
 mv "$OUT/co4.com" "$OUT/CO.COM"
 
 # 3ba. Список CO.ZGR: не заводить на C: пустышки для файлов, которых нет на
-#      исходном диске. Подробности -- в tools/zgrcheck.asm.
-#      С диском D: вместе не помещается: под стеком 1216 байт, и опытная
-#      сборка с D: выходит за BC00 на 86 байт. Пока D: опытный, уступает он.
+#      исходном диске. Подробности -- в tools/zgrcheck.asm. Со сборкой без
+#      диска D: код едет под стек, с ней -- остаётся по адресу загрузки: вдвоём
+#      они за BC00 не влезают, а разбирается список один раз при старте.
 if [ -z "$DSEL" ]; then
     python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com"
     mv "$OUT/co9.com" "$OUT/CO.COM"
-else
-    echo "проверка CO.ZGR пропущена: с диском D: хвост не помещается под стек"
 fi
 
 # 3bd. Дисковый обработчик БСВВ -- из вектора E213 при старте, а не зашитый.
@@ -169,6 +172,26 @@ if [ -n "$TDRVA" ]; then
     mv "$OUT/co7.com" "$OUT/CO.COM"
 else
     echo "таблицу дискет НЖМД не нашёл -- номер и метка в рамке не встроены" >&2
+fi
+
+# 3bc. СС+7 переставлен на выбор дискеты НЖМД безусловно, а винчестера в машине
+#      может и не быть. Проба при старте возвращает печать, если ОС говорит, что
+#      дискет НЖМД ноль. Идёт ПОСЛЕ hdinfo: всё, что дописано после него,
+#      остаётся по адресу загрузки и хвост под стеком не занимает.
+if [ -n "$TDRVA" ] && [ -n "$HDSLOT" ]; then
+    python3 "$HERE/tools/hdprobe.py" "$OUT/CO.COM" "$OUT/co8.com" \
+        --tdrva "$TDRVA" --slot "$HDSLOT" --old "$HDOLD" --bar "$HDBAR" \
+        --init "$INIT" >"$OUT/hdprobe.log"
+    cat "$OUT/hdprobe.log"
+    INIT=$(sed -n 's/^init=//p' "$OUT/hdprobe.log")
+    rm -f "$OUT/hdprobe.log"
+    mv "$OUT/co8.com" "$OUT/CO.COM"
+fi
+
+# 3be. Проверка CO.ZGR для сборки с диском D: -- по адресу загрузки, см. 3ba.
+if [ -n "$DSEL" ]; then
+    python3 "$HERE/tools/zgrcheck.py" "$OUT/CO.COM" "$OUT/co9.com" --inplace
+    mv "$OUT/co9.com" "$OUT/CO.COM"
 fi
 
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер

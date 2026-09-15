@@ -339,12 +339,15 @@ def build(at, image, ports_labels, flag_addr=None):
     a.ref(0x11, 'letters')               # DE -> таблица букв
     a.db(0x0E, 0x02)                     # C -- сколько пунктов набрали
 
+    # Пункты идут по алфавиту: A, B, C, D. Дисководов в машине может быть один,
+    # второго квазидиска может не быть -- эти два пункта условные, а счётчик
+    # пунктов начат с двух, потому что A: и C: есть всегда.
     a.db(0x3E, 0x41); a.ref(0xCD, 'add')          # "A"
-    a.db(0x3E, 0x43); a.ref(0xCD, 'add')          # "C"
     a.word(0x3A, DISK_B); a.db(0xFE, 0x59)        # диск B доступен?
     a.ref(0xC2, 'noB')
     a.db(0x3E, 0x42); a.ref(0xCD, 'add'); a.db(0x0C)
     a.label('noB')
+    a.db(0x3E, 0x43); a.ref(0xCD, 'add')          # "C"
     if flag_addr is None:
         a.ref(0x3A, 'dflag')
     else:
