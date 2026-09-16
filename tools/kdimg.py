@@ -155,6 +155,56 @@ def cmd_put(args):
            ','.join(str(b) for b in chosen)))
 
 
+def find_entries(img, name, ext):
+    out = []
+    for i, e, off in dir_entries(img):
+        if e[0] == 0xE5:
+            continue
+        nm = bytes(c & 0x7F for c in e[1:9]).decode('ascii', 'replace')
+        ex = bytes(c & 0x7F for c in e[9:12]).decode('ascii', 'replace')
+        if nm == name and ex == ext:
+            out.append((((e[14] & 0x3F) << 5) | (e[12] & 0x1F), bytes(e), off))
+    out.sort()
+    return out
+
+
+def refresh_dir_sector(img, off):
+    for r in range(DIR_BLOCKS * RECS_PER_BLOCK):
+        if rec_off(r) <= off < rec_off(r) + RECORD:
+            write_rec(img, r, img[rec_off(r):rec_off(r) + RECORD])
+            return
+
+
+def cmd_get(args):
+    img = bytearray(open(args.image, 'rb').read())
+    name, ext = parse_name(args.name)
+    ents = find_entries(img, name, ext)
+    if not ents:
+        sys.exit('нет файла %s.%s в образе' % (name.strip(), ext.strip()))
+    data = bytearray()
+    for _, e, _off in ents:
+        recs = [b * RECS_PER_BLOCK + s for b in e[16:32] if b
+                for s in range(RECS_PER_BLOCK)]
+        for r in recs[:e[15]]:
+            data += read_rec(img, r)
+    open(args.file, 'wb').write(bytes(data))
+    print('прочитан %s.%s: %d байт' % (name.strip(), ext.strip(), len(data)))
+
+
+def cmd_del(args):
+    img = bytearray(open(args.image, 'rb').read())
+    name, ext = parse_name(args.name)
+    ents = find_entries(img, name, ext)
+    if not ents:
+        sys.exit('нет файла %s.%s в образе' % (name.strip(), ext.strip()))
+    for _, _e, off in ents:
+        img[off] = 0xE5
+        refresh_dir_sector(img, off)
+    open(args.image, 'wb').write(bytes(img))
+    print('удалён %s.%s: записей каталога %d'
+          % (name.strip(), ext.strip(), len(ents)))
+
+
 def main():
     p = argparse.ArgumentParser()
     sub = p.add_subparsers(dest='cmd', required=True)
@@ -164,6 +214,12 @@ def main():
     q = sub.add_parser('put')
     q.add_argument('image'); q.add_argument('file'); q.add_argument('name', nargs='?')
     q.set_defaults(fn=cmd_put)
+    q = sub.add_parser('get')
+    q.add_argument('image'); q.add_argument('name'); q.add_argument('file')
+    q.set_defaults(fn=cmd_get)
+    q = sub.add_parser('del')
+    q.add_argument('image'); q.add_argument('name')
+    q.set_defaults(fn=cmd_del)
     args = p.parse_args()
     args.fn(args)
 

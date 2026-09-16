@@ -168,19 +168,39 @@ mv "$OUT/co6.com" "$OUT/CO.COM"
 #    она, а CO, пропатченный под нашу, начнёт сыпать ошибками диска. Подлинный
 #    os-t72.edd несёт сборку 1995 года, поэтому переписываем OS.COM из памяти
 #    командой МикроДОС "1 3C C:OS.COM" и забираем получившийся квазидиск.
+#    На базовый образ перед этим кладём заглушку C:INITIALC.SUB: без неё система
+#    ищет автозапуск на A:, а это винчестер (сборки h, hx, k), которого в v06x
+#    нет -- ССР сыплет "Ошибка диска. Игнорировать (Y/N)?" и съедает набранную
+#    команду. Потом заглушку убираем: на её место ляжет настоящая, с "CO".
 if [ -x "$V06X" ] && [ -f "$ROM" ]; then
     echo "переписываю OS.COM на квазидиске под текущую сборку T-72..."
+    cp "$EDD" "$OUT/os-base.edd"
+    printf '9 A:0\r\n' > "$OUT/initialc-boot.sub"
+    python3 "$HERE/tools/kdimg.py" put "$OUT/os-base.edd" \
+        "$OUT/initialc-boot.sub" INITIALC.SUB >/dev/null
     ( cd "$HERE/run" && V06X_EDD_SAVE="$OUT/co-t72.edd" "$V06X" --rom "$ROM" \
-        --edd "$EDD" --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
+        --edd "$OUT/os-base.edd" --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$HERE/scripts/write-os.chai" \
         --max-frame 1800 --novideo --nosound >/dev/null 2>&1 ) || true
-fi
-# Без OS.COM образ бесполезен: тёплый старт поднимет мусор, а не систему.
-# В подлинном образе ровно один файл, значит и после записи должен быть один:
-# лишняя запись означает, что ССР потерял символы и команда приехала обкусанной.
-if [ "$(python3 "$HERE/tools/kdimg.py" list "$OUT/co-t72.edd" 2>/dev/null | grep -c .)" != 1 ] ||
-   ! python3 "$HERE/tools/kdimg.py" list "$OUT/co-t72.edd" 2>/dev/null | grep -q 'OS *\.COM'; then
-    echo "не удалось переписать OS.COM -- беру подлинный образ как есть" >&2
+    # Мало проверить, что OS.COM на месте: он есть и в подлинном образе. Пока
+    # шаг выше молча не срабатывал, в сборку уезжала система 1995 года, а с ней
+    # CO под T-72 не работает. Поэтому сверяем дату сборки с образом системы.
+    python3 "$HERE/tools/kdimg.py" get "$OUT/co-t72.edd" OS.COM "$OUT/os-check.com"
+    python3 - "$OUT/os-check.com" "$ROM" <<'PYCHK'
+import pathlib, re, sys
+def ver(path):
+    m = re.search(rb'\d\d\.\d\d\.\d\d', pathlib.Path(path).read_bytes())
+    return m.group().decode() if m else '?'
+a, b = ver(sys.argv[1]), ver(sys.argv[2])
+if a != b:
+    sys.exit('OS.COM на квазидиске -- сборка %s, а образ системы %s: '
+             'команда записи ОС не отработала' % (a, b))
+print('OS.COM на квазидиске: сборка %s' % a)
+PYCHK
+    python3 "$HERE/tools/kdimg.py" del "$OUT/co-t72.edd" INITIALC.SUB >/dev/null
+    rm -f "$OUT/os-base.edd" "$OUT/os-check.com" "$OUT/initialc-boot.sub"
+else
+    echo "v06x не собран -- беру подлинный образ как есть" >&2
     cp "$EDD" "$OUT/co-t72.edd"
 fi
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
