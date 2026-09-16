@@ -112,6 +112,7 @@ mv "$OUT/coD.com" "$OUT/CO.COM"
 python3 "$HERE/tools/hddsel.py" "$OUT/CO.COM" "$OUT/co4.com" >"$OUT/hddsel.log"
 grep -v '^slot=\|^old=\|^bar=' "$OUT/hddsel.log"
 INIT=$(sed -n 's/^init=//p' "$OUT/hddsel.log")
+HDDINIT=$INIT   # пусковая подпрограмма hddsel: hdprobe её выключит без НЖМД
 HDSLOT=$(sed -n 's/^slot=//p' "$OUT/hddsel.log")
 HDOLD=$(sed -n 's/^old=//p' "$OUT/hddsel.log")
 HDBAR=$(sed -n 's/^bar=//p' "$OUT/hddsel.log")
@@ -146,7 +147,7 @@ if [ -n "$HDSLOT" ]; then
     python3 "$HERE/tools/hdprobe.py" "$OUT/CO.COM" "$OUT/co8.com" \
         --slot "$HDSLOT" --old "$HDOLD" --bar "$HDBAR" \
         ${DFLAG:+--dflag "$DFLAG"} ${AFLAG:+--aflag "$AFLAG"} ${PDTAB:+--pdtab "$PDTAB"} \
-        --init "$INIT" >"$OUT/hdprobe.log"
+        --hddinit "$HDDINIT" --init "$INIT" >"$OUT/hdprobe.log"
     cat "$OUT/hdprobe.log"
     INIT=$(sed -n 's/^init=//p' "$OUT/hdprobe.log")
     rm -f "$OUT/hdprobe.log"

@@ -46,6 +46,7 @@ def main():
     p.add_argument('--dflag', help='адрес признака «второй квазидиск есть» (dsel.py)')
     p.add_argument('--aflag', help='адрес признака «дисководы или НЖМД есть» (dsel.py)')
     p.add_argument('--pdtab', help='адрес таблицы «слот CO.PRM -> буква» (dsel.py)')
+    p.add_argument('--hddinit', help='адрес пусковой подпрограммы hddsel.py')
     p.add_argument('--init', help='адрес подпрограммы, которую позвать следом')
     a = p.parse_args()
 
@@ -61,6 +62,7 @@ def main():
     bar = bytes.fromhex(bar_hex)
     nxt = int(a.init, 16) if a.init else 0
     dflag = int(a.dflag, 16) if a.dflag else 0
+    hddinit = int(a.hddinit, 16) if a.hddinit else 0
     aflag = int(a.aflag, 16) if a.aflag else 0
     pdtab = int(a.pdtab, 16) if a.pdtab else 0
 
@@ -108,6 +110,15 @@ def main():
     head += w(0x2A, D_HDDD)                     # LHLD FFCA -- сколько дискет НЖМД
     head += bytes([0x7C, 0xB5])                 # MOV A,H / ORA L
     jz3 = len(head); head += b'\0\0\0'          # JNZ done -- есть, ничего не трогаем
+    # Заодно выключаем пусковое восстановление выбранной дискеты: оно открывает
+    # C:CO.HDD и, если файл есть, раздаёт номера дискет командой ОС "9". Без
+    # НЖМД раздавать нечего, а обращение к диску при пустом дисководе кончается
+    # ошибкой диска ещё до панелей -- на сборке k, где дисковода нет вовсе, она
+    # вылезает всегда. Пусковая подпрограмма hddsel.py начинается с перехода,
+    # ставим на её место RET.
+    if hddinit:
+        head += bytes([0x3E, 0xC9])             # MVI A,0C9h -- RET
+        head += w(0x32, hddinit)
     head += w(0x21, old)                        # LXI H,06E5 -- штатная печать
     head += w(0x22, slot)                       # SHLD запись в таблице клавиш
     src = len(head)                             # сюда встанет LXI H,строка
