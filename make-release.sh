@@ -1,7 +1,7 @@
 #!/bin/sh
 # Собрать выпуск: по архиву и образу квазидиска на каждую сборку T-72.
 #
-#   ./make-release.sh work/co/co.com work/os-t72/os-t72.edd release/ [каталог образов системы]
+#   ./make-release.sh work/co/co.com work/os-t72/os-t72.edd release/ [каталог с МикроДОС]
 #
 # Четвёртым аргументом -- каталог с os-t72{f,h,hx,k}.rom; по умолчанию берутся
 # из t72/ -- это сборка ImproverX от 15.09.2026, см. t72/README.md. Образ из
@@ -10,7 +10,7 @@
 # под ту, с которой собрана, и подсунуть чужую нельзя -- см. README.
 #
 # На каждую сборку три файла: co-t72X.zip -- каталог co-t72X с CO и его
-# комплектом, HDIR на двух языках, образом системы и README.txt; co-t72X.fdd --
+# комплектом, HDIR на двух языках, самой МикроДОС и README.txt; co-t72X.fdd --
 # загрузочная дискета с системой и тем же комплектом; co-t72X.edd -- готовый
 # квазидиск с системой, CO, HDIR и автозапуском.
 set -e
@@ -40,7 +40,7 @@ echo "HDIR: $(stat -f%z "$WORK/HDIR.COM") байт, HDIREN: $(stat -f%z "$WORK/H
 
 for v in f h hx k; do
     rom=$ROMS/os-t72$v.rom
-    [ -f "$rom" ] || { echo "нет образа системы: $rom" >&2; exit 1; }
+    [ -f "$rom" ] || { echo "нет МикроДОС: $rom" >&2; exit 1; }
     name=co-t72$v
     echo
     echo "=== $name ==="
