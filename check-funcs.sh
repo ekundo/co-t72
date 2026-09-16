@@ -66,24 +66,42 @@ if [ -n "${KDFIX:-}" ]; then
     KDCALL='if (frameno == 400) { kd_patch() }'
 fi
 
+# DRIVE=D -- гонять те же сценарии с панелью на втором квазидиске. Подключается
+# второй --edd (копия сборочного, чтобы было с чем работать), и перед клавишами
+# сценария панель переводится на D: обычным путём: 7-Диск, стрелка вправо, ВК.
+# Сценарий в этом случае набирается позже: CO поднимается только к 1300-му кадру,
+# а переключение надо успеть сделать после него.
+DRIVE=${DRIVE:-C}
+SWITCH=; PROBEAT=1500; MAXFRAME=3200; EDD2=
+if [ "$DRIVE" = "D" ]; then
+    SWITCH='if (frameno == 1400) { keytyper.types([60, "7", 200, "Right", 60, "Return", 200]) }'
+    PROBEAT=2100
+    MAXFRAME=4200
+fi
+
 probe() {   # имя, обработчик, клавиши для keytyper
     name=$1; want=$2; keys=$3
     cat > "$TMP/$name.chai" <<EOF
 $KDPATCH
 def framefunc(frameno) {
     $KDCALL
-    if (frameno == 1500) { keytyper.types([60, $keys]) }
+    $SWITCH
+    if (frameno == $PROBEAT) { keytyper.types([60, $keys]) }
     keytyper.onframe()
 }
 add_callback("frame", framefunc)
 EOF
     cp "$OUT/co-t72.edd" "$TMP/$name.edd"
+    if [ "$DRIVE" = "D" ]; then
+        cp "$OUT/co-t72.edd" "$TMP/$name-d.edd"
+        EDD2="--edd $TMP/$name-d.edd"
+    fi
     { ( cd "$RUN" && V06X_COV_LO=0x0100 V06X_COV_HI=0xBFFF V06X_COV_FILE="$TMP/$name.cov" \
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
-        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" --edd "$TMP/$name.edd" \
+        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" --edd "$TMP/$name.edd" $EDD2 \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
-        --max-frame 3200 --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
+        --max-frame $MAXFRAME --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
     res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" <<'PY'
 import re, sys
 cov = open(sys.argv[1], 'rb').read()
