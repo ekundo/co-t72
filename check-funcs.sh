@@ -57,10 +57,21 @@ mkdir -p "$RUN"
 
 ok=0; bad=0
 
+# KDFIX=1 -- наложить в ОЗУ диагностическую правку драйвера квазидиска (см.
+# scripts/kd2-patch.inc) до старта CO: с ней обмен с D: идёт из любого буфера.
+# Нужна, чтобы отделить «буфер в окне A000-DFFF» от прочих причин.
+KDPATCH=; KDCALL=
+if [ -n "${KDFIX:-}" ]; then
+    KDPATCH=$(cat "$HERE/scripts/kd2-patch.inc")
+    KDCALL='if (frameno == 400) { kd_patch() }'
+fi
+
 probe() {   # имя, обработчик, клавиши для keytyper
     name=$1; want=$2; keys=$3
     cat > "$TMP/$name.chai" <<EOF
+$KDPATCH
 def framefunc(frameno) {
+    $KDCALL
     if (frameno == 1500) { keytyper.types([60, $keys]) }
     keytyper.onframe()
 }
