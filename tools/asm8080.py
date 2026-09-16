@@ -6,7 +6,8 @@
 Синтаксис как в исходниках T-72 (TASM): метка в начале строки, точка с запятой
 -- комментарий, числа `1234h` / `0FFh` / десятичные / `'A'`. Директивы:
 
-    ORG, EQU, DB (.db), DW (.dw), DS (.ds), INCLUDE, END
+    ORG, EQU, DB (.db), DBN (.dbn -- байты дополнением), DW (.dw), DS (.ds),
+    INCLUDE, END
 
 Строки в DB пишутся в UTF-8, а в файл идут в КОИ-8: это кодировка экрана
 Вектора, других русских букв система не понимает.
@@ -188,6 +189,10 @@ class Asm:
             return b''
         if head_u == 'DB':
             return bytes(self.data_bytes(args, self.pc))
+        if head_u == 'DBN':
+            # то же, что DB, но каждый байт дополнением: так CO хранит заставку --
+            # цикл вывода инвертирует байты перед печатью
+            return bytes((~b) & 0xFF for b in self.data_bytes(args, self.pc))
         if head_u == 'DW':
             out = bytearray()
             for a in args:

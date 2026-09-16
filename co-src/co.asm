@@ -6510,70 +6510,17 @@ L_3FB2:  INX  H                   ; 3FB2 23
 L_3FB3:  INX  D                   ; 3FB3 13
 L_3FB4:  DCR  C                   ; 3FB4 0d
 L_3FB5:  JMP  L_3FAF              ; 3FB5 c3 af 3f
-         .db 0F2h,0F1h,88h,0BAh,0ADh,0ACh,0DFh,0CDh,0D1h,0CFh,0F2h,0F5h,97h,0BEh,0ADh,0A7h ; 3FB8 |................|
-         .db 0B4h,0B0h,0A8h,0DFh,0CEh,0C6h,0C6h,0CCh,0F2h,0F5h,84h,0B6h,0A4h,0BEh,0ABh,0ACh ; 3FC8 |................|
-L_3FD8:  ORA  H                   ; 3FD8 b4
-         ORA  M                   ; 3FD9 b6
-         ORA  L                   ; 3FDA b5
-         RST  3                   ; 3FDB df
-         ADC  H                   ; 3FDC 8c
-         POP  D                   ; 3FDD d1
-         SUB  D                   ; 3FDE 92
-         POP  D                   ; 3FDF d1
-         JP   9DF5h               ; 3FE0 f2 f5 9d
-         XRA  D                   ; 3FE3 aa
-         CMP  E                   ; 3FE4 bb
-         XRA  D                   ; 3FE5 aa
-         RST  3                   ; 3FE6 df
-         CMP  L                   ; 3FE7 bd
-         ORA  E                   ; 3FE8 b3
-         CMP  M                   ; 3FE9 be
-         CMP  B                   ; 3FEA b8
-         ORA  B                   ; 3FEB b0
-         CMP  E                   ; 3FEC bb
-         CMP  M                   ; 3FED be
-         XRA  L                   ; 3FEE ad
-         CMP  D                   ; 3FEF ba
-         ORA  C                   ; 3FF0 b1
-         RST  3                   ; 3FF1 df
-         ANA  L                   ; 3FF2 a5
-         CMP  M                   ; 3FF3 be
-         RST  3                   ; 3FF4 df
-         ORA  B                   ; 3FF5 b0
-         XRA  E                   ; 3FF6 ab
-         ANA  L                   ; 3FF7 a5
-         ANA  M                   ; 3FF8 a6
-         XRA  B                   ; 3FF9 a8
-         ANA  M                   ; 3FFA a6
-         RST  3                   ; 3FFB df
-         ORA  M                   ; 3FFC b6
-         RST  3                   ; 3FFD df
-         XRA  A                   ; 3FFE af
-         ORA  B                   ; 3FFF b0
-         XRA  C                   ; 4000 a9
-         CMP  D                   ; 4001 ba
-         ORA  E                   ; 4002 b3
-         CMP  M                   ; 4003 be
-         ORA  C                   ; 4004 b1
-         ORA  M                   ; 4005 b6
-         XRA  M                   ; 4006 ae
-         JP   97F5h               ; 4007 f2 f5 97
-         CMP  M                   ; 400A be
-         XRA  L                   ; 400B ad
-         ANA  A                   ; 400C a7
-         ORA  H                   ; 400D b4
-         ORA  B                   ; 400E b0
-         XRA  B                   ; 400F a8
-         RST  3                   ; 4010 df
-         CMP  M                   ; 4011 be
-         RNC                      ; 4012 d0
-         XRA  M                   ; 4013 ae
-         RST  3                   ; 4014 df
-         ADI  0CAh                ; 4015 c6 ca
-         ADI  0CCh                ; 4017 c6 cc
-         JP   0F2F5h              ; 4019 f2 f5 f2
-         PUSH PSW                 ; 401C f5
-         CPO  L_21A4              ; 401D e4 a4 21
+; Заставка. Цикл по 3EAE печатает отсюда ровно 67h байт и каждый инвертирует,
+; поэтому блок лежит дополнением -- .dbn кладёт байты именно так. Заполнять
+; надо целиком, до хвоста: длина зашита в MVI B,67h по 3EB1. Хвост
+; 0D 0A 0D 0A 1B 5B трогать нельзя -- ESC [ переключает знакогенератор на
+; КОИ-8, без него дальше полезет не тот шрифт.
+L_3FB8:  .dbn 13,10,'Версия 2.2.1 от 15.09.2026'
+         .dbn 13,10,'Харьков 1993'
+         .dbn 13,10,'Шишатский С.М.'
+         .dbn '                                       '
+         .dbn 13,10,13,10,27,'['
+         .db  21h                     ; 401F -- уже за блоком заставки
          MOV  A,C                 ; 4020 79
          RST  3                   ; 4021 df
          SHLD 0C05Dh              ; 4022 22 5d c0
