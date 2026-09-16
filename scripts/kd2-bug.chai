@@ -1,0 +1,52 @@
+/* Воспроизведение бага с диском D: в МикроДОС T-72 -- и проверка заплатки.
+ *
+ * Драйвер квазидиска перед пересылкой гасит первый квазидиск целиком
+ * ("XRA A / OUT 010h"), вместе с окном ОЗУ A000-DFFF. Для C: окно возвращает
+ * следующий же OUT с конфигом, а для D: конфиг уходит в порт 011h, и окно всю
+ * пересылку выключено. Обмен, чей буфер лежит в A000-DFFF, работает с
+ * видеопамятью вместо ОЗУ: просмотрщик CO (буфер ровно A000) показывает мусор,
+ * а сектор рисуется полосой у левого края экрана.
+ *
+ * Запуск (нужны два квазидиска, второй -- копия первого):
+ *   v06x --rom t72/os-t72k.rom --edd C.edd --edd D.edd \
+ *        --script tools/vector06sdl/scripts/robotnik.chai \
+ *        --script scripts/kd2-bug.chai [--scriptargs fix] \
+ *        --max-frame 3150 --novideo --nosound --save-frame 3100
+ *
+ * Без "fix" на кадре 3100 виден мусор, с "fix" -- нормальный текст CO.ZGR.
+ */
+global patched = false
+
+/* Убираем "XRA A / OUT 010h" в обеих ветках обмена (чтение и запись): на
+ * выходе драйвер и так оставляет в порту 010h значение 023h, то есть окно ОЗУ
+ * на входе уже стоит. Ищем по образцу, адреса у сборок f/h/hx/k разные. */
+def kd_patch() {
+    var n = 0
+    for (var a = 0xE200; a < 0xE600; ++a) {
+        if (read_memory(a, 0) == 0xAF && read_memory(a+1, 0) == 0xD3 &&
+            read_memory(a+2, 0) == 0x10 && read_memory(a+3, 0) == 0x3A &&
+            read_memory(a+6, 0) == 0xC6 && read_memory(a+7, 0) == 0x0E &&
+            read_memory(a+8, 0) == 0x32) {
+            write_memory(a, 0x00, 0)
+            write_memory(a+1, 0x00, 0)
+            write_memory(a+2, 0x00, 0)
+            ++n
+        }
+    }
+    var v = VectorInt(); v.push_back(n); write_file("kd2-fix.bin", v)
+}
+
+def framefunc(frameno) {
+    if (frameno == 1000 && !patched) {
+        patched = true
+        if (scriptargs.size() > 0 && scriptargs[0] == "fix") { kd_patch() }
+    }
+    /* 7-Диск, вправо, ВК -- панель на D:; курсор на CO.ZGR; 3 -- просмотр */
+    if (frameno == 1600) {
+        keytyper.types([60, "7", 250, "Right", 60, "Return", 400,
+            "Down", 40, "Down", 40, "Down", 40, "Down", 40, "Down", 80,
+            "3", 400])
+    }
+    keytyper.onframe()
+}
+add_callback("frame", framefunc)
