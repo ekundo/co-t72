@@ -1,15 +1,16 @@
 #!/bin/sh
 # Собрать выпуск: по архиву и образу квазидиска на каждую сборку T-72.
 #
-#   ./make-release.sh work/co/co.com work/os-t72/os-t72.edd release/ [каталог ПЗУ]
+#   ./make-release.sh work/co/co.com work/os-t72/os-t72.edd release/ [каталог образов системы]
 #
 # Четвёртым аргументом -- каталог с os-t72{f,h,hx,k}.rom; по умолчанию берутся
-# из roms/ -- это сборка ImproverX от 15.09.2026, см. roms/README.md. ПЗУ из
-# клона T-72 не годятся: там исходники 2022 года, без таблицы оборудования. ПЗУ кладутся в архивы как есть: сборка CO подстраивается
+# из t72/ -- это сборка ImproverX от 15.09.2026, см. t72/README.md. Образ из
+# клона T-72 не годится: там исходники 2022 года, без таблицы оборудования.
+# В архивы образ кладётся как есть: сборка CO подстраивается
 # под ту, с которой собрана, и подсунуть чужую нельзя -- см. README.
 #
 # В архиве co-t72X.zip -- каталог co-t72X с CO и его комплектом, HDIR на двух
-# языках, ПЗУ, дискетой и README.txt. Рядом co-t72X.edd -- готовый квазидиск с
+# языках, образом системы, дискетой и README.txt. Рядом co-t72X.edd -- готовый квазидиск с
 # системой, CO, HDIR и автозапуском.
 set -e
 
@@ -17,7 +18,7 @@ CO=${1:?оригинальный co.com}
 EDD=${2:?подлинный os-t72.edd как основа}
 OUT=${3:-release}
 HERE=$(cd "$(dirname "$0")" && pwd)
-ROMS=${4:-$HERE/roms}
+ROMS=${4:-$HERE/t72}
 ROMS=$(cd "$ROMS" && pwd)
 CO=$(cd "$(dirname "$CO")" && pwd)/$(basename "$CO")
 EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
@@ -38,7 +39,7 @@ echo "HDIR: $(stat -f%z "$WORK/HDIR.COM") байт, HDIREN: $(stat -f%z "$WORK/H
 
 for v in f h hx k; do
     rom=$ROMS/os-t72$v.rom
-    [ -f "$rom" ] || { echo "нет ПЗУ: $rom" >&2; exit 1; }
+    [ -f "$rom" ] || { echo "нет образа системы: $rom" >&2; exit 1; }
     name=co-t72$v
     echo
     echo "=== $name ==="
