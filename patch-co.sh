@@ -26,6 +26,9 @@ mkdir -p "${3:-out}"
 OUT=$(cd "${3:-out}" && pwd)
 CO=$(cd "$(dirname "$CO")" && pwd)/$(basename "$CO")
 EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
+# подлинная системная дискета рядом с базовым квазидиском: с неё берём описатель
+# диска для системных дорожек
+SYSFDD=$(dirname "$EDD")/os-t72.fdd
 CODIR=$(dirname "$CO")   # CO.PRM/MNU/EXT/HLP/ZGR берём рядом с бинарником
 
 # 1. Адрес дискового обработчика БСВВ в образе не правится вовсе. CO
@@ -192,20 +195,20 @@ done
 printf 'CO\r\n' > "$OUT/initialc.sub"
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIALC.SUB
 
-# 5. Дискета A: с тем же комплектом -- НЕ загрузочная. Если взять за основу
-#    os-t34.fdd, в её системных дорожках останется T-34, и после аппаратного
-#    сброса ПЗУ поднимет с дискеты именно её, а наш CO под T-34 уже не работает.
+# 5. Дискета A: с тем же комплектом и загрузочная: в её системные дорожки кладём
+#    ту же сборку T-72, что и в .rom. Брать за основу os-t34.fdd нельзя -- в её
+#    дорожках останется T-34, под которой наш CO уже не работает.
 python3 "$HERE/tools/cpmimg.py" --geom fdd create "$OUT/co-t72.fdd"
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
     [ -f "$CODIR/co.$f" ] && \
         python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$CODIR/co.$f"
 done
+python3 "$HERE/tools/sysfdd.py" "$OUT/co-t72.fdd" "$ROM" --base "$SYSFDD"
 
 echo
 echo "готово: $OUT/co-t72.edd (квазидиск C:) и $OUT/co-t72.fdd (дискета A:)"
 echo "запуск: v06x --rom $ROM --fdd $OUT/co-t72.fdd --edd $OUT/co-t72.edd"
 echo
 echo "Сброс: F12 (БЛК+СБР) поднимает систему заново из C:OS.COM -- работает."
-echo "F11 (БЛК+ВВОД) подключает ПЗУ и ищет систему на дискете, а дискета"
-echo "намеренно не загрузочная -- после F11 эмулятор надо запустить заново."
+echo "F11 (БЛК+ВВОД) ищет систему на дискете -- на её дорожках та же сборка."

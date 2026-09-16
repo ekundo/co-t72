@@ -4,7 +4,8 @@
 #   ./make-release.sh work/co/co.com work/os-t72/os-t72.edd release/ [каталог ПЗУ]
 #
 # Четвёртым аргументом -- каталог с os-t72{f,h,hx,k}.rom; по умолчанию берутся
-# из клона T-72 рядом. ПЗУ кладутся в архивы как есть: сборка CO подстраивается
+# из roms/ -- это сборка ImproverX от 15.09.2026, см. roms/README.md. ПЗУ из
+# клона T-72 не годятся: там исходники 2022 года, без таблицы оборудования. ПЗУ кладутся в архивы как есть: сборка CO подстраивается
 # под ту, с которой собрана, и подсунуть чужую нельзя -- см. README.
 #
 # В архиве co-t72X.zip -- каталог co-t72X с CO и его комплектом, HDIR на двух
@@ -16,7 +17,7 @@ CO=${1:?оригинальный co.com}
 EDD=${2:?подлинный os-t72.edd как основа}
 OUT=${3:-release}
 HERE=$(cd "$(dirname "$0")" && pwd)
-ROMS=${4:-$HERE/tools/MDOS_T-72/BIN}
+ROMS=${4:-$HERE/roms}
 ROMS=$(cd "$ROMS" && pwd)
 CO=$(cd "$(dirname "$CO")" && pwd)/$(basename "$CO")
 EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
