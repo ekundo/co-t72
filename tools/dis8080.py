@@ -11,6 +11,19 @@ import argparse
 import sys
 from collections import defaultdict
 
+UNDOC = {0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38,   # NOP
+         0xCB,                                        # JMP
+         0xD9,                                        # RET
+         0xDD, 0xED, 0xFD}                            # CALL
+
+
+def hx(v, digits=2):
+    """Шестнадцатеричное в синтаксисе ассемблера: с ведущим нулём, если первая
+    цифра -- буква. Иначе asm8080.py не отличит число от имени."""
+    t = '%0*X' % (digits, v)
+    return ('0' + t if t[0] not in '0123456789' else t) + 'h'
+
+
 R = ['B', 'C', 'D', 'E', 'H', 'L', 'M', 'A']
 RP = ['B', 'D', 'H', 'SP']
 RP_PP = ['B', 'D', 'H', 'PSW']
@@ -25,9 +38,12 @@ OPS = {}
 
 def _init():
     for op in range(256):
-        OPS[op] = ('DB   %02Xh' % op, 1, 'n')
-    for i, m in enumerate(['NOP'] * 8):
-        OPS[i * 8] = (m, 1, 'n')  # 00,08,...,38 (08+ undocumented)
+        OPS[op] = ('DB   ' + hx(op), 1, 'n')
+    OPS[0x00] = ('NOP', 1, 'n')
+    for op in (0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38):
+        # недокументированные NOP: печатаем байтом, иначе при обратной сборке
+        # все они превратятся в 00 и образ перестанет совпадать с исходным
+        OPS[op] = ('DB   ' + hx(op), 1, 'n')
     for i in range(4):
         OPS[0x01 + i * 16] = ('LXI  %s,#' % RP[i], 3, 'n')
         OPS[0x09 + i * 16] = ('DAD  %s' % RP[i], 1, 'n')
@@ -164,26 +180,44 @@ class Dis:
                 pc += ln
 
     def render(self, out):
+        # Адреса внутри команды: на них метку не поставить, поэтому ссылки туда
+        # печатаем числом. Так бывает у самомодифицирующегося кода -- он пишет
+        # прямо в операнд соседней команды.
+        inner = set()
+        for c in self.code:
+            for k in range(1, OPS[self.byte(c)][1]):
+                inner.add(c + k)
+
         # label names
         def lab(a):
-            if self.inside(a):
+            if self.inside(a) and a not in inner:
                 return 'L_%04X' % a
-            return '%04Xh' % a
+            return hx(a, 4)
 
         w = out.write
+        w('%-8s ORG  %s\n\n' % ('', hx(self.org, 4)))   # чтобы листинг собирался обратно
         a = self.org
         while a < self.end:
             if a in self.code:
                 op = self.byte(a)
                 text, ln, kind = OPS[op]
                 raw = self.d[a - self.org:a - self.org + ln]
+                if op in UNDOC:
+                    # недокументированные двойники JMP/CALL/RET: разбираем их как
+                    # команды, чтобы не терять поток, а печатаем байтами -- иначе
+                    # обратная сборка подставит документированный код
+                    name = ('L_%04X:' % a) if a in self.labels or a in self.entries else ''
+                    w('%-8s .db %-48s ; %04X %s\n' %
+                      (name, ','.join(hx(c) for c in raw), a, OPS[op][0]))
+                    a += ln
+                    continue
                 if '@' in text:
                     t = self.word(a + 1)
                     text = text.replace('@', lab(t))
                 elif '#' in text:
-                    text = text.replace('#', '%02Xh' % self.byte(a + 1) if ln == 2 else '')
+                    text = text.replace('#', hx(self.byte(a + 1)) if ln == 2 else '')
                     if ln == 3:
-                        text = OPS[op][0].replace('#', '%04Xh' % self.word(a + 1))
+                        text = OPS[op][0].replace('#', hx(self.word(a + 1), 4))
                 name = ('L_%04X:' % a) if a in self.labels or a in self.entries else ''
                 w('%-8s %-24s ; %04X %s\n' % (name, text, a, raw.hex(' ')))
                 a += ln
@@ -196,13 +230,23 @@ class Dis:
                 self.dump_data(w, start, run)
 
     def dump_data(self, w, start, run):
-        for i in range(0, len(run), 16):
-            chunk = run[i:i + 16]
+        # Блок режем не только по шестнадцати байтам, но и по каждому адресу, на
+        # который кто-то ссылается: иначе ссылка окажется внутрь блока, метки
+        # там не будет, и собрать листинг обратно не выйдет.
+        i = 0
+        while i < len(run):
             addr = start + i
+            n = min(16, len(run) - i)
+            for k in range(1, n):
+                if start + i + k in self.labels:
+                    n = k
+                    break
+            chunk = run[i:i + n]
             name = ('L_%04X:' % addr) if addr in self.labels else ''
             txt = ''.join(chr(c) if 32 <= c < 127 else '.' for c in chunk)
             w('%-8s .db %-48s ; %04X |%s|\n' %
-              (name, ','.join('%02Xh' % c for c in chunk), addr, txt))
+              (name, ','.join(hx(c) for c in chunk), addr, txt))
+            i += n
 
 
 def main():

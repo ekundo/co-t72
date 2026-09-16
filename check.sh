@@ -13,7 +13,12 @@ set -e
 CO=${1:?путь к патченному CO.COM}
 HERE=$(cd "$(dirname "$0")" && pwd)
 V06X=$HERE/tools/vector06sdl/build/v06x
-ROM=$HERE/tools/MDOS_T-72/BIN/os-t72f.rom
+ROM=${2:-$HERE/t72/os-t72f.rom}
+# путь к МикроДОС делаем абсолютным: прогон идёт со сменой каталога, и
+# относительный превращается в "файла нет" -- эмулятор тогда молча поднимает
+# свой загрузчик, CO не стартует, а прогон рапортует об успехе
+[ -f "$ROM" ] || { echo "нет МикроДОС: $ROM" >&2; exit 1; }
+ROM=$(cd "$(dirname "$ROM")" && pwd)/$(basename "$ROM")
 RUN=$HERE/run
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
