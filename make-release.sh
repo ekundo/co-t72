@@ -9,9 +9,10 @@
 # В архивы образ кладётся как есть: сборка CO подстраивается
 # под ту, с которой собрана, и подсунуть чужую нельзя -- см. README.
 #
-# В архиве co-t72X.zip -- каталог co-t72X с CO и его комплектом, HDIR на двух
-# языках, образом системы, дискетой и README.txt. Рядом co-t72X.edd -- готовый квазидиск с
-# системой, CO, HDIR и автозапуском.
+# На каждую сборку три файла: co-t72X.zip -- каталог co-t72X с CO и его
+# комплектом, HDIR на двух языках, образом системы и README.txt; co-t72X.fdd --
+# загрузочная дискета с системой и тем же комплектом; co-t72X.edd -- готовый
+# квазидиск с системой, CO, HDIR и автозапуском.
 set -e
 
 CO=${1:?оригинальный co.com}
@@ -55,7 +56,6 @@ for v in f h hx k; do
     done
     cp "$WORK/HDIR.COM" "$WORK/HDIREN.COM" "$kit/"
     cp "$rom" "$kit/"
-    cp "$WORK/$v/co-t72.fdd" "$kit/$name.fdd"
     sh "$HERE/tools/relnote.sh" "$v" "$VERSION" > "$kit/README.txt"
 
     # HDIR кладём и на квазидиск: patch-co.sh собирает образ только с CO.
@@ -63,8 +63,9 @@ for v in f h hx k; do
     python3 "$HERE/tools/kdimg.py" put "$WORK/$v/co-t72.edd" "$WORK/HDIREN.COM" >/dev/null
 
     ( cd "$WORK/kit-$v" && rm -f "$OUT/$name.zip" && zip -qr "$OUT/$name.zip" "$name" )
+    cp "$WORK/$v/co-t72.fdd" "$OUT/$name.fdd"
     cp "$WORK/$v/co-t72.edd" "$OUT/$name.edd"
-    echo "  $name.zip: $(stat -f%z "$OUT/$name.zip") байт, $name.edd: $(stat -f%z "$OUT/$name.edd") байт"
+    echo "  $name: zip $(stat -f%z "$OUT/$name.zip") байт, fdd $(stat -f%z "$OUT/$name.fdd") байт, edd $(stat -f%z "$OUT/$name.edd") байт"
 done
 
 rm -rf "$WORK"
