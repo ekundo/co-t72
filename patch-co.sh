@@ -196,14 +196,18 @@ printf 'CO\r\n' > "$OUT/initialc.sub"
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIALC.SUB
 
 # 5. Дискета A: с тем же комплектом и загрузочная: в её системные дорожки кладём
-#    ту же сборку T-72, что и в .rom. Брать за основу os-t34.fdd нельзя -- в её
-#    дорожках останется T-34, под которой наш CO уже не работает.
+#    ту же сборку T-72, что и в образе системы. Брать за основу os-t34.fdd нельзя
+#    -- в её дорожках останется T-34, под которой наш CO уже не работает.
+#    INITIAL.SUB с командой "A:CO" -- автозапуск: система выполняет его сразу
+#    после загрузки с дискеты, как INITIALC.SUB на квазидиске.
 python3 "$HERE/tools/cpmimg.py" --geom fdd create "$OUT/co-t72.fdd"
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
     [ -f "$CODIR/co.$f" ] && \
         python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$CODIR/co.$f"
 done
+printf 'A:CO\r\n' > "$OUT/initial.sub"
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/initial.sub" INITIAL.SUB
 python3 "$HERE/tools/sysfdd.py" "$OUT/co-t72.fdd" "$ROM" --base "$SYSFDD"
 
 echo
