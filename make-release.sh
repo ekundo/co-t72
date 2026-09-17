@@ -29,8 +29,9 @@ OUT=$(cd "$OUT" && pwd)
 WORK=$OUT/.build
 rm -rf "$WORK"; mkdir -p "$WORK"
 
-VERSION=$(sed -n "s/^TEXT = \['Версия \([0-9.]*\).*/\1/p" "$HERE/tools/banner.py")
-[ -n "$VERSION" ] || { echo "не понял версию из tools/banner.py" >&2; exit 1; }
+# Версия -- из заставки в исходнике: она и попадает в собранный CO.COM.
+VERSION=$(sed -n "s/.*'Версия \([0-9.]*\) от.*/\1/p" "$HERE/co-src/co.asm")
+[ -n "$VERSION" ] || { echo "не понял версию из co-src/co.asm" >&2; exit 1; }
 echo "выпуск CO $VERSION"
 
 # HDIR -- один на все сборки: адрес ОС в нём единственный и одинаковый.
