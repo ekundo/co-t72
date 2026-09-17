@@ -102,6 +102,11 @@ def framefunc(frameno) {
 add_callback("frame", framefunc)
 EOF
     cp "$OUT/co-t72.edd" "$TMP/$name.edd"
+    # Панели в образе -- какими их оставил хозяин рабочего диска, а сценариям
+    # нужна известная пара: меню дисков закольцовано, и "вправо" от разных букв
+    # ведёт в разные места. Поэтому в копию кладём эталонный CO.PRM сборки.
+    [ -f "$OUT/CO.PRM" ] && python3 "$HERE/tools/kdimg.py" put \
+        "$TMP/$name.edd" "$OUT/CO.PRM" CO.PRM >/dev/null
     if [ "$DRIVE" = "D" ]; then
         cp "$OUT/co-t72.edd" "$TMP/$name-d.edd"
         EDD2="--edd $TMP/$name-d.edd"

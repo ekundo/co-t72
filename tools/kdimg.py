@@ -103,6 +103,15 @@ def cmd_put(args):
         data += b'\x1a' * (RECORD - len(data) % RECORD)
     nrec = len(data) // RECORD
 
+    # Файл с таким именем сначала убираем. Без этого в каталоге заводится вторая
+    # запись с тем же именем, система читает первую -- то есть старый файл, а
+    # блоки обоих считаются занятыми.
+    replaced = 0
+    for _, _e, off in find_entries(img, name, ext):
+        img[off] = 0xE5
+        refresh_dir_sector(img, off)
+        replaced += 1
+
     used = set(range(DIR_BLOCKS))
     free_slots = []
     for i, e, off in dir_entries(img):
@@ -150,6 +159,9 @@ def cmd_put(args):
             break
 
     open(args.image, 'wb').write(bytes(img))
+    if replaced:
+        print('заменён %s.%s (записей каталога было %d)'
+              % (name.strip(), ext.strip(), replaced))
     print('wrote %s.%s: %d bytes, %d records, blocks %s' %
           (name.strip(), ext.strip(), len(data), nrec,
            ','.join(str(b) for b in chosen)))

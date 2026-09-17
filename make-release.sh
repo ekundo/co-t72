@@ -62,10 +62,6 @@ for v in f h hx k; do
     cp "$rom" "$kit/"
     sh "$HERE/tools/relnote.sh" "$v" "$VERSION" > "$kit/README.txt"
 
-    # HDIR кладём и на квазидиск: patch-co.sh собирает образ только с CO.
-    python3 "$HERE/tools/kdimg.py" put "$WORK/$v/co-t72.edd" "$WORK/HDIR.COM"   >/dev/null
-    python3 "$HERE/tools/kdimg.py" put "$WORK/$v/co-t72.edd" "$WORK/HDIREN.COM" >/dev/null
-
     ( cd "$WORK/kit-$v" && rm -f "$OUT/$name.zip" && zip -qr "$OUT/$name.zip" "$name" )
     cp "$WORK/$v/co-t72.fdd" "$OUT/$name.fdd"
     cp "$WORK/$v/co-t72.edd" "$OUT/$name.edd"

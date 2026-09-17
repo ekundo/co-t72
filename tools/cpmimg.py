@@ -129,6 +129,15 @@ def cmd_put(args, g):
         data += b'\x1a' * (RECORD - len(data) % RECORD)
     nrecords = len(data) // RECORD
 
+    # Файл с таким именем сначала убираем: иначе в каталоге появится вторая
+    # запись, а система прочитает первую -- то есть прежний файл.
+    want = '%-8s%-3s' % (name, ext)
+    replaced = 0
+    for i, e in live_entries(img, g):
+        if bytes(c & 0x7F for c in e[1:12]).decode('ascii', 'replace') == want:
+            img[g.data_start + i * 32] = 0xE5
+            replaced += 1
+
     used = set(range(g.dir_blocks))
     for _, e in live_entries(img, g):
         used |= set(entry_blocks(e, g))
@@ -172,6 +181,9 @@ def cmd_put(args, g):
             break
 
     open(args.image, 'wb').write(img)
+    if replaced:
+        print('заменён %s.%s (записей каталога было %d)'
+              % (name.strip(), ext.strip(), replaced))
     print('wrote %s.%s: %d bytes, %d records, blocks %s' %
           (name.strip(), ext.strip(), len(data), nrecords,
            ','.join(str(b) for b in chosen)))

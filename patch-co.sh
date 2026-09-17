@@ -29,7 +29,14 @@ EDD=$(cd "$(dirname "$EDD")" && pwd)/$(basename "$EDD")
 # подлинная системная дискета рядом с базовым квазидиском: с неё берём описатель
 # диска для системных дорожек
 SYSFDD=$(dirname "$EDD")/os-t72.fdd
-CODIR=$(dirname "$CO")   # CO.PRM/MNU/EXT/HLP/ZGR берём рядом с бинарником
+CODIR=$(dirname "$CO")   # рядом с бинарником лежат и шаблоны образов
+# Образы собираются не с нуля, а из рабочих дисков: в них, кроме CO, лежат
+# MEDIT, SID и прочее, на что ссылаются CO.EXT и клавиши. Заменяем в шаблоне
+# ровно четыре файла -- OS.COM под нужную сборку T-72, CO.COM, CO.HLP и HDIR,
+# -- а дискете ещё и системные дорожки. Нет шаблона -- образ, как раньше,
+# собирается с нуля из комплекта co.*.
+TMPL_EDD=${TMPL_EDD:-$CODIR/co.edd}
+TMPL_FDD=${TMPL_FDD:-$CODIR/co.fdd}
 
 # 1. Адрес дискового обработчика БСВВ в образе не правится вовсе. CO
 #    перехватывает вектор дисковых операций (SHLD E213h), ставит свой фильтр по
@@ -200,6 +207,11 @@ INIT=$(sed -n 's/^init=//p' "$OUT/win.log")
 rm -f "$OUT/win.log"
 mv "$OUT/coX.com" "$OUT/CO.COM"
 
+# 3bh2. HDIR -- каталог винчестера, отдельная программа. Кладём в оба образа,
+#       поэтому собираем здесь, а не только в make-release.sh.
+python3 "$HERE/tools/asm8080.py" "$HERE/tools/hdir.asm" -o "$OUT/HDIR.COM" >/dev/null
+echo "HDIR.COM: $(wc -c < "$OUT/HDIR.COM") байт"
+
 # 3bi. Справка. Источник -- docs/co-help.md, оригинальный co.hlp больше не
 #      берётся: в маркдауне тот же текст, и правки под T-72 (клавиша "F2" в
 #      просмотрщике, символы в CO.EXT) живут там, а не заплаткой поверх файла.
@@ -221,9 +233,11 @@ mv "$OUT/co6.com" "$OUT/CO.COM"
 #    ищет автозапуск на A:, а это винчестер (сборки h, hx, k), которого в v06x
 #    нет -- ССР сыплет "Ошибка диска. Игнорировать (Y/N)?" и съедает набранную
 #    команду. Потом заглушку убираем: на её место ляжет настоящая, с "CO".
+BASE_EDD=$EDD
+[ -f "$TMPL_EDD" ] && BASE_EDD=$TMPL_EDD
 if [ -x "$V06X" ] && [ -f "$ROM" ]; then
     echo "переписываю OS.COM на квазидиске под текущую сборку T-72..."
-    cp "$EDD" "$OUT/os-base.edd"
+    cp "$BASE_EDD" "$OUT/os-base.edd"
     printf '9 A:0\r\n' > "$OUT/initialc-boot.sub"
     python3 "$HERE/tools/kdimg.py" put "$OUT/os-base.edd" \
         "$OUT/initialc-boot.sub" INITIALC.SUB >/dev/null
@@ -249,17 +263,19 @@ PYCHK
     python3 "$HERE/tools/kdimg.py" del "$OUT/co-t72.edd" INITIALC.SUB >/dev/null
     rm -f "$OUT/os-base.edd" "$OUT/os-check.com" "$OUT/initialc-boot.sub"
 else
-    echo "v06x не собран -- беру подлинный образ как есть" >&2
-    cp "$EDD" "$OUT/co-t72.edd"
+    echo "v06x не собран -- беру базовый образ как есть" >&2
+    cp "$BASE_EDD" "$OUT/co-t72.edd"
 fi
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
-for f in prm mnu ext hlp zgr; do
-    # CO.HLP берём собранный, если он есть -- см. mkhlp.py выше
-    src=$CODIR/co.$f
-    [ "$f" = hlp ] && [ -f "$OUT/CO.HLP" ] && src=$OUT/CO.HLP
-    [ -f "$src" ] && \
-        python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$src" "CO.$(echo "$f" | tr a-z A-Z)"
-done
+python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.HLP" CO.HLP
+python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/HDIR.COM" HDIR.COM
+if [ ! -f "$TMPL_EDD" ]; then
+    # без шаблона комплект кладём сами
+    for f in prm mnu ext zgr; do
+        [ -f "$CODIR/co.$f" ] && python3 "$HERE/tools/kdimg.py" put \
+            "$OUT/co-t72.edd" "$CODIR/co.$f" "CO.$(echo "$f" | tr a-z A-Z)"
+    done
+fi
 printf 'CO\r\n' > "$OUT/initialc.sub"
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIALC.SUB
 
@@ -268,15 +284,35 @@ python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIAL
 #    -- в её дорожках останется T-34, под которой наш CO уже не работает.
 #    INITIAL.SUB с командой "A:CO" -- автозапуск: система выполняет его сразу
 #    после загрузки с дискеты, как INITIALC.SUB на квазидиске.
-python3 "$HERE/tools/cpmimg.py" --geom fdd create "$OUT/co-t72.fdd"
+if [ -f "$TMPL_FDD" ]; then
+    cp "$TMPL_FDD" "$OUT/co-t72.fdd"
+    # Редакторские копии с рабочего диска в выпуск не едут.
+    for junk in CO.BAK; do
+        python3 "$HERE/tools/cpmimg.py" --geom fdd del "$OUT/co-t72.fdd" "$junk" \
+            >/dev/null 2>&1 || true
+    done
+else
+    python3 "$HERE/tools/cpmimg.py" --geom fdd create "$OUT/co-t72.fdd"
+    for f in prm mnu ext zgr; do
+        [ -f "$CODIR/co.$f" ] && python3 "$HERE/tools/cpmimg.py" --geom fdd put \
+            "$OUT/co-t72.fdd" "$CODIR/co.$f" "CO.$(echo "$f" | tr a-z A-Z)"
+    done
+fi
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
-for f in prm mnu ext hlp zgr; do
-    src=$CODIR/co.$f
-    [ "$f" = hlp ] && [ -f "$OUT/CO.HLP" ] && src=$OUT/CO.HLP
-    [ -f "$src" ] && \
-        python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$src" \
-            "CO.$(echo "$f" | tr a-z A-Z)"
-done
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.HLP" CO.HLP
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/HDIR.COM" HDIR.COM
+# OS.COM на дискете -- та же сборка, что и на квазидиске: её туда только что
+# записала сама система. Дискета с чужой OS.COM опасна ровно так же, как
+# квазидиск: тёплый старт поднимет её, а не нашу.
+if python3 "$HERE/tools/kdimg.py" get "$OUT/co-t72.edd" OS.COM "$OUT/OS.COM" >/dev/null 2>&1; then
+    python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/OS.COM" OS.COM
+    rm -f "$OUT/OS.COM"
+fi
+# Эталонные настройки -- для прогона по функциям, а не для образов: в образе
+# лежит CO.PRM из шаблона, с панелями, как их оставил хозяин диска, а сценариям
+# нужна известная пара панелей. check-funcs.sh кладёт этот файл в свою копию.
+[ -f "$CODIR/co.prm" ] && cp "$CODIR/co.prm" "$OUT/CO.PRM"
+
 printf 'A:CO\r\n' > "$OUT/initial.sub"
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/initial.sub" INITIAL.SUB
 python3 "$HERE/tools/sysfdd.py" "$OUT/co-t72.fdd" "$ROM" --base "$SYSFDD"
