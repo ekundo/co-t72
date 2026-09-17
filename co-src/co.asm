@@ -30,6 +30,9 @@
          ORG  0100h
 
 L_0100:  JMP  L_406A              ; 0100 c3 6a 40
+; Таблицы перекодировки знаков, четыре ряда по 16 байт и продолжение. По ним
+; печать переводит знаки из рабочего шрифта в набор принтера: этим занимается
+; подпрограмма по 30E9, она берёт отсюда коды от 80h и выше.
          .db 0C0h,0C1h,0C2h,0C3h,0C4h,0C5h,0C6h,0C7h,0C8h,0C9h,0CAh,0CBh,0CCh,0CDh,0CEh,0CFh ; 0103 |................|
          .db 0D0h,0D1h,0D2h,0D3h,0D4h,0D5h,0D6h,0D7h,0D8h,0D9h,0DAh,0DBh,0DCh,0DDh,0DEh,0DFh ; 0113 |................|
          .db 0F0h,0F1h,0F2h,0F3h,0F4h,0F5h,0F6h,0F7h,0F8h,0F9h,0FAh,0FBh,0FCh,0FDh,0FEh,9Ah ; 0123 |................|
@@ -950,8 +953,10 @@ L_0805:  XRA  A                   ; 0805 af
          CPI  02h                 ; 080F fe 02
          JZ   L_139E              ; 0811 ca 9e 13
          JMP  L_138F              ; 0814 c3 8f 13
-         .db 0F7h,0D9h,0CAh,0D4h,0C9h,20h,0D7h,20h,44h,4Fh,53h,20h,3Fh,20h,28h,59h ; 0817 |..... . DOS ? (Y|
-         .db 2Fh,4Eh,29h,00h                                  ; 0827 |/N).|
+
+; Вопрос при выходе из CO.
+         .db 'Выйти в DOS ? (Y/N)'                            ; 0817
+         .db 00h                                              ; 082A |.|
 L_082B:  .db 00h                                              ; 082B |.|
 L_082C:  .db 05h                                              ; 082C |.|
 L_082D:  LXI  H,3E93h             ; 082D 21 93 3e
@@ -1956,37 +1961,86 @@ L_107B:  JMP  L_0FE0              ; 107B c3 e0 0f
 L_107E:  MVI  A,42h               ; 107E 3e 42
 L_1080:  STA  0B673h              ; 1080 32 73 b6
 L_1083:  JMP  L_12A7              ; 1083 c3 a7 12
-         .db 0E6h,0C1h,0CAh,0CCh,20h,00h,20h,0CEh,0C5h,20h,0CEh,0C1h,0CAh,0C4h,0C5h,0CEh ; 1086 |.... . .. ......|
-         .db 00h,1Bh,62h,00h,1Bh,61h,00h,1Bh,59h,37h,20h      ; 1096 |..b..a..Y7 |
+
+; Сообщения и шапки панелей: «Файл не найден», «Копируется»,
+; счётчик файлов и свободного места в рамке.
+         .db 'Файл '                                          ; 1086
+         .db 00h                                              ; 108B |.|
+         .db ' не найден'                                     ; 108C
+         .db 00h,1Bh                                          ; 1096 |..|
+         .db 62h                                              ; 1098 |b|
+         .db 00h,1Bh                                          ; 1099 |..|
+         .db 61h                                              ; 109B |a|
+         .db 00h,1Bh                                          ; 109C |..|
+         .db 59h,37h,20h                                      ; 109E |Y7 |
 L_10A1:  .db 55h                                              ; 10A1 |U|
-L_10A2:  .db 58h,3Eh,00h,0EBh,0CFh,0D0h,0C9h,0D2h,0D5h,0C5h,0D4h,0D3h,0D1h,00h,00h,00h ; 10A2 |X>..............|
-         .db 2Dh,0CAh,20h,0C6h,0C1h,0CAh,0CCh,20h             ; 10B2 |-. .... |
-L_10BA:  .db 58h,3Ah,3Dh,3Eh                                  ; 10BA |X:=>|
-L_10BE:  .db 59h,3Ah,08h,08h,00h,00h,00h,00h,4Bh,00h,18h,00h,00h,00h,4Bh,18h ; 10BE |Y:......K.....K.|
-         .db 18h,1Bh,59h                                      ; 10CE |..Y|
+L_10A2:  .db 58h,3Eh                                          ; 10A2 |X>|
+         .db 00h                                              ; 10A4 |.|
+         .db 'Копируется'                                     ; 10A5
+         .db 00h,00h,00h                                      ; 10AF |...|
+         .db '-й файл '                                       ; 10B2
+L_10BA:  .db 'X:=>'                                           ; 10BA
+L_10BE:  .db 59h,3Ah                                          ; 10BE |Y:|
+         .db 08h,08h,00h,00h,00h,00h                          ; 10C0 |......|
+         .db 4Bh                                              ; 10C6 |K|
+         .db 00h,18h,00h,00h,00h                              ; 10C7 |.....|
+         .db 4Bh                                              ; 10CC |K|
+         .db 18h,18h,1Bh                                      ; 10CD |...|
+         .db 59h                                              ; 10D0 |Y|
 L_10D1:  .db 22h                                              ; 10D1 |"|
-L_10D2:  .db 00h,00h,08h,1Ah,00h,3Ah,09h,55h,73h,65h,72h,20h  ; 10D2 |.....:.User |
-L_10DE:  .db 58h,08h,00h,20h,0E4h,0C9h,0D3h,0CBh,20h          ; 10DE |X.. .... |
+L_10D2:  .db 00h,00h,08h,1Ah,00h                              ; 10D2 |.....|
+         .db 3Ah                                              ; 10D7 |:|
+         .db 09h                                              ; 10D8 |.|
+         .db 'User '                                          ; 10D9
+L_10DE:  .db 58h                                              ; 10DE |X|
+         .db 08h,00h                                          ; 10DF |..|
+         .db ' Диск '                                         ; 10E1
 L_10E7:  .db 00h                                              ; 10E7 |.|
-L_10E8:  .db 00h,20h,0E6h,0C1h,0CAh,0CCh,0CFh,0D7h,20h,00h,00h,00h ; 10E8 |. ...... ...|
-L_10F4:  .db 00h,00h,00h,20h,20h,0F3h,0D7h,0CFh,0C2h,0CFh,0C4h,0CEh,0CFh,20h,00h,00h ; 10F4 |...  ........ ..|
-         .db 00h,20h,0EBh,0C2h,2Eh,00h,1Bh,59h,36h            ; 1104 |. .....Y6|
-L_110D:  .db 00h,00h,1Bh,62h,00h,00h,00h,2Fh,00h,00h,00h,20h,1Bh,61h,00h,1Bh ; 110D |...b.../... .a..|
+L_10E8:  .db 00h                                              ; 10E8 |.|
+         .db ' Файлов '                                       ; 10E9
+         .db 00h,00h,00h                                      ; 10F1 |...|
+L_10F4:  .db 00h,00h,00h                                      ; 10F4 |...|
+         .db '  Свободно '                                    ; 10F7
+         .db 00h,00h,00h                                      ; 1102 |...|
+         .db ' Кб.'                                           ; 1105
+         .db 00h,1Bh                                          ; 1109 |..|
+         .db 59h,36h                                          ; 110B |Y6|
+L_110D:  .db 00h,00h,1Bh                                      ; 110D |...|
+         .db 62h                                              ; 1110 |b|
+         .db 00h,00h,00h                                      ; 1111 |...|
+         .db 2Fh                                              ; 1114 |/|
+         .db 00h,00h,00h                                      ; 1115 |...|
+         .db 20h                                              ; 1118 | |
+         .db 1Bh                                              ; 1119 |.|
+         .db 61h                                              ; 111A |a|
+         .db 00h,1Bh                                          ; 111B |..|
          .db 59h,28h                                          ; 111D |Y(|
-L_111F:  .db 20h,1Bh,62h,20h,0E4h,0C9h,0D3h,0CBh,20h,45h,72h,72h,6Fh,72h,20h,1Bh ; 111F | .b .... Error .|
-         .db 61h,1Bh,59h,20h,48h,00h,1Bh,59h,38h,20h,00h,1Bh,62h,31h,2Dh,0F0h ; 112F |a.Y H..Y8 ..b1-.|
-         .db 0CFh,0CDh,0CFh,0DDh,0D8h,20h,32h,2Dh,0EDh,0C5h,0CEh,0C0h,20h,33h,2Dh,0F0h ; 113F |..... 2-.... 3-.|
-         .db 0D2h,0CFh,0D3h,0CDh,2Eh,34h,2Dh,0EDh,65h,64h,69h,74h,20h,35h,2Dh,0EBh ; 114F |.....4-.edit 5-.|
-         .db 0CFh,0D0h,0C9h,0D1h,20h,36h,2Dh,0E9h,0CDh,0D1h,20h,37h,2Dh,0E4h,0C9h,0D3h ; 115F |.... 6-... 7-...|
-         .db 0CBh,20h,38h,2Dh,0F5h,0C2h,0D2h,0C1h,0D4h,0D8h,20h,39h,2Dh,53h,79h,73h ; 116F |. 8-...... 9-Sys|
-         .db 2Eh,0D0h,0D2h,0CDh,20h,30h,2Dh,0EDh,0CFh,0CEh,0C9h,0D4h,1Bh,61h,00h,31h ; 117F |.... 0-......a.1|
-         .db 2Dh,34h,30h,2Fh,36h,30h,20h,32h,2Dh,0E1h,0D4h,0D2h,0C9h,0C2h,2Eh,33h ; 118F |-40/60 2-......3|
-         .db 2Dh,0F0h,0D2h,0EBh,37h,20h,34h,2Dh,57h,6Fh,72h,64h,53h,74h,61h,72h ; 119F |-...7 4-WordStar|
-         .db 20h,35h,2Dh,0EBh,0D3h,0FAh,0E9h,20h,36h,2Dh,0FAh,0C1h,0D0h,0C9h,0D3h,0D8h ; 11AF | 5-.... 6-......|
-         .db 20h,37h,2Dh,0F0h,0C5h,0DEh,0C1h,0D4h,0D8h,20h,38h,2Dh,0E6h,0C1h,0CAh,0CCh ; 11BF | 7-...... 8-....|
-         .db 20h,39h,2Dh,53h,69h,64h,20h,30h,2Dh,0F7h,0D9h,0CAh,0D4h,0C9h,00h,1Bh ; 11CF | 9-Sid 0-.......|
-         .db 5Bh,00h,1Bh,5Ch,00h,0Ch,0Ah,20h,3Eh,00h,1Bh,59h,37h,2Dh,00h,00h ; 11DF |[..\... >..Y7-..|
-         .db 00h,00h                                          ; 11EF |..|
+L_111F:  .db 20h                                              ; 111F | |
+         .db 1Bh                                              ; 1120 |.|
+         .db 'b Диск Error '                                  ; 1121
+         .db 1Bh                                              ; 112E |.|
+         .db 61h                                              ; 112F |a|
+         .db 1Bh                                              ; 1130 |.|
+         .db 59h,20h,48h                                      ; 1131 |Y H|
+         .db 00h,1Bh                                          ; 1134 |..|
+         .db 59h,38h,20h                                      ; 1136 |Y8 |
+         .db 00h,1Bh                                          ; 1139 |..|
+         .db 'b1-Помощь 2-Меню 3-Просм.4-Мedit 5-Копия'       ; 113B
+         .db ' 6-Имя 7-Диск 8-Убрать 9-Sys.прм 0-Монит'       ; 1163
+         .db 1Bh                                              ; 118B |.|
+         .db 61h                                              ; 118C |a|
+         .db 00h                                              ; 118D |.|
+         .db '1-40/60 2-Атриб.3-ПрК7 4-WordStar 5-КсЗИ'       ; 118E
+         .db ' 6-Запись 7-Печать 8-Файл 9-Sid 0-Выйти'        ; 11B6
+         .db 00h,1Bh                                          ; 11DD |..|
+         .db 5Bh                                              ; 11DF |[|
+         .db 00h,1Bh                                          ; 11E0 |..|
+         .db 5Ch                                              ; 11E2 |\|
+         .db 00h,0Ch,0Ah                                      ; 11E3 |...|
+         .db 20h,3Eh                                          ; 11E6 | >|
+         .db 00h,1Bh                                          ; 11E8 |..|
+         .db 59h,37h,2Dh                                      ; 11EA |Y7-|
+         .db 00h,00h,00h,00h                                  ; 11ED |....|
 L_11F1:  LXI  H,0000h             ; 11F1 21 00 00
 L_11F4:  SHLD 0A831h              ; 11F4 22 31 a8
 L_11F7:  LDA  0B69Bh              ; 11F7 3a 9b b6
@@ -2600,7 +2654,11 @@ L_1701:  MOV  A,M                 ; 1701 7e
          MOV  D,M                 ; 170C 56
          CALL L_171F              ; 170D cd 1f 17
          JMP  L_16CF              ; 1710 c3 cf 16
-         .db 0CDh,0E0h,16h,7Eh,32h,0F4h,0DDh,3Eh,01h,0C3h,0CFh,16h ; 1713 |...~2..>....|
+L_1713:  CALL L_16E0              ; 1713 cd e0 16
+         MOV  A,M                 ; 1716 7e
+         STA  0DDF4h              ; 1717 32 f4 dd
+         MVI  A,01h               ; 171A 3e 01
+         JMP  L_16CF              ; 171C c3 cf 16
 L_171F:  XCHG                     ; 171F eb
          DAD  H                   ; 1720 29
          XCHG                     ; 1721 eb
@@ -3675,26 +3733,53 @@ L_1F3E:  POP  B                   ; 1F3E c1
 L_1F3F:  POP  D                   ; 1F3F d1
 L_1F40:  POP  H                   ; 1F40 e1
 L_1F41:  RET                      ; 1F41 c9
+
+; Размер файла в рамке, имена CO.PRM и CO.PTK, вопросы про защищённый
+; и системный файл и про замену при копировании.
 L_1F42:  .db 00h                                              ; 1F42 |.|
 L_1F43:  .db 00h                                              ; 1F43 |.|
-L_1F44:  .db 00h,20h                                          ; 1F44 |. |
+L_1F44:  .db 00h                                              ; 1F44 |.|
+         .db 20h                                              ; 1F45 | |
 L_1F46:  .db 00h                                              ; 1F46 |.|
 L_1F47:  .db 00h                                              ; 1F47 |.|
-L_1F48:  .db 00h,20h,0E2h,0C1h,0CAh,0D4h,00h,20h,20h,28h,00h,00h,00h,20h,0EBh,0C2h ; 1F48 |. .....  (... ..|
-         .db 29h,00h,43h,4Fh,20h,20h,20h,20h,20h,20h,20h,50h,52h,4Dh,43h,4Fh ; 1F58 |).CO       PRMCO|
-         .db 20h,20h,20h,20h,20h,20h,20h,50h,54h,4Bh,3Eh,43h,3Ah,43h,4Fh,2Eh ; 1F68 |       PTK>C:CO.|
-         .db 50h,54h,4Bh,1Bh,50h                              ; 1F78 |PTK.P|
+L_1F48:  .db 00h                                              ; 1F48 |.|
+         .db ' Байт'                                          ; 1F49
+         .db 00h                                              ; 1F4E |.|
+         .db 20h,20h,28h                                      ; 1F4F |  (|
+         .db 00h,00h,00h                                      ; 1F52 |...|
+         .db ' Кб)'                                           ; 1F55
+         .db 00h                                              ; 1F59 |.|
+         .db 'CO       PRMCO       PTK>C:CO.PTK'              ; 1F5A
+         .db 1Bh                                              ; 1F7B |.|
+         .db 50h                                              ; 1F7C |P|
 L_1F7D:  .db 00h                                              ; 1F7D |.|
 L_1F7E:  .db 0FFh                                             ; 1F7E |.|
-L_1F7F:  .db 09h,0E6h,0C1h,0CAh,0CCh,00h,20h,0FAh,0C1h,0DDh,0C9h,0DDh,0C5h,0CEh,20h,00h ; 1F7F |...... ....... .|
-         .db 20h,0F5h,0C4h,0C1h,0CCh,0D1h,0D4h,0D8h,3Fh,20h,28h,59h,2Fh,4Eh,29h,00h ; 1F8F | .......? (Y/N).|
-         .db 20h,0F3h,0C9h,0D3h,0D4h,0C5h,0CDh,0CEh,0D9h,0CAh,00h ; 1F9F | ..........|
-L_1FAA:  .db 00h,20h,0CEh,0C1h,20h,0C4h,0C9h,0D3h,0CBh,0C5h,20h,22h,00h,20h,0D5h,0D6h ; 1FAA |. .. ..... ". ..|
-         .db 0C5h,20h,0C5h,0D3h,0D4h,0D8h,2Eh,00h,20h,0FAh,0C1h,0CDh,0C5h,0CEh,0D1h,0D4h ; 1FBA |. ...... .......|
-         .db 0D8h,3Fh,20h,28h,59h,2Fh,4Eh,29h,20h,20h,20h,20h,08h,08h,08h,00h ; 1FCA |.? (Y/N)    ....|
-         .db 59h,65h,73h,00h,4Eh,6Fh,20h,00h,2Eh,20h,75h,73h,65h,72h,20h ; 1FDA |Yes.No .. user |
-L_1FE9:  .db 30h,20h,64h,69h,72h,00h,0E4h,0C9h,0D3h,0CBh,20h,0D0h,0CFh,0CCh,0CEh,0D9h ; 1FE9 |0 dir..... .....|
-         .db 0CAh,00h,20h,2Dh,20h,0E6h,0C1h                   ; 1FF9 |.. - ..|
+L_1F7F:  .db 09h                                              ; 1F7F |.|
+         .db 'Файл'                                           ; 1F80
+         .db 00h                                              ; 1F84 |.|
+         .db ' Защищен '                                      ; 1F85
+         .db 00h                                              ; 1F8E |.|
+         .db ' Удалять? (Y/N)'                                ; 1F8F
+         .db 00h                                              ; 1F9E |.|
+         .db ' Системный'                                     ; 1F9F
+         .db 00h                                              ; 1FA9 |.|
+L_1FAA:  .db 00h                                              ; 1FAA |.|
+         .db ' на диске "'                                    ; 1FAB
+         .db 00h                                              ; 1FB6 |.|
+         .db ' уже есть.'                                     ; 1FB7
+         .db 00h                                              ; 1FC1 |.|
+         .db ' Заменять? (Y/N)    '                           ; 1FC2
+         .db 08h,08h,08h,00h                                  ; 1FD6 |....|
+         .db 59h,65h,73h                                      ; 1FDA |Yes|
+         .db 00h                                              ; 1FDD |.|
+         .db 4Eh,6Fh,20h                                      ; 1FDE |No |
+         .db 00h                                              ; 1FE1 |.|
+         .db '. user '                                        ; 1FE2
+L_1FE9:  .db '0 dir'                                          ; 1FE9
+         .db 00h                                              ; 1FEE |.|
+         .db 'Диск полный'                                    ; 1FEF
+         .db 00h                                              ; 1FFA |.|
+         .db ' - Фа'                                          ; 1FFB
 L_2000:  JZ   20CCh               ; 2000 ca cc 20
          ACI  0C5h                ; 2003 ce c5
          .db 20h                                              ; 2005 DB   20h
@@ -4317,29 +4402,75 @@ L_2562:  LDA  L_2698              ; 2562 3a 98 26
          JNZ  L_255C              ; 2568 c2 5c 25
          MVI  A,01h               ; 256B 3e 01
          JMP  L_255C              ; 256D c3 5c 25
-         .db 0CDh,7Eh,25h,34h,0C3h,0F0h,24h,0CDh,7Eh,25h,35h,0C3h,0F0h,24h ; 2570 |.~%4..$.~%5..$|
+L_2570:  CALL L_257E              ; 2570 cd 7e 25
+         INR  M                   ; 2573 34
+         JMP  L_24F0              ; 2574 c3 f0 24
+         .db 0CDh,7Eh,25h,35h,0C3h,0F0h,24h                   ; 2577 |.~%5..$|
 L_257E:  LXI  D,1F7Ch             ; 257E 11 7c 1f
          LHLD L_2698              ; 2581 2a 98 26
          DAD  D                   ; 2584 19
          RET                      ; 2585 c9
-         .db 0F3h,0C9h,0D3h,0D4h,0C5h,0CDh,0CEh,0D9h,0C5h,20h,0C6h,0C1h,0CAh,0CCh,0D9h,00h ; 2586 |......... ......|
-         .db 0F0h,0CFh,0CBh,0C1h,0DAh,0C1h,0CEh,0D9h,00h,0F3h,0D0h,0D2h,0D1h,0D4h,0C1h,0CEh ; 2596 |................|
-         .db 0D9h,00h,0F2h,2Eh,0CBh,0CFh,0D0h,0C9h,0D2h,2Eh,00h,0E4h,0C9h,0D3h,0CBh,22h ; 25A6 |..............."|
-         .db 42h,22h,00h,0F3h,0CFh,0D2h,0D4h,2Eh,00h,0FCh,0CBh,0D2h,0C1h,0CEh,00h,0F2h ; 25B6 |B"..............|
-         .db 2Eh,44h,49h,52h,00h,0F0h,0CFh,20h,0C9h,0CDh,0C5h,0CEh,0C9h,00h,0F0h,0CFh ; 25C6 |.DIR... ........|
-         .db 20h,0D4h,0C9h,0D0h,0D5h,00h,0F0h,0CFh,20h,0D2h,0C1h,0DAh,0CDh,0C5h,0D2h,0D5h ; 25D6 | ....... .......|
-         .db 00h,0F2h,0C5h,0C1h,0CCh,0D8h,0CEh,0CFh,00h,0E4h,0C9h,0D3h,0CBh,20h,22h,42h ; 25E6 |............. "B|
-         .db 22h,00h,0E4h,0CFh,0D3h,0D4h,0D5h,0D0h,0C5h,0CEh,00h,0EFh,0D4h,0CBh,0CCh,0C0h ; 25F6 |"...............|
-         .db 0DEh,0C5h,0CEh,00h,0F0h,0D2h,0CFh,0D7h,0C5h,0D2h,0CBh,0D5h,00h,0E4h,0C5h,0CCh ; 2606 |................|
-         .db 0C1h,0D4h,0D8h,00h,0EEh,0C5h,20h,0C4h,0C5h,0CCh,0C1h,0D4h,0D8h,00h,0FAh,0C1h ; 2616 |...... .........|
-         .db 0DDh,0C9h,0DDh,0C5h,0CEh,00h,0F3h,0C9h,0D3h,0D4h,0C5h,0CDh,0CEh,0D9h,0CAh,00h ; 2626 |................|
-         .db 0F3h,0C2h,0D2h,0CFh,0D3h,20h,0C1h,0D4h,0D2h,2Eh,00h,0E9h,0CDh,0D1h,20h,0CBh ; 2636 |..... ........ .|
-         .db 0CFh,0D0h,0C9h,0C9h,20h,0C9h,0CCh,0C9h,20h,0CDh,0C1h,0D3h,0CBh,0C1h,20h,2Dh ; 2646 |.... ... ..... -|
-         .db 00h,0EEh,0CFh,0D7h,0CFh,0C5h,20h,0C9h,0CDh,0D1h,20h,0C9h,0CCh,0C9h,20h,0CDh ; 2656 |...... ... ... .|
-         .db 0C1h,0D3h,0CBh,0C1h,20h,2Dh,00h,0E9h,0CDh,0D1h,20h,0CEh,0CFh,0D7h,0CFh,0C7h ; 2666 |.... -.... .....|
-         .db 0CFh,20h,0C6h,0C1h,0CAh,0CCh,0C1h,20h,2Dh,00h,0E6h,0CFh,0CEh,00h,0F3h,0C9h ; 2676 |. ..... -.......|
-         .db 0CDh,0D7h,0CFh,0CCh,0D9h,00h,0F0h,0C1h,0D5h,0DAh,0C1h,00h,1Bh,62h,00h,1Bh ; 2686 |.............b..|
-         .db 61h,00h                                          ; 2696 |a.|
+
+; Меню настроек по «9»: показ системных файлов, диск B, сортировка,
+; экран, проверка при копировании.
+         .db 'Системные файлы'                                ; 2586
+         .db 00h                                              ; 2595 |.|
+         .db 'Показаны'                                       ; 2596
+         .db 00h                                              ; 259E |.|
+         .db 'Спрятаны'                                       ; 259F
+         .db 00h                                              ; 25A7 |.|
+         .db 'Р.копир.'                                       ; 25A8
+         .db 00h                                              ; 25B0 |.|
+         .db 'Диск"B"'                                        ; 25B1
+         .db 00h                                              ; 25B8 |.|
+         .db 'Сорт.'                                          ; 25B9
+         .db 00h                                              ; 25BE |.|
+         .db 'Экран'                                          ; 25BF
+         .db 00h                                              ; 25C4 |.|
+         .db 'Р.DIR'                                          ; 25C5
+         .db 00h                                              ; 25CA |.|
+         .db 'По имени'                                       ; 25CB
+         .db 00h                                              ; 25D3 |.|
+         .db 'По типу'                                        ; 25D4
+         .db 00h                                              ; 25DB |.|
+         .db 'По размеру'                                     ; 25DC
+         .db 00h                                              ; 25E6 |.|
+         .db 'Реально'                                        ; 25E7
+         .db 00h                                              ; 25EE |.|
+         .db 'Диск "B"'                                       ; 25EF
+         .db 00h                                              ; 25F7 |.|
+         .db 'Доступен'                                       ; 25F8
+         .db 00h                                              ; 2600 |.|
+         .db 'Отключен'                                       ; 2601
+         .db 00h                                              ; 2609 |.|
+         .db 'Проверку'                                       ; 260A
+         .db 00h                                              ; 2612 |.|
+         .db 'Делать'                                         ; 2613
+         .db 00h                                              ; 2619 |.|
+         .db 'Не делать'                                      ; 261A
+         .db 00h                                              ; 2623 |.|
+         .db 'Защищен'                                        ; 2624
+         .db 00h                                              ; 262B |.|
+         .db 'Системный'                                      ; 262C
+         .db 00h                                              ; 2635 |.|
+         .db 'Сброс атр.'                                     ; 2636
+         .db 00h                                              ; 2640 |.|
+         .db 'Имя копии или маска -'                          ; 2641
+         .db 00h                                              ; 2656 |.|
+         .db 'Новое имя или маска -'                          ; 2657
+         .db 00h                                              ; 266C |.|
+         .db 'Имя нового файла -'                             ; 266D
+         .db 00h                                              ; 267F |.|
+         .db 0E6h,0CFh,0CEh                                   ; 2680 |...|
+         .db 00h                                              ; 2683 |.|
+         .db 'Символы'                                        ; 2684
+         .db 00h                                              ; 268B |.|
+         .db 'Пауза'                                          ; 268C
+         .db 00h,1Bh                                          ; 2691 |..|
+         .db 62h                                              ; 2693 |b|
+         .db 00h,1Bh                                          ; 2694 |..|
+         .db 61h                                              ; 2696 |a|
+         .db 00h                                              ; 2697 |.|
 L_2698:  .db 00h,00h                                          ; 2698 |..|
 L_269A:  LXI  H,0DF14h            ; 269A 21 14 df
          LDA  0A802h              ; 269D 3a 02 a8
@@ -4672,15 +4803,51 @@ L_2916:  LDA  0A933h              ; 2916 3a 33 a9
          RST  3                   ; 2926 df
          POP  H                   ; 2927 e1
          JMP  L_28E1              ; 2928 c3 e1 28
-         .db 08h,20h,08h,00h,1Bh,59h,36h,25h,8Dh,8Dh,8Dh,8Dh,8Dh,8Dh,8Dh,8Dh ; 292B |. ...Y6%........|
-         .db 8Dh,00h,1Bh,59h,36h,25h,1Bh,62h,20h,3Eh,43h,4Fh,2Eh,50h,54h,4Bh ; 293B |...Y6%.b >CO.PTK|
-         .db 20h,1Bh,61h,00h,0EEh,0CFh,0CDh,0C5h,0D2h,20h,0D3h,0D4h,0D2h,0CFh,0CBh,0C9h ; 294B | .a...... ......|
-         .db 20h,2Dh,20h,00h,1Bh,59h,37h,6Ch,00h,00h,52h,2Fh,4Ch,00h,52h,55h ; 295B | - ..Y7l..R/L.RU|
-         .db 53h,00h,4Ch,41h,54h,00h,4Bh,2Dh,38h,00h,0F5h,0C4h,0C1h,0CCh,0D1h,0D4h ; 296B |S.LAT.K-8.......|
-         .db 0D8h,00h,0F7h,0D9h,0CAh,0D4h,0C9h,00h,0F5h,0C4h,0C1h,0CCh,0C9h,0D4h,0D8h,20h ; 297B |............... |
-         .db 22h,42h,41h,4Bh,22h,00h,22h,41h,22h,00h,22h,43h,22h,00h,22h,42h ; 298B |"BAK"."A"."C"."B|
-         .db 22h,00h,0FEh,02h,0F5h,0CCh,06h,3Bh,0F1h,0C4h,51h,3Bh,3Ah,8Dh,0B6h,3Dh ; 299B |"......;..Q;:..=|
-         .db 0C9h                                             ; 29AB |.|
+
+; Строка запроса номера строки, названия кодировок просмотра
+; (Р/Л, РУС, ЛАТ, К-8) и вопросы про удаление.
+         .db 08h                                              ; 292B |.|
+         .db 20h                                              ; 292C | |
+         .db 08h,00h,1Bh                                      ; 292D |...|
+         .db 59h,36h,25h                                      ; 2930 |Y6%|
+         .db 8Dh,8Dh,8Dh,8Dh,8Dh,8Dh,8Dh,8Dh,8Dh,00h,1Bh      ; 2933 |...........|
+         .db 59h,36h,25h                                      ; 293E |Y6%|
+         .db 1Bh                                              ; 2941 |.|
+         .db 'b >CO.PTK '                                     ; 2942
+         .db 1Bh                                              ; 294C |.|
+         .db 61h                                              ; 294D |a|
+         .db 00h                                              ; 294E |.|
+         .db 'Номер строки - '                                ; 294F
+         .db 00h,1Bh                                          ; 295E |..|
+         .db 59h,37h,6Ch                                      ; 2960 |Y7l|
+         .db 00h,00h                                          ; 2963 |..|
+         .db 52h,2Fh,4Ch                                      ; 2965 |R/L|
+         .db 00h                                              ; 2968 |.|
+         .db 52h,55h,53h                                      ; 2969 |RUS|
+         .db 00h                                              ; 296C |.|
+         .db 4Ch,41h,54h                                      ; 296D |LAT|
+         .db 00h                                              ; 2970 |.|
+         .db 4Bh,2Dh,38h                                      ; 2971 |K-8|
+         .db 00h                                              ; 2974 |.|
+         .db 'Удалять'                                        ; 2975
+         .db 00h                                              ; 297C |.|
+         .db 'Выйти'                                          ; 297D
+         .db 00h                                              ; 2982 |.|
+         .db 'Удалить "BAK"'                                  ; 2983
+         .db 00h                                              ; 2990 |.|
+         .db 22h,41h,22h                                      ; 2991 |"A"|
+         .db 00h                                              ; 2994 |.|
+         .db 22h,43h,22h                                      ; 2995 |"C"|
+         .db 00h                                              ; 2998 |.|
+         .db 22h,42h,22h                                      ; 2999 |"B"|
+         .db 00h                                              ; 299C |.|
+L_299D:  .db 0FEh                                             ; 299D |.|
+         .db 02h                                              ; 299E |.|
+         .db 0F5h,0CCh                                        ; 299F |..|
+         .db 06h                                              ; 29A1 |.|
+         .db ';ЯдQ;:'                                         ; 29A2
+         .db 8Dh,0B6h                                         ; 29A8 |..|
+         .db 3Dh,0C9h                                         ; 29AA |=.|
 L_29AC:  XRA  A                   ; 29AC af
          STA  0A934h              ; 29AD 32 34 a9
          CALL L_0242              ; 29B0 cd 42 02
@@ -4694,8 +4861,14 @@ L_29AC:  XRA  A                   ; 29AC af
          CPI  1Bh                 ; 29C5 fe 1b
          RZ                       ; 29C7 c8
          JMP  L_2C6A              ; 29C8 c3 6a 2c
-         .db 0CDh,3Ah,39h,3Ah,36h,0A9h,0CDh,9Dh,29h,0C8h,21h,34h,0A9h,34h,0CDh,24h ; 29CB |.:9:6...).!4.4.$|
-         .db 38h,0C3h,0E9h,3Bh                                ; 29DB |8..;|
+L_29CB:  CALL L_393A              ; 29CB cd 3a 39
+         LDA  0A936h              ; 29CE 3a 36 a9
+         CALL L_299D              ; 29D1 cd 9d 29
+         RZ                       ; 29D4 c8
+         LXI  H,0A934h            ; 29D5 21 34 a9
+         INR  M                   ; 29D8 34
+         CALL L_3824              ; 29D9 cd 24 38
+         JMP  L_3BE9              ; 29DC c3 e9 3b
 L_29DF:  LXI  H,0A954h            ; 29DF 21 54 a9
 L_29E2:  LDA  0B69Dh              ; 29E2 3a 9d b6
 L_29E5:  DCR  A                   ; 29E5 3d
@@ -5069,16 +5242,37 @@ L_2D28:  LDA  0A93Dh              ; 2D28 3a 3d a9
          INR  A                   ; 2D37 3c
          STA  0A93Eh              ; 2D38 32 3e a9
          JMP  L_2DD0              ; 2D3B c3 d0 2d
-         .db 3Ah,3Eh,0A9h,0FEh,01h,0C8h,0F5h,0CDh,0DEh,2Dh,3Ah,3Dh,0A9h,4Fh,0F1h,0F5h ; 2D3E |:>.......-:=.O..|
-         .db 91h,0FEh,01h,0C2h,66h,2Dh,0CDh,0Ah,2Ah,3Eh,01h,32h,4Ah,35h,0CDh,81h ; 2D4E |....f-..*>.2J5..|
-         .db 34h,0CDh,0Ah,2Ah,21h,3Dh,0A9h,35h,0F1h,3Dh,0CDh,0D0h,2Dh,21h,3Eh,0A9h ; 2D5E |4..*!=.5.=..-!>.|
-         .db 35h,0C9h,3Ah,3Eh,0A9h,0C6h,80h,6Fh,26h,9Fh,7Eh,0FEh,4Eh,3Eh,4Eh,0C2h ; 2D6E |5.:>...o&.~.N>N.|
-         .db 82h,2Dh,3Eh,59h,77h,3Ah,3Ch,0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0CAh,0D0h,2Dh ; 2D7E |.->Yw:<.O:>....-|
-         .db 3Ah,3Ch,0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0C8h,0F5h,0CDh,0DEh,2Dh,3Ah,3Dh,0A9h ; 2D8E |:<.O:>......-:=.|
-         .db 4Fh,0F1h,0F5h,91h,0FEh,14h,0C2h,0B9h,2Dh,0CDh,0Ah,2Ah,3Eh,02h,32h,4Ah ; 2D9E |O.......-..*>.2J|
-         .db 35h,0CDh,81h,34h,0CDh,0Ah,2Ah,21h,3Dh,0A9h,34h,0F1h,3Ch,0CDh,0D0h,2Dh ; 2DAE |5..4..*!=.4.<..-|
-         .db 21h,3Eh,0A9h,34h,0C9h,0CDh,0Ah,2Ah,0CDh,15h,04h,0CDh,0Ah,2Ah,0E1h,0C3h ; 2DBE |!>.4...*.....*..|
-         .db 0F3h,0Fh                                         ; 2DCE |..|
+L_2D3E:  LDA  0A93Eh              ; 2D3E 3a 3e a9
+         CPI  01h                 ; 2D41 fe 01
+         RZ                       ; 2D43 c8
+         PUSH PSW                 ; 2D44 f5
+         CALL L_2DDE              ; 2D45 cd de 2d
+         LDA  0A93Dh              ; 2D48 3a 3d a9
+         MOV  C,A                 ; 2D4B 4f
+         POP  PSW                 ; 2D4C f1
+         PUSH PSW                 ; 2D4D f5
+         SUB  C                   ; 2D4E 91
+         CPI  01h                 ; 2D4F fe 01
+         JNZ  L_2D66              ; 2D51 c2 66 2d
+         CALL L_2A0A              ; 2D54 cd 0a 2a
+         MVI  A,01h               ; 2D57 3e 01
+         STA  L_354A              ; 2D59 32 4a 35
+         CALL L_3481              ; 2D5C cd 81 34
+         CALL L_2A0A              ; 2D5F cd 0a 2a
+         LXI  H,0A93Dh            ; 2D62 21 3d a9
+         DCR  M                   ; 2D65 35
+L_2D66:  POP  PSW                 ; 2D66 f1
+         DCR  A                   ; 2D67 3d
+         CALL L_2DD0              ; 2D68 cd d0 2d
+         LXI  H,0A93Eh            ; 2D6B 21 3e a9
+         DCR  M                   ; 2D6E 35
+         RET                      ; 2D6F c9
+         .db 3Ah,3Eh,0A9h,0C6h,80h,6Fh,26h,9Fh,7Eh,0FEh,4Eh,3Eh,4Eh,0C2h,82h,2Dh ; 2D70 |:>...o&.~.N>N..-|
+         .db 3Eh,59h,77h,3Ah,3Ch,0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0CAh,0D0h,2Dh,3Ah,3Ch ; 2D80 |>Yw:<.O:>....-:<|
+         .db 0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0C8h,0F5h,0CDh,0DEh,2Dh,3Ah,3Dh,0A9h,4Fh,0F1h ; 2D90 |.O:>......-:=.O.|
+         .db 0F5h,91h,0FEh,14h,0C2h,0B9h,2Dh,0CDh,0Ah,2Ah,3Eh,02h,32h,4Ah,35h,0CDh ; 2DA0 |......-..*>.2J5.|
+         .db 81h,34h,0CDh,0Ah,2Ah,21h,3Dh,0A9h,34h,0F1h,3Ch,0CDh,0D0h,2Dh,21h,3Eh ; 2DB0 |.4..*!=.4.<..-!>|
+         .db 0A9h,34h,0C9h,0CDh,0Ah,2Ah,0CDh,15h,04h,0CDh,0Ah,2Ah,0E1h,0C3h,0F3h,0Fh ; 2DC0 |.4...*.....*....|
 L_2DD0:  PUSH PSW                 ; 2DD0 f5
          LXI  H,1097h             ; 2DD1 21 97 10
          RST  3                   ; 2DD4 df
@@ -5560,7 +5754,12 @@ L_31A7:  POP  B                   ; 31A7 c1
 L_31A8:  DCR  C                   ; 31A8 0d
 L_31A9:  JNZ  L_31A3              ; 31A9 c2 a3 31
 L_31AC:  RET                      ; 31AC c9
-         .db 3Ah,9Dh,0B6h,3Dh,0C2h,0B6h,31h,3Eh,02h,32h,9Dh,0B6h,0C9h ; 31AD |:..=..1>.2...|
+L_31AD:  LDA  0B69Dh              ; 31AD 3a 9d b6
+         DCR  A                   ; 31B0 3d
+         JNZ  L_31B6              ; 31B1 c2 b6 31
+         MVI  A,02h               ; 31B4 3e 02
+L_31B6:  STA  0B69Dh              ; 31B6 32 9d b6
+         RET                      ; 31B9 c9
 L_31BA:  LXI  D,005Ch             ; 31BA 11 5c 00
 L_31BD:  MVI  C,10h               ; 31BD 0e 10
 L_31BF:  CALL 0005h               ; 31BF cd 05 00
@@ -5631,8 +5830,6 @@ L_324A:  MVI  A,0F8h              ; 324A 3e f8
          JMP  L_3282              ; 3253 c3 82 32
 L_3256:  STA  L_354B              ; 3256 32 4b 35
 L_3259:  CALL L_101B              ; 3259 cd 1b 10
-
-; Вывод строки просмотрщика.
 L_325C:  LHLD 0A857h              ; 325C 2a 57 a8
 L_325F:  XCHG                     ; 325F eb
 L_3260:  LHLD 0A855h              ; 3260 2a 55 a8
@@ -5657,10 +5854,6 @@ L_3283:  CPI  0Ah                 ; 3283 fe 0a
 L_3285:  CZ   L_32BE              ; 3285 cc be 32
 L_3288:  LDA  L_354B              ; 3288 3a 4b 35
 L_328B:  MOV  E,A                 ; 328B 5f
-
-; Цикл вывода знака в просмотрщике: RST 2 берёт байт, дальше он либо
-; уходит в обработку управляющего знака (331F), либо печатается. Сюда
-; врезается перекодировка кодировок, см. tools/koi.asm.
 L_328C:  RST  2                   ; 328C d7
 L_328D:  CPI  20h                 ; 328D fe 20
 L_328F:  CC   L_331F              ; 328F dc 1f 33
@@ -5993,55 +6186,135 @@ L_351C:  DCR  B                   ; 351C 05
 L_351D:  JNZ  L_3511              ; 351D c2 11 35
 L_3520:  POP  B                   ; 3520 c1
 L_3521:  RET                      ; 3521 c9
+
+; Шаблоны экрана: рамка панелей, счётчики, строка ПКК для запуска
+; через CO.TOK, названия архиватора.
          .db 0F3h,2Dh                                         ; 3522 |.-|
 L_3524:  .db 20h                                              ; 3524 | |
 L_3525:  .db 20h                                              ; 3525 | |
 L_3526:  .db 20h                                              ; 3526 | |
-L_3527:  .db 20h,20h,0F0h,2Dh                                 ; 3527 |  .-|
+L_3527:  .db '  П-'                                           ; 3527
 L_352B:  .db 20h                                              ; 352B | |
 L_352C:  .db 20h                                              ; 352C | |
-L_352D:  .db 20h,20h,20h,00h,1Bh,59h                          ; 352D |   ..Y|
+L_352D:  .db 20h,20h,20h                                      ; 352D |   |
+         .db 00h,1Bh                                          ; 3530 |..|
+         .db 59h                                              ; 3532 |Y|
 L_3533:  .db 00h                                              ; 3533 |.|
-L_3534:  .db 00h,00h,1Bh,59h                                  ; 3534 |...Y|
-L_3538:  .db 20h,20h,00h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h ; 3538 |  .             |
+L_3534:  .db 00h,00h,1Bh                                      ; 3534 |...|
+         .db 59h                                              ; 3537 |Y|
+L_3538:  .db 20h,20h                                          ; 3538 |  |
+         .db 00h                                              ; 353A |.|
+         .db '             '                                  ; 353B
          .db 00h                                              ; 3548 |.|
 L_3549:  .db 00h                                              ; 3549 |.|
 L_354A:  .db 00h                                              ; 354A |.|
 L_354B:  .db 00h,00h                                          ; 354B |..|
-L_354D:  .db 00h,06h,58h,3Ah,41h,52h,43h,32h,20h,20h,20h,20h,20h,43h,4Fh,4Dh ; 354D |..X:ARC2     COM|
-         .db 0F2h,0C1h,0D3h,0D0h,0C1h,0CBh,0CFh,0D7h,0CBh,0C1h,20h,00h,0Ah,45h,20h,43h ; 355D |.......... ..E C|
-         .db 3Ah,43h,4Fh,2Eh,54h,4Fh,4Bh,04h,43h,3Ah,43h,4Fh,07h,3Ch,43h,4Fh ; 356D |:CO.TOK.C:CO.<CO|
-         .db 2Eh,54h,4Fh,4Bh,1Bh,59h                          ; 357D |.TOK.Y|
+L_354D:  .db 00h,06h                                          ; 354D |..|
+         .db 'X:ARC2     COMРаспаковка '                      ; 354F
+         .db 00h,0Ah                                          ; 3568 |..|
+         .db 'E C:CO.TOK'                                     ; 356A
+         .db 04h                                              ; 3574 |.|
+         .db 'C:CO'                                           ; 3575
+         .db 07h                                              ; 3579 |.|
+         .db '<CO.TOK'                                        ; 357A
+         .db 1Bh                                              ; 3581 |.|
+         .db 59h                                              ; 3582 |Y|
 L_3583:  .db 20h                                              ; 3583 | |
-L_3584:  .db 20h,20h,00h,20h,20h,20h,20h,20h,0EBh,0C2h,20h,20h,00h,20h,20h,20h ; 3584 |  .     ..  .   |
-         .db 20h,25h,20h,00h,1Bh,59h,20h                      ; 3594 | % ..Y |
-L_359B:  .db 20h,1Bh,62h,20h,20h,20h,00h,20h,20h,20h,20h,20h,0EBh,0C2h,00h,20h ; 359B | .b   .     ... |
-         .db 20h,0E6h,0C1h,0CAh,0CCh,0CFh,0D7h,20h,20h,20h,20h,20h,20h,20h,20h,1Bh ; 35AB | ......        .|
-         .db 61h,00h,3Fh,3Fh,3Fh,3Fh,3Fh,3Fh,3Fh,3Fh,00h,50h,4Bh,32h,07h,20h ; 35BB |a.????????.PK2. |
-         .db 0F0h,0CFh,0CDh,0CFh,0DDh,0D8h,00h,43h,4Fh,20h,20h,20h,20h,20h,20h,20h ; 35CB |.......CO       |
-         .db 48h,4Ch,50h,1Bh,59h,38h,20h,46h,31h,2Dh,0F7h,0D7h,0C5h,0D2h,0C8h,20h ; 35DB |HLP.Y8 F1-..... |
-         .db 46h,32h,2Dh,0FBh,0D2h,0C9h,0C6h,0D4h,20h,46h,33h,2Dh,0F0h,0C5h,0DEh,0C1h ; 35EB |F2-..... F3-....|
-         .db 0D4h,0D8h,20h,46h,34h,2Dh,0F7h,0CEh,0C9h,0DAh,20h,43h,54h,50h,2Dh,0EBh ; 35FB |.. F4-.... CTP-.|
-         .db 20h,0D3h,0D4h,0D2h,0CFh,0CBh,0C5h,20h,23h,20h,0F0h,0F3h,2Dh,0F0h,0CFh,0C9h ; 360B | ...... # ..-...|
-         .db 0D3h,0CBh,20h,0F7h,0EBh,2Dh,0F0h,0CFh,0C9h,0D3h,0CBh,20h,0D3h,0CCh,0C5h,0C4h ; 361B |.. ..-..... ....|
-         .db 0D5h,0C0h,0DDh,0C5h,0C7h,0CFh,00h,20h,0F0h,0CFh,0C9h,0D3h,0CBh,20h,0D0h,0CFh ; 362B |....... ..... ..|
-         .db 0C4h,0D3h,0D4h,0D2h,0CFh,0CBh,0C9h,20h,2Dh,20h,00h,23h ; 363B |....... - .#|
-L_3647:  .db 01h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h ; 3647 |.               |
-         .db 20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h ; 3657 |                |
-         .db 20h,20h,20h,20h,20h,0F3h,0CBh,0CFh,0CCh,0D8h,0CBh,0CFh,20h,0D3h,0D4h,0D2h ; 3667 |     ....... ...|
-         .db 0CFh,0CBh,20h,0D0h,0C5h,0DEh,0C1h,0D4h,0C1h,0D4h,0D8h,20h,2Dh,20h,00h,1Bh ; 3677 |.. ........ - ..|
-         .db 59h,20h,48h,00h,1Bh,59h,20h,61h,00h,0F0h,0C5h,0DEh,0C1h,0D4h,0D8h,00h ; 3687 |Y H..Y a........|
-         .db 0F0h,0D2h,0D1h,0CDh,0CFh,0CAh,5Fh,0D7h,0D9h,0D7h,0CFh,0C4h,00h,0F7h,5Fh,0CEh ; 3697 |......_......._.|
-         .db 0C1h,0C2h,0CFh,0D2h,5Fh,38h,00h,0F7h,5Fh,0E1h,0CCh,0D8h,0D4h,5Fh,0EBh,0CFh ; 36A7 |...._8.._...._..|
-         .db 0C4h,5Fh,0E7h,0EFh,0F3h,0F4h,0C1h,00h,1Bh,5Bh,00h ; 36B7 |._.......[.|
+L_3584:  .db 20h,20h                                          ; 3584 |  |
+         .db 00h                                              ; 3586 |.|
+         .db '     Кб  '                                      ; 3587
+         .db 00h                                              ; 3590 |.|
+         .db '    % '                                         ; 3591
+         .db 00h,1Bh                                          ; 3597 |..|
+         .db 59h,20h                                          ; 3599 |Y |
+L_359B:  .db 20h                                              ; 359B | |
+         .db 1Bh                                              ; 359C |.|
+         .db 'b   '                                           ; 359D
+         .db 00h                                              ; 35A1 |.|
+         .db '     Кб'                                        ; 35A2
+         .db 00h                                              ; 35A9 |.|
+         .db '  Файлов        '                               ; 35AA
+         .db 1Bh                                              ; 35BA |.|
+         .db 61h                                              ; 35BB |a|
+         .db 00h                                              ; 35BC |.|
+         .db '????????'                                       ; 35BD
+         .db 00h                                              ; 35C5 |.|
+         .db 50h,4Bh,32h                                      ; 35C6 |PK2|
+         .db 07h                                              ; 35C9 |.|
+         .db ' Помощь'                                        ; 35CA
+         .db 00h                                              ; 35D1 |.|
+         .db 'CO       HLP'                                   ; 35D2
+         .db 1Bh                                              ; 35DE |.|
+         .db 'Y8 F1-Вверх F2-Шрифт F3-Печать F4-Вниз C'       ; 35DF
+         .db 'TP-К строке # ПС-Поиск ВК-Поиск следующе'       ; 3607
+         .db 0C7h,0CFh                                        ; 362F |..|
+         .db 00h                                              ; 3631 |.|
+         .db ' Поиск подстроки - '                            ; 3632
+         .db 00h                                              ; 3645 |.|
+         .db 23h                                              ; 3646 |#|
+L_3647:  .db 01h                                              ; 3647 |.|
+         .db '                                    Скол'       ; 3648
+         .db 'ько строк печатать - '                          ; 3670
+         .db 00h,1Bh                                          ; 3685 |..|
+         .db 59h,20h,48h                                      ; 3687 |Y H|
+         .db 00h,1Bh                                          ; 368A |..|
+         .db 59h,20h,61h                                      ; 368C |Y a|
+         .db 00h                                              ; 368F |.|
+         .db 'Печать'                                         ; 3690
+         .db 00h                                              ; 3696 |.|
+         .db 'Прямой_вывод'                                   ; 3697
+         .db 00h                                              ; 36A3 |.|
+         .db 'В_набор_8'                                      ; 36A4
+         .db 00h                                              ; 36AD |.|
+         .db 'В_Альт_Код_ГОСТа'                               ; 36AE
+         .db 00h,1Bh                                          ; 36BE |..|
+         .db 5Bh                                              ; 36C0 |[|
+         .db 00h                                              ; 36C1 |.|
 L_36C2:  LXI  H,0A866h            ; 36C2 21 66 a8
          JMP  L_36CB              ; 36C5 c3 cb 36
-         .db 21h,59h,0A8h                                     ; 36C8 |!Y.|
-L_36CB:  .db 22h,0E9h,36h,22h,0Bh,37h,21h,89h,0B6h,0CDh,47h,0Eh,7Eh ; 36CB |".6".7!...G.~|
-         .db 0FEh,00h,0C8h,3Ah,14h,0DFh,0FEh,37h,0D0h,0CDh,3Ah,39h,21h,14h,0DFh,4Eh ; 36D8 |...:...7..:9!..N|
-         .db 3Ah,59h,0A8h,0C6h,03h,47h,81h,77h,79h,85h,6Fh,3Ah,02h,0A8h,0FEh,00h ; 36E8 |:Y...G.wy.o:....|
-         .db 0C4h,3Bh,37h,0E5h,21h,91h,3Eh,0CDh,4Dh,0Eh,7Eh,0E1h,23h,77h,23h,36h ; 36F8 |.;7.!.>.M.~.#w#6|
-         .db 3Ah,23h,11h,59h,0A8h,0EBh,4Eh,23h,0EFh,0EBh,36h,20h,0C3h,0EFh,27h ; 3708 |:#.Y..N#..6 ..'|
+L_36C8:  LXI  H,0A859h            ; 36C8 21 59 a8
+L_36CB:  SHLD 36E9h               ; 36CB 22 e9 36
+         SHLD 370Bh               ; 36CE 22 0b 37
+         LXI  H,0B689h            ; 36D1 21 89 b6
+         CALL L_0E47              ; 36D4 cd 47 0e
+         MOV  A,M                 ; 36D7 7e
+         CPI  00h                 ; 36D8 fe 00
+         RZ                       ; 36DA c8
+         LDA  0DF14h              ; 36DB 3a 14 df
+         CPI  37h                 ; 36DE fe 37
+         RNC                      ; 36E0 d0
+         CALL L_393A              ; 36E1 cd 3a 39
+         LXI  H,0DF14h            ; 36E4 21 14 df
+         MOV  C,M                 ; 36E7 4e
+         LDA  0A859h              ; 36E8 3a 59 a8
+         ADI  03h                 ; 36EB c6 03
+         MOV  B,A                 ; 36ED 47
+         ADD  C                   ; 36EE 81
+         MOV  M,A                 ; 36EF 77
+         MOV  A,C                 ; 36F0 79
+         ADD  L                   ; 36F1 85
+         MOV  L,A                 ; 36F2 6f
+         LDA  0A802h              ; 36F3 3a 02 a8
+         CPI  00h                 ; 36F6 fe 00
+         CNZ  L_373B              ; 36F8 c4 3b 37
+         PUSH H                   ; 36FB e5
+         LXI  H,3E91h             ; 36FC 21 91 3e
+         CALL L_0E4D              ; 36FF cd 4d 0e
+         MOV  A,M                 ; 3702 7e
+         POP  H                   ; 3703 e1
+         INX  H                   ; 3704 23
+         MOV  M,A                 ; 3705 77
+         INX  H                   ; 3706 23
+         MVI  M,3Ah               ; 3707 36 3a
+         INX  H                   ; 3709 23
+         LXI  D,0A859h            ; 370A 11 59 a8
+         XCHG                     ; 370D eb
+         MOV  C,M                 ; 370E 4e
+         INX  H                   ; 370F 23
+         RST  5                   ; 3710 ef
+         XCHG                     ; 3711 eb
+         MVI  M,20h               ; 3712 36 20
+         JMP  L_27EF              ; 3714 c3 ef 27
 L_3717:  LDA  0DF14h              ; 3717 3a 14 df
 L_371A:  CPI  46h                 ; 371A fe 46
 L_371C:  RNC                      ; 371C d0
@@ -6128,8 +6401,6 @@ L_37A1:  LXI  D,3E89h             ; 37A1 11 89 3e
          CALL L_381A              ; 37A6 cd 1a 38
          RNZ                      ; 37A9 c0
          JMP  L_26D1              ; 37AA c3 d1 26
-
-; «=» -- отметить те же файлы, что на другой панели.
 L_37AD:  CALL L_2A0A              ; 37AD cd 0a 2a
 L_37B0:  CALL L_20CA              ; 37B0 cd ca 20
 L_37B3:  SHLD 37EAh               ; 37B3 22 ea 37
@@ -6513,8 +6784,6 @@ L_3A5D:  PUSH H                   ; 3A5D e5
 L_3A7B:  LDA  0B6ABh              ; 3A7B 3a ab b6
 L_3A7E:  CPI  3Ah                 ; 3A7E fe 3a
 L_3A80:  JZ   L_200F              ; 3A80 ca 0f 20
-
-; Запуск программы по строке из CO.EXT или CO.MNU.
          CALL L_1009              ; 3A83 cd 09 10
          LXI  H,3E15h             ; 3A86 21 15 3e
          RST  3                   ; 3A89 df
@@ -6909,13 +7178,28 @@ L_3D9A:  DCR  C                   ; 3D9A 0d
 L_3D9B:  JNZ  L_3D8E              ; 3D9B c2 8e 3d
 L_3D9E:  CALL L_11F1              ; 3D9E cd f1 11
 L_3DA1:  JMP  L_090F              ; 3DA1 c3 0f 09
-         .db 42h,41h,53h,43h,4Fh,4Dh,41h,53h,4Dh,4Dh,4Fh,4Eh,07h,53h,41h,56h ; 3DA4 |BASCOMASMMON.SAV|
-         .db 45h,0E6h,0C1h,0CAh,0CCh,20h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h ; 3DB4 |E.... ..........|
-         .db 00h,00h,00h,00h,44h,4Fh,53h,00h,52h,4Fh,4Dh,00h,42h,41h,53h,00h ; 3DC4 |....DOS.ROM.BAS.|
-         .db 41h,53h,4Dh,00h,4Dh,4Fh,4Eh,00h,20h,0E4h,0CCh,0D1h,20h,0DAh,0C1h,0D0h ; 3DD4 |ASM.MON. ... ...|
-         .db 0C9h,0D3h,0C9h,20h,0CEh,0C1h,0D6h,0CDh,0C9h,0D4h,0C5h,20h,0CCh,0C0h,0C2h,0D5h ; 3DE4 |... ....... ....|
-         .db 0C0h,20h,0CBh,0CCh,0C1h,0D7h,0C9h,0DBh,0D5h,00h,0F0h,0CFh,20h,0D4h,0C9h,0D0h ; 3DF4 |. .......... ...|
-         .db 0D5h,00h,0F3h,20h,0D5h,0CBh,0C1h,0DAh,0C1h,0CEh,0C9h,0C5h ; 3E04 |... ........|
+
+; Загрузчики для записи на магнитофон: по типу файла выбирается
+; SAVEDOS, SAVEROM, SAVEBAS, SAVEASM или SAVEMON.
+         .db 'BASCOMASMMON'                                   ; 3DA4
+         .db 07h                                              ; 3DB0 |.|
+         .db 'SAVEФайл '                                      ; 3DB1
+         .db 00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h ; 3DBA |..............|
+         .db 44h,4Fh,53h                                      ; 3DC8 |DOS|
+         .db 00h                                              ; 3DCB |.|
+         .db 52h,4Fh,4Dh                                      ; 3DCC |ROM|
+         .db 00h                                              ; 3DCF |.|
+         .db 42h,41h,53h                                      ; 3DD0 |BAS|
+         .db 00h                                              ; 3DD3 |.|
+         .db 41h,53h,4Dh                                      ; 3DD4 |ASM|
+         .db 00h                                              ; 3DD7 |.|
+         .db 4Dh,4Fh,4Eh                                      ; 3DD8 |MON|
+         .db 00h                                              ; 3DDB |.|
+         .db ' Для записи нажмите любую клавишу'              ; 3DDC
+         .db 00h                                              ; 3DFD |.|
+         .db 'По типу'                                        ; 3DFE
+         .db 00h                                              ; 3E05 |.|
+         .db 'С указание'                                     ; 3E06
 L_3E10:  CALL 1B00h               ; 3E10 cd 00 1b
          MOV  E,E                 ; 3E13 5b
          NOP                      ; 3E14 00
@@ -7211,6 +7495,8 @@ L_4033:  PUSH H                   ; 4033 e5
          SHLD 0DF18h              ; 4049 22 18 df
          POP  H                   ; 404C e1
          RET                      ; 404D c9
+; Последовательности для экрана: ESC [ -- очистка, ESC Y с парой координат --
+; позиционирование курсора. Ими рисуются рамки и шапки панелей.
          .db 1Bh,5Bh,0Ch,1Bh,59h,21h,20h,89h,00h,0BBh,89h,00h,0BBh,1Bh,59h,36h ; 404E |.[..Y! .......Y6|
          .db 20h,88h,00h,0BCh,88h,00h,0BCh,1Bh,59h,37h,6Ch,00h ; 405E | .......Y7l.|
 L_406A:  LHLD 0006h               ; 406A 2a 06 00
@@ -7252,7 +7538,17 @@ L_40C1:  JZ   L_3E98              ; 40C1 ca 98 3e
 L_40C4:  LDA  0004h               ; 40C4 3a 04 00
 L_40C7:  ADI  41h                 ; 40C7 c6 41
 L_40C9:  JMP  L_3E9B              ; 40C9 c3 9b 3e
-         .db 0F5h,0C5h,0D5h,0E5h,0CDh,15h,0F8h,0CDh,03h,0F8h,0E1h,0D1h,0C1h,0F1h,0C9h ; 40CC |...............|
+L_40CC:  PUSH PSW                 ; 40CC f5
+         PUSH B                   ; 40CD c5
+         PUSH D                   ; 40CE d5
+         PUSH H                   ; 40CF e5
+         CALL 0F815h              ; 40D0 cd 15 f8
+         CALL 0F803h              ; 40D3 cd 03 f8
+         POP  H                   ; 40D6 e1
+         POP  D                   ; 40D7 d1
+         POP  B                   ; 40D8 c1
+         POP  PSW                 ; 40D9 f1
+         RET                      ; 40DA c9
 L_40DB:  NOP                      ; 40DB 00
          NOP                      ; 40DC 00
          NOP                      ; 40DD 00
