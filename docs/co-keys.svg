@@ -184,7 +184,7 @@
 <line x1="654" y1="346" x2="1220" y2="346" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
 <rect x="654" y="354" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="669" y="369" fill="#14149b" font-size="13" text-anchor="middle">1</text>
-<text x="696" y="369" fill="#e8e8f4" font-size="13">показать помощь -- этот файл CO.HLP</text>
+<text x="696" y="369" fill="#e8e8f4" font-size="13">показать встроенную справку -- файл CO.HLP</text>
 <rect x="654" y="379" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="669" y="394" fill="#14149b" font-size="13" text-anchor="middle">2</text>
 <text x="696" y="394" fill="#e8e8f4" font-size="13">открыть меню пользователя из CO.MNU</text>
