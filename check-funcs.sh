@@ -89,8 +89,12 @@ elif [ "$DRIVE" = "B" ]; then
     MAXFRAME=4200
 fi
 
-probe() {   # имя, обработчик, клавиши для keytyper
-    name=$1; want=$2; keys=$3
+probe() {   # имя, обработчик, клавиши для keytyper, [чужой]
+    # Четвёртым словом «чужой» помечаются сценарии, которые доводят дело до
+    # запуска программы с диска: дальше памятью распоряжается она, и сторож
+    # целости нашего кода к ней не относится -- CO там уже нет, а когда
+    # вернётся, загрузится заново.
+    name=$1; want=$2; keys=$3; alien=${4:-}
     # ONLY=имя -- прогнать один сценарий: удобно, когда разбираешься с ним
     # по следу обращений, а не смотришь общую картину.
     [ -n "${ONLY:-}" ] && [ "$ONLY" != "$name" ] && return 0
@@ -130,9 +134,10 @@ EOF
     # десятки мегабайт, поэтому кладём не его, а сводку: по байту на адрес,
     # 1 -- читали, 2 -- писали, 3 -- и то и другое. Их сводит tools/winmap.py.
     [ -n "${DATDIR:-}" ] && { mkdir -p "$DATDIR"; [ -n "${RAWDAT:-}" ] && cp "$TMP/$name.dat" "$DATDIR/"; }
-    res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" "${DATDIR:+$DATDIR/$name.win}" <<'PY'
-import re, sys
+    res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" "${DATDIR:+$DATDIR/$name.win}" "$OUT/layout.txt" "$alien" <<'PY'
+import os, re, sys
 cov = open(sys.argv[1], 'rb').read()
+hurt = {}                       # куда писал не наш код: адрес -> pc
 want = int(sys.argv[3], 16)
 fired = 'да ' if cov[want - 0x100] else 'НЕТ'
 # CO вообще стартовал? Проверяем по отрисовке панели (091B): без неё прогон
@@ -164,22 +169,46 @@ for ln in open(sys.argv[2]):
         bit = 1 if m.group(1) == 'r' else 2
         if not any(lo <= pc <= hi for lo, hi in OURS):
             bit |= 4
+            if bit & 2:
+                hurt.setdefault(a, pc)
         seen[a - 0xA000] |= bit
     if pc in OSPC and not 0xDFC9 <= a <= 0xDFFF:
         win.add(a)
 if len(sys.argv) > 4 and sys.argv[4]:
     open(sys.argv[4], 'wb').write(bytes(seen))
 clean = 'чисто' if not win else '%04X-%04X' % (min(win), max(win))
-print('%s %s %d' % (fired, clean, sum(1 for b in cov if b)))
+
+# Цел ли дописанный код. Где он лежит, сборка записала в layout.txt; сюда
+# никто, кроме него самого, писать не должен. Проверка ловит ровно то, на чём
+# мы уже обожглись: меню пользователя чистило свою таблицу поверх нашего кода,
+# и это вылезло только зависанием в одном сценарии из сорока.
+guard = 'цел'
+alien = len(sys.argv) > 6 and sys.argv[6]
+if alien:
+    guard = 'чужая_программа'
+elif len(sys.argv) > 5 and os.path.exists(sys.argv[5]):
+    mine = []
+    for ln in open(sys.argv[5]):
+        where, addr, length, _ = ln.strip().split(',', 3)
+        if where in ('окно', 'стек'):
+            mine.append((int(addr, 16), int(addr, 16) + int(length) - 1))
+    for a in sorted(hurt):
+        if any(lo <= a <= hi for lo, hi in mine):
+            guard = 'ЗАТЁРТ_%04X_из_%04X' % (a, hurt[a])
+            break
+print('%s %s %s %d' % (fired, clean, guard, sum(1 for b in cov if b)))
 PY
 )
     set -- $res
-    printf '%-14s %-8s %-4s %-10s %s\n' "$name" "$want" "$1" "$2" "$3"
-    [ "$1" = "да" ] && ok=$((ok+1)) || bad=$((bad+1))
+    printf '%-14s %-8s %-4s %-10s %-18s %s\n' "$name" "$want" "$1" "$2" "$3" "$4"
+    case "$1:$3" in
+        да:цел|да:чужая_программа) ok=$((ok+1)) ;;
+        *) bad=$((bad+1)) ;;
+    esac
 }
 
-printf '%-14s %-8s %-4s %-10s %s\n' функция обработчик было в_окне адресов
-printf '%-14s %-8s %-4s %-10s %s\n' -------------- -------- ---- ---------- --------
+printf '%-14s %-8s %-4s %-10s %-18s %s\n' функция обработчик было в_окне наш_код адресов
+printf '%-14s %-8s %-4s %-10s %-18s %s\n' -------------- -------- ---- ---------- ------------------ --------
 
 # Меню пользователя чистит у себя таблицу по B728-B755, а туда сборка
 # кладёт свой код: после меню первое же перечитывание каталога с файлом
@@ -208,7 +237,7 @@ probe снять       0344 '"=", 300'
 probe какнасосед  37AD '"\001Left Shift", 10, "=", 20, "\002Left Shift", 300'
 probe инверсия    3D69 '"/", 300'
 probe поиск       0315 '";", 200, "C", 200'
-probe запуск      06AC '"Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 60, "Return", 600'
+probe запуск      06AC '"Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 60, "Return", 600' чужой
 probe сс1         053C '"\001Left Shift", 10, "1", 20, "\002Left Shift", 300'
 probe сс2         06A0 '"\001Left Shift", 10, "2", 20, "\002Left Shift", 300'
 probe сс3         0700 '"\001Left Shift", 10, "3", 20, "\002Left Shift", 300'
