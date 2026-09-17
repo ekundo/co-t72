@@ -173,7 +173,7 @@
 <text x="696" y="217" fill="#e8e8f4" font-size="13">отметить те же, что на другой панели</text>
 <rect x="654" y="227" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="669" y="242" fill="#14149b" font-size="13" text-anchor="middle">/</text>
-<text x="696" y="242" fill="#e8e8f4" font-size="13">обратить метки</text>
+<text x="696" y="242" fill="#e8e8f4" font-size="13">инвертировать метки</text>
 <rect x="654" y="252" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="669" y="267" fill="#14149b" font-size="13" text-anchor="middle">-</text>
 <text x="696" y="267" fill="#e8e8f4" font-size="13">снять все метки</text>
