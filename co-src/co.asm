@@ -567,10 +567,44 @@ L_05C5:  CALL L_1958              ; 05C5 cd 58 19
          JMP  L_205D              ; 05D1 c3 5d 20
 L_05D4:  CALL L_0FE0              ; 05D4 cd e0 0f
          JMP  L_030F              ; 05D7 c3 0f 03
-         .db 11h,00h,4Ah,07h,02h,4Ah,07h,03h,4Ah,07h,3Ch,4Ah,07h,20h,6Dh,03h ; 05DA |..J..J..J.<J. m.|
-         .db 01h,0FEh,27h,1Bh,9Ah,0Fh,0Ch,0F7h,0Bh,0Ah,0E1h,26h,31h,16h,06h,21h ; 05EA |..'........&1..!|
-         .db 3Ch,05h,32h,1Ch,06h,37h,70h,28h,28h,3Dh,21h,39h,0ACh,23h,30h,98h ; 05FA |<.2..7p((=!9.#0.|
-         .db 04h,09h,0F7h,0Bh,0AAh,05h                        ; 060A |......|
+
+; Таблица «клавиша -> обработчик» для панелей при непустой командной строке;
+L_05DA:  .db 11h                                              ; 05DA -- записей в таблице
+         .db 00h                                              ; 05DB Ф1
+         .dw L_074A                                           ; 05DC
+         .db 02h                                              ; 05DE Ф3
+         .dw L_074A                                           ; 05DF
+         .db 03h                                              ; 05E1 Ф4
+         .dw L_074A                                           ; 05E2
+         .db 3Ch                                              ; 05E4 "<"
+         .dw L_074A                                           ; 05E5
+         .db 20h                                              ; 05E7 пробел
+         .dw L_036D                                           ; 05E8
+         .db 01h                                              ; 05EA Ф2
+         .dw L_27FE                                           ; 05EB
+         .db 1Bh                                              ; 05ED АР2
+         .dw L_0F9A                                           ; 05EE
+         .db 0Ch                                              ; 05F0 стрелка влево-вверх
+         .dw L_0BF7                                           ; 05F1
+         .db 0Ah                                              ; 05F3 ПС
+         .dw L_26E1                                           ; 05F4
+         .db 31h                                              ; 05F6 "1"
+         .dw L_0616                                           ; 05F7
+         .db 21h                                              ; 05F9 "!"
+         .dw L_053C                                           ; 05FA
+         .db 32h                                              ; 05FC "2"
+         .dw L_061C                                           ; 05FD
+         .db 37h                                              ; 05FF "7"
+         .dw L_2870                                           ; 0600
+         .db 28h                                              ; 0602 "("
+         .dw L_213D                                           ; 0603
+         .db 39h                                              ; 0605 "9"
+         .dw L_23AC                                           ; 0606
+         .db 30h                                              ; 0608 "0"
+         .dw L_0498                                           ; 0609
+         .db 09h                                              ; 060B ТАБ
+         .dw L_0BF7                                           ; 060C
+         .dw L_05AA                                           ; 060E -- для всех прочих клавиш
 L_0610:  MVI  A,4Eh               ; 0610 3e 4e
 L_0612:  STA  L_082B              ; 0612 32 2b 08
 L_0615:  RET                      ; 0615 c9
@@ -578,16 +612,80 @@ L_0616:  CALL L_0610              ; 0616 cd 10 06
 L_0619:  JMP  L_2E4E              ; 0619 c3 4e 2e
 L_061C:  CALL L_0610              ; 061C cd 10 06
 L_061F:  JMP  L_3AAB              ; 061F c3 ab 3a
-         .db 06h,19h,77h,04h,1Ah,5Ah,04h,01h,0FEh,27h,08h,64h,04h,18h,85h,04h ; 0622 |..w..Z...'.d....|
-         .db 0Ah,0E1h,26h,0DDh,03h,18h,19h,77h,04h,1Ah,5Ah,04h,08h,64h,04h,18h ; 0632 |..&....w..Z..d..|
-         .db 85h,04h,1Fh,0FBh,26h,0Dh,0ACh,06h,3Bh,15h,03h,2Bh,0C7h,22h,2Dh,44h ; 0642 |....&...;..+."-D|
-         .db 03h,3Dh,0ADh,37h,2Fh,69h,3Dh,22h,0A0h,06h,33h,0F7h,06h,23h,00h,07h ; 0652 |.=.7/i="..3..#..|
-         .db 34h,8Eh,06h,24h,94h,06h,35h,2Eh,07h,25h,3Ah,07h,36h,88h,06h,26h ; 0662 |4..$..5..%:.6..&|
-         .db 0EEh,06h,38h,0A6h,06h,27h,0E5h,06h,3Fh,82h,06h,29h,9Ah,06h,82h,05h ; 0672 |..8..'..?..)....|
-         .db 0CDh,1Eh,07h,0C3h,0DAh,12h                       ; 0682 |......|
+
+; она же при пустой строке, короткая: только стрелки и ПС;
+L_0622:  .db 06h                                              ; 0622 -- записей в таблице
+         .db 19h                                              ; 0623 стрелка вверх
+         .dw L_0477                                           ; 0624
+         .db 1Ah                                              ; 0626 стрелка вниз
+         .dw L_045A                                           ; 0627
+         .db 01h                                              ; 0629 Ф2
+         .dw L_27FE                                           ; 062A
+         .db 08h                                              ; 062C стрелка влево
+         .dw L_0464                                           ; 062D
+         .db 18h                                              ; 062F стрелка вправо
+         .dw L_0485                                           ; 0630
+         .db 0Ah                                              ; 0632 ПС
+         .dw L_26E1                                           ; 0633
+         .dw L_03DD                                           ; 0635 -- для всех прочих клавиш
+
+; и она же для второго набора цифр -- после АР2 или с СС.
+L_0637:  .db 18h                                              ; 0637 -- записей в таблице
+         .db 19h                                              ; 0638 стрелка вверх
+         .dw L_0477                                           ; 0639
+         .db 1Ah                                              ; 063B стрелка вниз
+         .dw L_045A                                           ; 063C
+         .db 08h                                              ; 063E стрелка влево
+         .dw L_0464                                           ; 063F
+         .db 18h                                              ; 0641 стрелка вправо
+         .dw L_0485                                           ; 0642
+         .db 1Fh                                              ; 0644 СТР
+         .dw L_26FB                                           ; 0645
+         .db 0Dh                                              ; 0647 ВК
+         .dw L_06AC                                           ; 0648
+         .db 3Bh                                              ; 064A ";"
+         .dw L_0315                                           ; 064B
+         .db 2Bh                                              ; 064D "+"
+         .dw L_22C7                                           ; 064E
+         .db 2Dh                                              ; 0650 "-"
+         .dw L_0344                                           ; 0651
+         .db 3Dh                                              ; 0653 "="
+         .dw L_37AD                                           ; 0654
+         .db 2Fh                                              ; 0656 "/"
+         .dw L_3D69                                           ; 0657
+         .db 22h                                              ; 0659 """
+         .dw L_06A0                                           ; 065A
+         .db 33h                                              ; 065C "3"
+         .dw L_06F7                                           ; 065D
+         .db 23h                                              ; 065F "#"
+         .dw L_0700                                           ; 0660
+         .db 34h                                              ; 0662 "4"
+         .dw L_068E                                           ; 0663
+         .db 24h                                              ; 0665 "$"
+         .dw L_0694                                           ; 0666
+         .db 35h                                              ; 0668 "5"
+         .dw L_072E                                           ; 0669
+         .db 25h                                              ; 066B "%"
+         .dw L_073A                                           ; 066C
+         .db 36h                                              ; 066E "6"
+         .dw L_0688                                           ; 066F
+         .db 26h                                              ; 0671 "&"
+         .dw L_06EE                                           ; 0672
+         .db 38h                                              ; 0674 "8"
+         .dw L_06A6                                           ; 0675
+         .db 27h                                              ; 0677 "'"
+         .dw L_06E5                                           ; 0678
+         .db 3Fh                                              ; 067A "?"
+         .dw L_0682                                           ; 067B
+         .db 29h                                              ; 067D ")"
+         .dw L_069A                                           ; 067E
+         .dw L_0582                                           ; 0680 -- для всех прочих клавиш
+L_0682:  CALL L_071E              ; 0682 cd 1e 07
+         JMP  L_12DA              ; 0685 c3 da 12
 L_0688:  CALL L_0714              ; 0688 cd 14 07
 L_068B:  JMP  L_218A              ; 068B c3 8a 21
-         .db 0CDh,1Eh,07h,0C3h,7Dh,39h                        ; 068E |....}9|
+L_068E:  CALL L_071E              ; 068E cd 1e 07
+         JMP  L_397D              ; 0691 c3 7d 39
 L_0694:  CALL L_071E              ; 0694 cd 1e 07
 L_0697:  JMP  L_39C3              ; 0697 c3 c3 39
 L_069A:  CALL L_071E              ; 069A cd 1e 07
@@ -685,12 +783,59 @@ L_0775:  POP  H                   ; 0775 e1
 L_0776:  MOV  A,L                 ; 0776 7d
 L_0777:  STA  0B693h              ; 0777 32 93 b6
 L_077A:  JMP  L_075C              ; 077A c3 5c 07
-         .db 0Fh,01h,0F5h,27h,00h,05h,08h,0Ah,0E1h,26h,02h,05h,08h,03h,0C2h,36h ; 077D |...'.....&.....6|
-         .db 0Dh,0Fh,20h,1Ah,5Ah,04h,08h,0C0h,07h,18h,0ADh,07h,19h,77h,04h,0Ch ; 078D |.. .Z........w..|
-         .db 0F7h,0Bh,09h,0F7h,0Bh,1Fh,0C8h,36h,7Fh,0F4h,07h,1Bh,0FCh,07h,0D7h,07h ; 079D |.......6........|
-         .db 3Ah,01h,0A8h,0E6h,20h,0CAh,85h,04h,21h,02h,0A8h,7Eh,0FEh,00h,0CAh,85h ; 07AD |:... ...!..~....|
-         .db 04h,35h,0C9h,3Ah,01h,0A8h,0E6h,20h,0CAh,64h,04h,3Ah,02h,0A8h,21h,14h ; 07BD |.5.:... .d.:..!.|
-         .db 0DFh,0BEh,0CAh,64h,04h,3Ch,32h,02h,0A8h,0C9h     ; 07CD |...d.<2...|
+
+; Таблица клавиш меню выбора из списка: диски, кодировки, настройки.
+L_077D:  .db 0Fh                                              ; 077D -- записей в таблице
+         .db 01h                                              ; 077E Ф2
+         .dw L_27F5                                           ; 077F
+         .db 00h                                              ; 0781 Ф1
+         .dw L_0805                                           ; 0782
+         .db 0Ah                                              ; 0784 ПС
+         .dw L_26E1                                           ; 0785
+         .db 02h                                              ; 0787 Ф3
+         .dw L_0805                                           ; 0788
+         .db 03h                                              ; 078A Ф4
+         .dw L_36C2                                           ; 078B
+         .db 0Dh                                              ; 078D ВК
+         .dw L_200F                                           ; 078E
+         .db 1Ah                                              ; 0790 стрелка вниз
+         .dw L_045A                                           ; 0791
+         .db 08h                                              ; 0793 стрелка влево
+         .dw L_07C0                                           ; 0794
+         .db 18h                                              ; 0796 стрелка вправо
+         .dw L_07AD                                           ; 0797
+         .db 19h                                              ; 0799 стрелка вверх
+         .dw L_0477                                           ; 079A
+         .db 0Ch                                              ; 079C стрелка влево-вверх
+         .dw L_0BF7                                           ; 079D
+         .db 09h                                              ; 079F ТАБ
+         .dw L_0BF7                                           ; 07A0
+         .db 1Fh                                              ; 07A2 СТР
+         .dw 36C8h                                            ; 07A3
+         .db 7Fh                                              ; 07A5 ЗБ
+         .dw L_07F4                                           ; 07A6
+         .db 1Bh                                              ; 07A8 АР2
+         .dw 07FCh                                            ; 07A9
+         .dw L_07D7                                           ; 07AB -- для всех прочих клавиш
+L_07AD:  LDA  0A801h              ; 07AD 3a 01 a8
+         ANI  20h                 ; 07B0 e6 20
+         JZ   L_0485              ; 07B2 ca 85 04
+         LXI  H,0A802h            ; 07B5 21 02 a8
+         MOV  A,M                 ; 07B8 7e
+         CPI  00h                 ; 07B9 fe 00
+         JZ   L_0485              ; 07BB ca 85 04
+         DCR  M                   ; 07BE 35
+         RET                      ; 07BF c9
+L_07C0:  LDA  0A801h              ; 07C0 3a 01 a8
+         ANI  20h                 ; 07C3 e6 20
+         JZ   L_0464              ; 07C5 ca 64 04
+         LDA  0A802h              ; 07C8 3a 02 a8
+         LXI  H,0DF14h            ; 07CB 21 14 df
+         CMP  M                   ; 07CE be
+         JZ   L_0464              ; 07CF ca 64 04
+         INR  A                   ; 07D2 3c
+         STA  0A802h              ; 07D3 32 02 a8
+         RET                      ; 07D6 c9
 L_07D7:  LDA  0B693h              ; 07D7 3a 93 b6
 L_07DA:  MOV  C,A                 ; 07DA 4f
 L_07DB:  RST  4                   ; 07DB e7
@@ -707,10 +852,22 @@ L_07E4:  JZ   L_3717              ; 07E4 ca 17 37
          MOV  A,C                 ; 07ED 79
          CALL L_2A02              ; 07EE cd 02 2a
          JMP  L_3717              ; 07F1 c3 17 37
-         .db 3Ah,14h,0DFh,0FEh,01h,0C2h,9Ah,26h,3Eh,0Eh,32h,51h,0A8h,0E1h,0C3h,0E0h ; 07F4 |:......&>.2Q....|
-         .db 0Fh,0AFh,32h,02h,0A8h,0CDh,0E0h,0Fh,3Ah,93h,0B6h,0FEh,02h,0CAh,9Eh,13h ; 0804 |..2.....:.......|
-         .db 0C3h,8Fh,13h,0F7h,0D9h,0CAh,0D4h,0C9h,20h,0D7h,20h,44h,4Fh,53h,20h,3Fh ; 0814 |........ . DOS ?|
-         .db 20h,28h,59h,2Fh,4Eh,29h,00h                      ; 0824 | (Y/N).|
+L_07F4:  LDA  0DF14h              ; 07F4 3a 14 df
+         CPI  01h                 ; 07F7 fe 01
+         JNZ  L_269A              ; 07F9 c2 9a 26
+         MVI  A,0Eh               ; 07FC 3e 0e
+         STA  0A851h              ; 07FE 32 51 a8
+         POP  H                   ; 0801 e1
+         JMP  L_0FE0              ; 0802 c3 e0 0f
+L_0805:  XRA  A                   ; 0805 af
+         STA  0A802h              ; 0806 32 02 a8
+         CALL L_0FE0              ; 0809 cd e0 0f
+         LDA  0B693h              ; 080C 3a 93 b6
+         CPI  02h                 ; 080F fe 02
+         JZ   L_139E              ; 0811 ca 9e 13
+         JMP  L_138F              ; 0814 c3 8f 13
+         .db 0F7h,0D9h,0CAh,0D4h,0C9h,20h,0D7h,20h,44h,4Fh,53h,20h,3Fh,20h,28h,59h ; 0817 |..... . DOS ? (Y|
+         .db 2Fh,4Eh,29h,00h                                  ; 0827 |/N).|
 L_082B:  .db 00h                                              ; 082B |.|
 L_082C:  .db 05h                                              ; 082C |.|
 L_082D:  LXI  H,3E93h             ; 082D 21 93 3e
@@ -1592,8 +1749,15 @@ L_0F81:  RST  4                   ; 0F81 e7
 L_0F82:  DCR  A                   ; 0F82 3d
 L_0F83:  JNZ  L_0F81              ; 0F83 c2 81 0f
 L_0F86:  RET                      ; 0F86 c9
-         .db 3Ah,9Dh,0B6h,3Dh,0CAh,95h,0Fh,6Fh,26h,00h,22h,91h,0B6h,0C9h,3Eh,02h ; 0F87 |:..=...o&."...>.|
-         .db 0C3h,8Eh,0Fh                                     ; 0F97 |...|
+L_0F87:  LDA  0B69Dh              ; 0F87 3a 9d b6
+         DCR  A                   ; 0F8A 3d
+         JZ   L_0F95              ; 0F8B ca 95 0f
+L_0F8E:  MOV  L,A                 ; 0F8E 6f
+         MVI  H,00h               ; 0F8F 26 00
+         SHLD 0B691h              ; 0F91 22 91 b6
+         RET                      ; 0F94 c9
+L_0F95:  MVI  A,02h               ; 0F95 3e 02
+         JMP  L_0F8E              ; 0F97 c3 8e 0f
 L_0F9A:  LXI  H,1135h             ; 0F9A 21 35 11
 L_0F9D:  RST  3                   ; 0F9D df
 L_0F9E:  LDA  0B68Fh              ; 0F9E 3a 8f b6
@@ -1607,8 +1771,17 @@ L_0FAE:  JMP  L_0FF3              ; 0FAE c3 f3 0f
 L_0FB1:  LXI  H,118Eh             ; 0FB1 21 8e 11
 L_0FB4:  MVI  A,02h               ; 0FB4 3e 02
 L_0FB6:  JMP  L_0FAA              ; 0FB6 c3 aa 0f
-         .db 21h,63h,0B6h,11h,0Bh,00h,19h,7Eh,0E6h,7Fh,77h,23h,7Eh,0E6h,7Fh,77h ; 0FB9 |!c.....~..w#~..w|
-         .db 0C9h                                             ; 0FC9 |.|
+L_0FB9:  LXI  H,0B663h            ; 0FB9 21 63 b6
+         LXI  D,000Bh             ; 0FBC 11 0b 00
+         DAD  D                   ; 0FBF 19
+         MOV  A,M                 ; 0FC0 7e
+         ANI  7Fh                 ; 0FC1 e6 7f
+         MOV  M,A                 ; 0FC3 77
+         INX  H                   ; 0FC4 23
+         MOV  A,M                 ; 0FC5 7e
+         ANI  7Fh                 ; 0FC6 e6 7f
+         MOV  M,A                 ; 0FC8 77
+         RET                      ; 0FC9 c9
 L_0FCA:  CALL L_0FD0              ; 0FCA cd d0 0f
          CALL L_091B              ; 0FCD cd 1b 09
 L_0FD0:  LDA  0B69Dh              ; 0FD0 3a 9d b6
@@ -1829,11 +2002,39 @@ L_12D0:  XRA  A                   ; 12D0 af
 L_12D1:  STA  0B68Dh              ; 12D1 32 8d b6
 L_12D4:  LXI  H,353Bh             ; 12D4 21 3b 35
 L_12D7:  JMP  L_19BB              ; 12D7 c3 bb 19
-         .db 21h,00h,00h,22h,83h,0A8h,0CDh,57h,12h,0CDh,0DFh,29h,21h,91h,3Eh,0CDh ; 12DA |!.."...W...)!.>.|
-         .db 4Dh,0Eh,7Eh,32h,73h,0B6h,0CDh,0B8h,19h,3Eh,3Fh,32h,68h,00h,0Eh,11h ; 12EA |M.~2s....>?2h...|
-         .db 0C3h,0FFh,12h,0Eh,12h,0CDh,0ADh,19h,0FEh,0FFh,0CAh,22h,13h,3Ch,4Fh,0AFh ; 12FA |...........".<O.|
-         .db 47h,0C6h,20h,0Dh,0C2h,0Bh,13h,0C6h,6Fh,4Fh,0Ah,4Fh,2Ah,83h,0A8h,09h ; 130A |G. .....oO.O*...|
-         .db 22h,83h,0A8h,0FEh,80h,0CAh,0FDh,12h              ; 131A |".......|
+L_12DA:  LXI  H,0000h             ; 12DA 21 00 00
+         SHLD 0A883h              ; 12DD 22 83 a8
+         CALL L_1257              ; 12E0 cd 57 12
+         CALL L_29DF              ; 12E3 cd df 29
+         LXI  H,3E91h             ; 12E6 21 91 3e
+         CALL L_0E4D              ; 12E9 cd 4d 0e
+         MOV  A,M                 ; 12EC 7e
+         STA  0B673h              ; 12ED 32 73 b6
+         CALL L_19B8              ; 12F0 cd b8 19
+         MVI  A,3Fh               ; 12F3 3e 3f
+         STA  0068h               ; 12F5 32 68 00
+         MVI  C,11h               ; 12F8 0e 11
+         JMP  L_12FF              ; 12FA c3 ff 12
+L_12FD:  MVI  C,12h               ; 12FD 0e 12
+L_12FF:  CALL L_19AD              ; 12FF cd ad 19
+         CPI  0FFh                ; 1302 fe ff
+         JZ   L_1322              ; 1304 ca 22 13
+         INR  A                   ; 1307 3c
+         MOV  C,A                 ; 1308 4f
+         XRA  A                   ; 1309 af
+         MOV  B,A                 ; 130A 47
+L_130B:  ADI  20h                 ; 130B c6 20
+         DCR  C                   ; 130D 0d
+         JNZ  L_130B              ; 130E c2 0b 13
+         ADI  6Fh                 ; 1311 c6 6f
+         MOV  C,A                 ; 1313 4f
+         LDAX B                   ; 1314 0a
+         MOV  C,A                 ; 1315 4f
+         LHLD 0A883h              ; 1316 2a 83 a8
+         DAD  B                   ; 1319 09
+         SHLD 0A883h              ; 131A 22 83 a8
+         CPI  80h                 ; 131D fe 80
+         JZ   L_12FD              ; 131F ca fd 12
 L_1322:  LHLD 0A883h              ; 1322 2a 83 a8
          CALL L_1345              ; 1325 cd 45 13
          LHLD 0A842h              ; 1328 2a 42 a8
@@ -1879,8 +2080,18 @@ L_1385:  MOV  A,M                 ; 1385 7e
          MVI  M,20h               ; 1389 36 20
          INX  H                   ; 138B 23
          JMP  L_1385              ; 138C c3 85 13
-         .db 0CDh,73h,14h,3Ah,51h,0A8h,3Dh,0C2h,0ACh,13h,3Eh,0Eh,0C3h,0ACh,13h,0CDh ; 138F |.s.:Q.=...>.....|
-         .db 73h,14h,3Ah,51h,0A8h,3Ch,0FEh,0Fh,0C2h,0ACh,13h,3Eh,01h ; 139F |s.:Q.<.....>.|
+L_138F:  CALL L_1473              ; 138F cd 73 14
+         LDA  0A851h              ; 1392 3a 51 a8
+         DCR  A                   ; 1395 3d
+         JNZ  L_13AC              ; 1396 c2 ac 13
+         MVI  A,0Eh               ; 1399 3e 0e
+         JMP  L_13AC              ; 139B c3 ac 13
+L_139E:  CALL L_1473              ; 139E cd 73 14
+         LDA  0A851h              ; 13A1 3a 51 a8
+         INR  A                   ; 13A4 3c
+         CPI  0Fh                 ; 13A5 fe 0f
+         JNZ  L_13AC              ; 13A7 c2 ac 13
+         MVI  A,01h               ; 13AA 3e 01
 L_13AC:  STA  0A851h              ; 13AC 32 51 a8
          LXI  H,0000h             ; 13AF 21 00 00
          LXI  D,0048h             ; 13B2 11 48 00
@@ -2509,9 +2720,23 @@ L_18EE:  CALL L_1808              ; 18EE cd 08 18
          JMP  L_18C3              ; 18F4 c3 c3 18
 L_18F7:  MOV  A,C                 ; 18F7 79
 L_18F8:  JMP  L_18DD              ; 18F8 c3 dd 18
-         .db 2Ah,3Ah,0A8h,22h,0Ah,0F8h,2Ah,38h,0A8h,0F9h,0CDh,0E0h,0Fh,3Ah,73h,0B6h ; 18FB |*:."..*8.....:s.|
-         .db 4Fh,0E7h,0Eh,3Ah,0E7h,0CDh,70h,19h,21h,0FBh,1Fh,0DFh,0CDh,44h,0Dh,0CDh ; 190B |O..:..p.!....D..|
-         .db 0E0h,0Fh,3Eh,0FFh,0C3h,43h,19h                   ; 191B |..>..C.|
+L_18FB:  LHLD 0A83Ah              ; 18FB 2a 3a a8
+         SHLD 0F80Ah              ; 18FE 22 0a f8
+         LHLD 0A838h              ; 1901 2a 38 a8
+         SPHL                     ; 1904 f9
+         CALL L_0FE0              ; 1905 cd e0 0f
+         LDA  0B673h              ; 1908 3a 73 b6
+         MOV  C,A                 ; 190B 4f
+         RST  4                   ; 190C e7
+         MVI  C,3Ah               ; 190D 0e 3a
+         RST  4                   ; 190F e7
+         CALL L_1970              ; 1910 cd 70 19
+         LXI  H,1FFBh             ; 1913 21 fb 1f
+         RST  3                   ; 1916 df
+         CALL L_0D44              ; 1917 cd 44 0d
+         CALL L_0FE0              ; 191A cd e0 0f
+         MVI  A,0FFh              ; 191D 3e ff
+         JMP  L_1943              ; 191F c3 43 19
 L_1922:  PUSH H                   ; 1922 e5
 L_1923:  PUSH D                   ; 1923 d5
 L_1924:  PUSH B                   ; 1924 c5
@@ -3633,9 +3858,20 @@ L_227A:  CALL L_0FE0              ; 227A cd e0 0f
 L_227D:  LDA  0A950h              ; 227D 3a 50 a9
 L_2280:  STA  0B69Bh              ; 2280 32 9b b6
 L_2283:  JMP  L_0CD9              ; 2283 c3 d9 0c
-         .db 0CDh,0DFh,29h,22h,4Fh,0A8h,0CDh,01h,22h,0CDh,0AFh,22h,3Ah,04h,0A8h,0B7h ; 2286 |..)"O..."..":...|
-         .db 0CAh,9Ah,15h,21h,0AFh,10h,3Ah,04h,0A8h,0CDh,1Bh,0Eh,0CDh,0E0h,0Fh,21h ; 2296 |...!..:........!|
-         .db 0A5h,10h,0DFh,0C3h,9Ah,15h                       ; 22A6 |......|
+L_2286:  CALL L_29DF              ; 2286 cd df 29
+         SHLD 0A84Fh              ; 2289 22 4f a8
+         CALL L_2201              ; 228C cd 01 22
+         CALL L_22AF              ; 228F cd af 22
+         LDA  0A804h              ; 2292 3a 04 a8
+         ORA  A                   ; 2295 b7
+         JZ   L_159A              ; 2296 ca 9a 15
+         LXI  H,10AFh             ; 2299 21 af 10
+         LDA  0A804h              ; 229C 3a 04 a8
+         CALL L_0E1B              ; 229F cd 1b 0e
+         CALL L_0FE0              ; 22A2 cd e0 0f
+         LXI  H,10A5h             ; 22A5 21 a5 10
+         RST  3                   ; 22A8 df
+         JMP  L_159A              ; 22A9 c3 9a 15
 L_22AC:  CALL L_231E              ; 22AC cd 1e 23
 L_22AF:  LHLD 0A842h              ; 22AF 2a 42 a8
 L_22B2:  LXI  D,0B663h            ; 22B2 11 63 b6
@@ -3954,8 +4190,13 @@ L_2552:  RET                      ; 2552 c9
          .db 3Ah,98h,26h,3Dh,0C2h,5Ch,25h,3Eh,03h             ; 2553 |:.&=.\%>.|
 L_255C:  STA  L_2698              ; 255C 32 98 26
          JMP  L_24F0              ; 255F c3 f0 24
-         .db 3Ah,98h,26h,3Ch,0FEh,04h,0C2h,5Ch,25h,3Eh,01h,0C3h,5Ch,25h,0CDh,7Eh ; 2562 |:.&<...\%>..\%.~|
-         .db 25h,34h,0C3h,0F0h,24h,0CDh,7Eh,25h,35h,0C3h,0F0h,24h ; 2572 |%4..$.~%5..$|
+L_2562:  LDA  L_2698              ; 2562 3a 98 26
+         INR  A                   ; 2565 3c
+         CPI  04h                 ; 2566 fe 04
+         JNZ  L_255C              ; 2568 c2 5c 25
+         MVI  A,01h               ; 256B 3e 01
+         JMP  L_255C              ; 256D c3 5c 25
+         .db 0CDh,7Eh,25h,34h,0C3h,0F0h,24h,0CDh,7Eh,25h,35h,0C3h,0F0h,24h ; 2570 |.~%4..$.~%5..$|
 L_257E:  LXI  D,1F7Ch             ; 257E 11 7c 1f
          LHLD L_2698              ; 2581 2a 98 26
          DAD  D                   ; 2584 19
@@ -3978,10 +4219,43 @@ L_257E:  LXI  D,1F7Ch             ; 257E 11 7c 1f
          .db 0CFh,20h,0C6h,0C1h,0CAh,0CCh,0C1h,20h,2Dh,00h,0E6h,0CFh,0CEh,00h,0F3h,0C9h ; 2676 |. ..... -.......|
          .db 0CDh,0D7h,0CFh,0CCh,0D9h,00h,0F0h,0C1h,0D5h,0DAh,0C1h,00h,1Bh,62h,00h,1Bh ; 2686 |.............b..|
          .db 61h,00h                                          ; 2696 |a.|
-L_2698:  .db 00h,00h,21h,14h,0DFh,3Ah,02h,0A8h,0BEh,0C8h,35h,0B7h,0CAh,0CCh,26h,0Eh ; 2698 |..!..:....5...&.|
-         .db 08h,0CDh,09h,0F8h,3Ah,02h,0A8h,47h,21h,14h,0DFh,7Eh,0F5h,85h,90h,6Fh ; 26A8 |....:..G!..~...o|
-         .db 78h,23h,23h,0E5h,0CDh,02h,2Ah,21h,2Ch,29h,0DFh,0E1h,54h,5Dh,2Bh,0F1h ; 26B8 |x##...*!,)..T]+.|
-         .db 4Fh,0EBh,0EFh,0C9h,21h,2Bh,29h,0DFh,0C9h         ; 26C8 |O...!+)..|
+L_2698:  .db 00h,00h                                          ; 2698 |..|
+L_269A:  LXI  H,0DF14h            ; 269A 21 14 df
+         LDA  0A802h              ; 269D 3a 02 a8
+         CMP  M                   ; 26A0 be
+         RZ                       ; 26A1 c8
+         DCR  M                   ; 26A2 35
+         ORA  A                   ; 26A3 b7
+         JZ   L_26CC              ; 26A4 ca cc 26
+         MVI  C,08h               ; 26A7 0e 08
+         CALL 0F809h              ; 26A9 cd 09 f8
+         LDA  0A802h              ; 26AC 3a 02 a8
+         MOV  B,A                 ; 26AF 47
+         LXI  H,0DF14h            ; 26B0 21 14 df
+         MOV  A,M                 ; 26B3 7e
+         PUSH PSW                 ; 26B4 f5
+         ADD  L                   ; 26B5 85
+         SUB  B                   ; 26B6 90
+         MOV  L,A                 ; 26B7 6f
+         MOV  A,B                 ; 26B8 78
+         INX  H                   ; 26B9 23
+         INX  H                   ; 26BA 23
+         PUSH H                   ; 26BB e5
+         CALL L_2A02              ; 26BC cd 02 2a
+         LXI  H,292Ch             ; 26BF 21 2c 29
+         RST  3                   ; 26C2 df
+         POP  H                   ; 26C3 e1
+         MOV  D,H                 ; 26C4 54
+         MOV  E,L                 ; 26C5 5d
+         DCX  H                   ; 26C6 2b
+         POP  PSW                 ; 26C7 f1
+         MOV  C,A                 ; 26C8 4f
+         XCHG                     ; 26C9 eb
+         RST  5                   ; 26CA ef
+         RET                      ; 26CB c9
+L_26CC:  LXI  H,292Bh             ; 26CC 21 2b 29
+         RST  3                   ; 26CF df
+         RET                      ; 26D0 c9
 L_26D1:  CALL L_29DF              ; 26D1 cd df 29
          LXI  H,3E91h             ; 26D4 21 91 3e
          CALL L_0E4D              ; 26D7 cd 4d 0e
@@ -3999,12 +4273,60 @@ L_26F3:  MOV  A,B                 ; 26F3 78
 L_26F4:  STA  0B672h              ; 26F4 32 72 b6
 L_26F7:  RST  3                   ; 26F7 df
 L_26F8:  JMP  L_0FF3              ; 26F8 c3 f3 0f
-         .db 0CDh,0DFh,29h,3Eh,2Eh,0BEh,0C8h,11h,08h,00h,19h,16h,20h,7Eh,0BAh,0F5h ; 26FB |..)>........ ~..|
-         .db 0C2h,10h,27h,16h,7Fh,72h,11h,04h,00h,19h,0E5h,21h,47h,0A9h,0CDh,47h ; 270B |..'..r.....!G..G|
-         .db 0Eh,5Eh,23h,56h,2Bh,0E3h,7Eh,0EBh,5Fh,16h,00h,0C1h,0F1h,0F5h,0C5h,0CAh ; 271B |.^#V+.~._.......|
-         .db 33h,27h,7Bh,2Fh,5Fh,16h,0FFh,13h,19h,0EBh,0E1h,73h,23h,72h,21h,43h ; 272B |3'{/_......s#r!C|
-         .db 0A9h,0CDh,47h,0Eh,46h,04h,0F1h,0CAh,47h,27h,05h,05h,70h,0CDh,54h,0Eh ; 273B |..G.F...G'..p.T.|
-         .db 0C3h,5Ah,04h                                     ; 274B |.Z.|
+L_26FB:  CALL L_29DF              ; 26FB cd df 29
+         MVI  A,2Eh               ; 26FE 3e 2e
+         CMP  M                   ; 2700 be
+         RZ                       ; 2701 c8
+         LXI  D,0008h             ; 2702 11 08 00
+         DAD  D                   ; 2705 19
+         MVI  D,20h               ; 2706 16 20
+         MOV  A,M                 ; 2708 7e
+         CMP  D                   ; 2709 ba
+         PUSH PSW                 ; 270A f5
+         JNZ  L_2710              ; 270B c2 10 27
+         MVI  D,7Fh               ; 270E 16 7f
+L_2710:  MOV  M,D                 ; 2710 72
+         LXI  D,0004h             ; 2711 11 04 00
+         DAD  D                   ; 2714 19
+         PUSH H                   ; 2715 e5
+         LXI  H,0A947h            ; 2716 21 47 a9
+         CALL L_0E47              ; 2719 cd 47 0e
+         MOV  E,M                 ; 271C 5e
+         INX  H                   ; 271D 23
+         MOV  D,M                 ; 271E 56
+         DCX  H                   ; 271F 2b
+         XTHL                     ; 2720 e3
+         MOV  A,M                 ; 2721 7e
+         XCHG                     ; 2722 eb
+         MOV  E,A                 ; 2723 5f
+         MVI  D,00h               ; 2724 16 00
+         POP  B                   ; 2726 c1
+         POP  PSW                 ; 2727 f1
+         PUSH PSW                 ; 2728 f5
+         PUSH B                   ; 2729 c5
+         JZ   L_2733              ; 272A ca 33 27
+         MOV  A,E                 ; 272D 7b
+         CMA                      ; 272E 2f
+         MOV  E,A                 ; 272F 5f
+         MVI  D,0FFh              ; 2730 16 ff
+         INX  D                   ; 2732 13
+L_2733:  DAD  D                   ; 2733 19
+         XCHG                     ; 2734 eb
+         POP  H                   ; 2735 e1
+         MOV  M,E                 ; 2736 73
+         INX  H                   ; 2737 23
+         MOV  M,D                 ; 2738 72
+         LXI  H,0A943h            ; 2739 21 43 a9
+         CALL L_0E47              ; 273C cd 47 0e
+         MOV  B,M                 ; 273F 46
+         INR  B                   ; 2740 04
+         POP  PSW                 ; 2741 f1
+         JZ   L_2747              ; 2742 ca 47 27
+         DCR  B                   ; 2745 05
+         DCR  B                   ; 2746 05
+L_2747:  MOV  M,B                 ; 2747 70
+         CALL L_0E54              ; 2748 cd 54 0e
+         JMP  L_045A              ; 274B c3 5a 04
 L_274E:  CALL L_0FE0              ; 274E cd e0 0f
 L_2751:  LXI  H,294Fh             ; 2751 21 4f 29
 L_2754:  RST  3                   ; 2754 df
@@ -4081,7 +4403,11 @@ L_27EB:  MOV  E,A                 ; 27EB 5f
 L_27EC:  INX  D                   ; 27EC 13
 L_27ED:  DAD  D                   ; 27ED 19
 L_27EE:  RET                      ; 27EE c9
-         .db 0CDh,0F3h,0Fh,0C3h,0F8h,27h,0CDh,0FEh,27h,21h,14h,0DFh,0C3h,6Bh,0Fh ; 27EF |.....'..'!...k.|
+L_27EF:  CALL L_0FF3              ; 27EF cd f3 0f
+         JMP  L_27F8              ; 27F2 c3 f8 27
+L_27F5:  CALL L_27FE              ; 27F5 cd fe 27
+L_27F8:  LXI  H,0DF14h            ; 27F8 21 14 df
+         JMP  L_0F6B              ; 27FB c3 6b 0f
 L_27FE:  CALL L_0FE0              ; 27FE cd e0 0f
 L_2801:  LDA  L_3E8F              ; 2801 3a 8f 3e
 L_2804:  MVI  E,01h               ; 2804 1e 01
@@ -4590,19 +4916,45 @@ L_2CF0:  CALL L_3D24              ; 2CF0 cd 24 3d
          STAX D                   ; 2CFF 12
          INX  D                   ; 2D00 13
          JMP  L_2CEA              ; 2D01 c3 ea 2c
-         .db 3Ah,3Eh,0A9h,4Fh,3Ah,3Dh,0A9h,0C6h,14h,47h,0B9h,0C8h,3Ah,3Ch,0A9h,0B9h ; 2D04 |:>.O:=...G..:<..|
-         .db 0C8h,0B8h,0DAh,1Ah,2Dh,78h,0F5h,3Ah,3Eh,0A9h,0CDh,0DEh,2Dh,0F1h,32h,3Eh ; 2D14 |....-x.:>...-.2>|
-         .db 0A9h,0C3h,0D0h,2Dh,3Ah,3Dh,0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0C8h,0CDh,0DEh,2Dh ; 2D24 |...-:=.O:>.....-|
-         .db 3Ah,3Dh,0A9h,3Ch,32h,3Eh,0A9h,0C3h,0D0h,2Dh,3Ah,3Eh,0A9h,0FEh,01h,0C8h ; 2D34 |:=.<2>...-:>....|
-         .db 0F5h,0CDh,0DEh,2Dh,3Ah,3Dh,0A9h,4Fh,0F1h,0F5h,91h,0FEh,01h,0C2h,66h,2Dh ; 2D44 |...-:=.O......f-|
-         .db 0CDh,0Ah,2Ah,3Eh,01h,32h,4Ah,35h,0CDh,81h,34h,0CDh,0Ah,2Ah,21h,3Dh ; 2D54 |..*>.2J5..4..*!=|
-         .db 0A9h,35h,0F1h,3Dh,0CDh,0D0h,2Dh,21h,3Eh,0A9h,35h,0C9h,3Ah,3Eh,0A9h,0C6h ; 2D64 |.5.=..-!>.5.:>..|
-         .db 80h,6Fh,26h,9Fh,7Eh,0FEh,4Eh,3Eh,4Eh,0C2h,82h,2Dh,3Eh,59h,77h,3Ah ; 2D74 |.o&.~.N>N..->Yw:|
-         .db 3Ch,0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0CAh,0D0h,2Dh,3Ah,3Ch,0A9h,4Fh,3Ah,3Eh ; 2D84 |<.O:>....-:<.O:>|
-         .db 0A9h,0B9h,0C8h,0F5h,0CDh,0DEh,2Dh,3Ah,3Dh,0A9h,4Fh,0F1h,0F5h,91h,0FEh,14h ; 2D94 |......-:=.O.....|
-         .db 0C2h,0B9h,2Dh,0CDh,0Ah,2Ah,3Eh,02h,32h,4Ah,35h,0CDh,81h,34h,0CDh,0Ah ; 2DA4 |..-..*>.2J5..4..|
-         .db 2Ah,21h,3Dh,0A9h,34h,0F1h,3Ch,0CDh,0D0h,2Dh,21h,3Eh,0A9h,34h,0C9h,0CDh ; 2DB4 |*!=.4.<..-!>.4..|
-         .db 0Ah,2Ah,0CDh,15h,04h,0CDh,0Ah,2Ah,0E1h,0C3h,0F3h,0Fh ; 2DC4 |.*.....*....|
+L_2D04:  LDA  0A93Eh              ; 2D04 3a 3e a9
+         MOV  C,A                 ; 2D07 4f
+         LDA  0A93Dh              ; 2D08 3a 3d a9
+         ADI  14h                 ; 2D0B c6 14
+         MOV  B,A                 ; 2D0D 47
+         CMP  C                   ; 2D0E b9
+         RZ                       ; 2D0F c8
+         LDA  0A93Ch              ; 2D10 3a 3c a9
+         CMP  C                   ; 2D13 b9
+         RZ                       ; 2D14 c8
+         CMP  B                   ; 2D15 b8
+         JC   L_2D1A              ; 2D16 da 1a 2d
+         MOV  A,B                 ; 2D19 78
+L_2D1A:  PUSH PSW                 ; 2D1A f5
+         LDA  0A93Eh              ; 2D1B 3a 3e a9
+         CALL L_2DDE              ; 2D1E cd de 2d
+         POP  PSW                 ; 2D21 f1
+         STA  0A93Eh              ; 2D22 32 3e a9
+         JMP  L_2DD0              ; 2D25 c3 d0 2d
+L_2D28:  LDA  0A93Dh              ; 2D28 3a 3d a9
+         MOV  C,A                 ; 2D2B 4f
+         LDA  0A93Eh              ; 2D2C 3a 3e a9
+         CMP  C                   ; 2D2F b9
+         RZ                       ; 2D30 c8
+         CALL L_2DDE              ; 2D31 cd de 2d
+         LDA  0A93Dh              ; 2D34 3a 3d a9
+         INR  A                   ; 2D37 3c
+         STA  0A93Eh              ; 2D38 32 3e a9
+         JMP  L_2DD0              ; 2D3B c3 d0 2d
+         .db 3Ah,3Eh,0A9h,0FEh,01h,0C8h,0F5h,0CDh,0DEh,2Dh,3Ah,3Dh,0A9h,4Fh,0F1h,0F5h ; 2D3E |:>.......-:=.O..|
+         .db 91h,0FEh,01h,0C2h,66h,2Dh,0CDh,0Ah,2Ah,3Eh,01h,32h,4Ah,35h,0CDh,81h ; 2D4E |....f-..*>.2J5..|
+         .db 34h,0CDh,0Ah,2Ah,21h,3Dh,0A9h,35h,0F1h,3Dh,0CDh,0D0h,2Dh,21h,3Eh,0A9h ; 2D5E |4..*!=.5.=..-!>.|
+         .db 35h,0C9h,3Ah,3Eh,0A9h,0C6h,80h,6Fh,26h,9Fh,7Eh,0FEh,4Eh,3Eh,4Eh,0C2h ; 2D6E |5.:>...o&.~.N>N.|
+         .db 82h,2Dh,3Eh,59h,77h,3Ah,3Ch,0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0CAh,0D0h,2Dh ; 2D7E |.->Yw:<.O:>....-|
+         .db 3Ah,3Ch,0A9h,4Fh,3Ah,3Eh,0A9h,0B9h,0C8h,0F5h,0CDh,0DEh,2Dh,3Ah,3Dh,0A9h ; 2D8E |:<.O:>......-:=.|
+         .db 4Fh,0F1h,0F5h,91h,0FEh,14h,0C2h,0B9h,2Dh,0CDh,0Ah,2Ah,3Eh,02h,32h,4Ah ; 2D9E |O.......-..*>.2J|
+         .db 35h,0CDh,81h,34h,0CDh,0Ah,2Ah,21h,3Dh,0A9h,34h,0F1h,3Ch,0CDh,0D0h,2Dh ; 2DAE |5..4..*!=.4.<..-|
+         .db 21h,3Eh,0A9h,34h,0C9h,0CDh,0Ah,2Ah,0CDh,15h,04h,0CDh,0Ah,2Ah,0E1h,0C3h ; 2DBE |!>.4...*.....*..|
+         .db 0F3h,0Fh                                         ; 2DCE |..|
 L_2DD0:  PUSH PSW                 ; 2DD0 f5
          LXI  H,1097h             ; 2DD1 21 97 10
          RST  3                   ; 2DD4 df
@@ -4750,8 +5102,14 @@ L_2EEE:  POP  PSW                 ; 2EEE f1
 L_2EEF:  DCR  A                   ; 2EEF 3d
 L_2EF0:  JNZ  L_2EEA              ; 2EF0 c2 ea 2e
 L_2EF3:  RET                      ; 2EF3 c9
-         .db 3Ah,57h,0A8h,0C6h,10h,32h,57h,0A8h,0CDh,8Eh,31h,0C3h,0A5h,33h,3Ah,57h ; 2EF4 |:W...2W...1..3:W|
-         .db 0A8h,0D6h,10h,0C3h,0F9h,2Eh                      ; 2F04 |......|
+L_2EF4:  LDA  0A857h              ; 2EF4 3a 57 a8
+         ADI  10h                 ; 2EF7 c6 10
+L_2EF9:  STA  0A857h              ; 2EF9 32 57 a8
+         CALL L_318E              ; 2EFC cd 8e 31
+         JMP  L_33A5              ; 2EFF c3 a5 33
+L_2F02:  LDA  0A857h              ; 2F02 3a 57 a8
+         SUI  10h                 ; 2F05 d6 10
+         JMP  L_2EF9              ; 2F07 c3 f9 2e
 L_2F0A:  LDA  0B68Dh              ; 2F0A 3a 8d b6
 L_2F0D:  CPI  4Dh                 ; 2F0D fe 4d
 L_2F0F:  RZ                       ; 2F0F c8
@@ -4787,11 +5145,48 @@ L_2F58:  CALL L_0D44              ; 2F58 cd 44 0d
 L_2F5B:  LXI  H,2F64h             ; 2F5B 21 64 2f
 L_2F5E:  CALL L_0562              ; 2F5E cd 62 05
 L_2F61:  JMP  L_2F54              ; 2F61 c3 54 2f
-         .db 0Dh,03h,29h,2Fh,00h,9Ah,2Eh,0Ch,36h,31h,02h,91h,2Fh,0Dh,07h,30h ; 2F64 |..)/....61../..0|
-         .db 0Ah,0EAh,2Fh,1Bh,65h,31h,19h,70h,2Eh,18h,0F4h,2Eh,08h,02h,2Fh,01h ; 2F74 |../.e1.p....../.|
-         .db 20h,2Fh,1Fh,0DBh,2Eh,1Ah,0Ah,2Fh,0F3h,0Fh,2Ah,40h,0A8h,0CDh,0DCh,31h ; 2F84 | /...../..*@...1|
-         .db 0FEh,04h,0C8h,0CDh,8Eh,31h,21h,6Bh,36h,22h,8Dh,0B6h,0DFh,0CDh,7Eh,20h ; 2F94 |.....1!k6"....~ |
-         .db 0E1h,22h,38h,0A9h,0CDh,0F3h,0Fh                  ; 2FA4 |."8....|
+
+; Таблица клавиш просмотрщика.
+L_2F64:  .db 0Dh                                              ; 2F64 -- записей в таблице
+         .db 03h                                              ; 2F65 Ф4
+         .dw L_2F29                                           ; 2F66
+         .db 00h                                              ; 2F68 Ф1
+         .dw L_2E9A                                           ; 2F69
+         .db 0Ch                                              ; 2F6B стрелка влево-вверх
+         .dw L_3136                                           ; 2F6C
+         .db 02h                                              ; 2F6E Ф3
+         .dw L_2F91                                           ; 2F6F
+         .db 0Dh                                              ; 2F71 ВК
+         .dw L_3007                                           ; 2F72
+         .db 0Ah                                              ; 2F74 ПС
+         .dw L_2FEA                                           ; 2F75
+         .db 1Bh                                              ; 2F77 АР2
+         .dw L_3165                                           ; 2F78
+         .db 19h                                              ; 2F7A стрелка вверх
+         .dw L_2E70                                           ; 2F7B
+         .db 18h                                              ; 2F7D стрелка вправо
+         .dw L_2EF4                                           ; 2F7E
+         .db 08h                                              ; 2F80 стрелка влево
+         .dw L_2F02                                           ; 2F81
+         .db 01h                                              ; 2F83 Ф2
+         .dw L_2F20                                           ; 2F84
+         .db 1Fh                                              ; 2F86 СТР
+         .dw L_2EDB                                           ; 2F87
+         .db 1Ah                                              ; 2F89 стрелка вниз
+         .dw L_2F0A                                           ; 2F8A
+         .dw L_0FF3                                           ; 2F8C -- для всех прочих клавиш
+         .db 2Ah,40h,0A8h                                     ; 2F8E |*@.|
+L_2F91:  CALL L_31DC              ; 2F91 cd dc 31
+         CPI  04h                 ; 2F94 fe 04
+         RZ                       ; 2F96 c8
+         CALL L_318E              ; 2F97 cd 8e 31
+         LXI  H,366Bh             ; 2F9A 21 6b 36
+         SHLD 0B68Dh              ; 2F9D 22 8d b6
+         RST  3                   ; 2FA0 df
+         CALL L_207E              ; 2FA1 cd 7e 20
+         POP  H                   ; 2FA4 e1
+         SHLD 0A938h              ; 2FA5 22 38 a9
+         CALL L_0FF3              ; 2FA8 cd f3 0f
 L_2FAB:  LHLD 0A938h              ; 2FAB 2a 38 a9
          MVI  A,00h               ; 2FAE 3e 00
          CMP  H                   ; 2FB0 bc
@@ -4978,8 +5373,11 @@ L_312D:  CPI  0C0h                ; 312D fe c0
          SUI  80h                 ; 3130 d6 80
          STA  L_3549              ; 3132 32 49 35
          RET                      ; 3135 c9
-         .db 3Ah,9Dh,0B6h,0FEh,03h,0C8h,21h,86h               ; 3136 |:.....!.|
-L_313E:  MVI  M,0DFh              ; 313E 36 df
+L_3136:  LDA  0B69Dh              ; 3136 3a 9d b6
+         CPI  03h                 ; 3139 fe 03
+         RZ                       ; 313B c8
+         LXI  H,3686h             ; 313C 21 86 36
+         RST  3                   ; 313F df
          MVI  A,28h               ; 3140 3e 28
          MVI  C,20h               ; 3142 0e 20
 L_3144:  RST  4                   ; 3144 e7
@@ -5493,12 +5891,15 @@ L_3647:  .db 01h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h,20h ; 3
          .db 59h,20h,48h,00h,1Bh,59h,20h,61h,00h,0F0h,0C5h,0DEh,0C1h,0D4h,0D8h,00h ; 3687 |Y H..Y a........|
          .db 0F0h,0D2h,0D1h,0CDh,0CFh,0CAh,5Fh,0D7h,0D9h,0D7h,0CFh,0C4h,00h,0F7h,5Fh,0CEh ; 3697 |......_......._.|
          .db 0C1h,0C2h,0CFh,0D2h,5Fh,38h,00h,0F7h,5Fh,0E1h,0CCh,0D8h,0D4h,5Fh,0EBh,0CFh ; 36A7 |...._8.._...._..|
-         .db 0C4h,5Fh,0E7h,0EFh,0F3h,0F4h,0C1h,00h,1Bh,5Bh,00h,21h,66h,0A8h,0C3h,0CBh ; 36B7 |._.......[.!f...|
-         .db 36h,21h,59h,0A8h,22h,0E9h,36h,22h,0Bh,37h,21h,89h,0B6h,0CDh,47h,0Eh ; 36C7 |6!Y.".6".7!...G.|
-         .db 7Eh,0FEh,00h,0C8h,3Ah,14h,0DFh,0FEh,37h,0D0h,0CDh,3Ah,39h,21h,14h,0DFh ; 36D7 |~...:...7..:9!..|
-         .db 4Eh,3Ah,59h,0A8h,0C6h,03h,47h,81h,77h,79h,85h,6Fh,3Ah,02h,0A8h,0FEh ; 36E7 |N:Y...G.wy.o:...|
-         .db 00h,0C4h,3Bh,37h,0E5h,21h,91h,3Eh,0CDh,4Dh,0Eh,7Eh,0E1h,23h,77h,23h ; 36F7 |..;7.!.>.M.~.#w#|
-         .db 36h,3Ah,23h,11h,59h,0A8h,0EBh,4Eh,23h,0EFh,0EBh,36h,20h,0C3h,0EFh,27h ; 3707 |6:#.Y..N#..6 ..'|
+         .db 0C4h,5Fh,0E7h,0EFh,0F3h,0F4h,0C1h,00h,1Bh,5Bh,00h ; 36B7 |._.......[.|
+L_36C2:  LXI  H,0A866h            ; 36C2 21 66 a8
+         JMP  L_36CB              ; 36C5 c3 cb 36
+         .db 21h,59h,0A8h                                     ; 36C8 |!Y.|
+L_36CB:  .db 22h,0E9h,36h,22h,0Bh,37h,21h,89h,0B6h,0CDh,47h,0Eh,7Eh ; 36CB |".6".7!...G.~|
+         .db 0FEh,00h,0C8h,3Ah,14h,0DFh,0FEh,37h,0D0h,0CDh,3Ah,39h,21h,14h,0DFh,4Eh ; 36D8 |...:...7..:9!..N|
+         .db 3Ah,59h,0A8h,0C6h,03h,47h,81h,77h,79h,85h,6Fh,3Ah,02h,0A8h,0FEh,00h ; 36E8 |:Y...G.wy.o:....|
+         .db 0C4h,3Bh,37h,0E5h,21h,91h,3Eh,0CDh,4Dh,0Eh,7Eh,0E1h,23h,77h,23h,36h ; 36F8 |.;7.!.>.M.~.#w#6|
+         .db 3Ah,23h,11h,59h,0A8h,0EBh,4Eh,23h,0EFh,0EBh,36h,20h,0C3h,0EFh,27h ; 3708 |:#.Y..N#..6 ..'|
 L_3717:  LDA  0DF14h              ; 3717 3a 14 df
 L_371A:  CPI  46h                 ; 371A fe 46
 L_371C:  RNC                      ; 371C d0
@@ -5519,7 +5920,18 @@ L_3722:  JZ   L_3754              ; 3722 ca 54 37
          LXI  H,0DF14h            ; 3736 21 14 df
          INR  M                   ; 3739 34
          RET                      ; 373A c9
-         .db 48h,47h,21h,14h,0DFh,7Eh,85h,5Fh,91h,6Fh,54h,48h,0CDh,4Bh,37h,0C9h ; 373B |HG!..~._.oTH.K7.|
+L_373B:  MOV  C,B                 ; 373B 48
+         MOV  B,A                 ; 373C 47
+         LXI  H,0DF14h            ; 373D 21 14 df
+         MOV  A,M                 ; 3740 7e
+         ADD  L                   ; 3741 85
+         MOV  E,A                 ; 3742 5f
+         SUB  C                   ; 3743 91
+         MOV  L,A                 ; 3744 6f
+         MOV  D,H                 ; 3745 54
+         MOV  C,B                 ; 3746 48
+         CALL L_374B              ; 3747 cd 4b 37
+         RET                      ; 374A c9
 L_374B:  MOV  A,M                 ; 374B 7e
          STAX D                   ; 374C 12
          DCX  D                   ; 374D 1b
@@ -5634,13 +6046,71 @@ L_381E:  INX  D                   ; 381E 13
 L_381F:  DCR  C                   ; 381F 0d
 L_3820:  JNZ  L_381A              ; 3820 c2 1a 38
 L_3823:  RET                      ; 3823 c9
-         .db 3Ah,59h,0A8h,0C6h,0Ch,21h,0A7h,0B6h,77h,23h,3Ah,73h,0B6h,77h,23h,36h ; 3824 |:Y...!..w#:s.w#6|
-         .db 3Ah,23h,0EBh,21h,9Fh,0B6h,23h,0Eh,07h,0EFh,0EBh,36h,20h,23h,0E5h,21h ; 3834 |:#.!..#....6 #.!|
-         .db 91h,3Eh,0CDh,4Dh,0Eh,7Eh,0E1h,77h,23h,36h,3Ah,23h,0EBh,21h,59h,0A8h ; 3844 |.>.M.~.w#6:#.!Y.|
-         .db 4Eh,23h,0EFh,0D5h,21h,9Fh,0B6h,11h,05h,00h,19h,0D1h,7Eh,0FEh,44h,0C8h ; 3854 |N#..!.......~.D.|
-         .db 0FEh,52h,0CAh,82h,38h,3Eh,22h,12h,13h,21h,0A7h,0B6h,46h,3Ah,66h,0A8h ; 3864 |.R..8>"..!..F:f.|
-         .db 4Fh,80h,0C6h,02h,77h,21h,66h,0A8h,23h,0EFh,3Eh,22h,12h,0C9h,3Ah,0A7h ; 3874 |O...w!f.#.>"..:.|
-         .db 0B6h,0C6h,04h,32h,0A7h,0B6h,21h,85h,3Eh,0Eh,04h,0EFh,0C9h ; 3884 |...2..!.>....|
+L_3824:  LDA  0A859h              ; 3824 3a 59 a8
+         ADI  0Ch                 ; 3827 c6 0c
+         LXI  H,0B6A7h            ; 3829 21 a7 b6
+         MOV  M,A                 ; 382C 77
+         INX  H                   ; 382D 23
+         LDA  0B673h              ; 382E 3a 73 b6
+         MOV  M,A                 ; 3831 77
+         INX  H                   ; 3832 23
+         MVI  M,3Ah               ; 3833 36 3a
+         INX  H                   ; 3835 23
+         XCHG                     ; 3836 eb
+         LXI  H,0B69Fh            ; 3837 21 9f b6
+         INX  H                   ; 383A 23
+         MVI  C,07h               ; 383B 0e 07
+         RST  5                   ; 383D ef
+         XCHG                     ; 383E eb
+         MVI  M,20h               ; 383F 36 20
+         INX  H                   ; 3841 23
+         PUSH H                   ; 3842 e5
+         LXI  H,3E91h             ; 3843 21 91 3e
+         CALL L_0E4D              ; 3846 cd 4d 0e
+         MOV  A,M                 ; 3849 7e
+         POP  H                   ; 384A e1
+         MOV  M,A                 ; 384B 77
+         INX  H                   ; 384C 23
+         MVI  M,3Ah               ; 384D 36 3a
+         INX  H                   ; 384F 23
+         XCHG                     ; 3850 eb
+         LXI  H,0A859h            ; 3851 21 59 a8
+         MOV  C,M                 ; 3854 4e
+         INX  H                   ; 3855 23
+         RST  5                   ; 3856 ef
+         PUSH D                   ; 3857 d5
+         LXI  H,0B69Fh            ; 3858 21 9f b6
+         LXI  D,0005h             ; 385B 11 05 00
+         DAD  D                   ; 385E 19
+         POP  D                   ; 385F d1
+         MOV  A,M                 ; 3860 7e
+         CPI  44h                 ; 3861 fe 44
+         RZ                       ; 3863 c8
+         CPI  52h                 ; 3864 fe 52
+         JZ   L_3882              ; 3866 ca 82 38
+         MVI  A,22h               ; 3869 3e 22
+         STAX D                   ; 386B 12
+         INX  D                   ; 386C 13
+         LXI  H,0B6A7h            ; 386D 21 a7 b6
+         MOV  B,M                 ; 3870 46
+         LDA  0A866h              ; 3871 3a 66 a8
+         MOV  C,A                 ; 3874 4f
+         ADD  B                   ; 3875 80
+         ADI  02h                 ; 3876 c6 02
+         MOV  M,A                 ; 3878 77
+         LXI  H,0A866h            ; 3879 21 66 a8
+         INX  H                   ; 387C 23
+         RST  5                   ; 387D ef
+         MVI  A,22h               ; 387E 3e 22
+         STAX D                   ; 3880 12
+         RET                      ; 3881 c9
+L_3882:  LDA  0B6A7h              ; 3882 3a a7 b6
+         ADI  04h                 ; 3885 c6 04
+         STA  0B6A7h              ; 3887 32 a7 b6
+         LXI  H,3E85h             ; 388A 21 85 3e
+         MVI  C,04h               ; 388D 0e 04
+         RST  5                   ; 388F ef
+         RET                      ; 3890 c9
 L_3891:  CALL L_393A              ; 3891 cd 3a 39
 L_3894:  LXI  H,0B6A7h            ; 3894 21 a7 b6
 L_3897:  MOV  C,M                 ; 3897 4e
@@ -5778,7 +6248,7 @@ L_3978:  RET                      ; 3978 c9
 L_3979:  MVI  C,0Ch               ; 3979 0e 0c
 L_397B:  RST  5                   ; 397B ef
 L_397C:  RET                      ; 397C c9
-         .db 21h,48h,3Eh                                      ; 397D |!H>|
+L_397D:  LXI  H,3E48h             ; 397D 21 48 3e
 L_3980:  LXI  D,0B663h            ; 3980 11 63 b6
 L_3983:  CALL L_3979              ; 3983 cd 79 39
 L_3986:  CALL L_1038              ; 3986 cd 38 10
@@ -5992,11 +6462,51 @@ L_3B1E:  STAX D                   ; 3B1E 12
          MVI  C,05h               ; 3B4B 0e 05
          RST  5                   ; 3B4D ef
          JMP  L_391E              ; 3B4E c3 1e 39
-         .db 21h,63h,0B6h,11h,09h,00h,19h,0E5h,0D5h,0CDh,0DFh,29h,0D1h,19h,0D1h,0D5h ; 3B51 |!c.........)....|
-         .db 0Eh,03h,0EFh,0CDh,0B9h,0Fh,0D1h,21h,0A4h,3Dh,06h,04h,0E5h,0D5h,0Eh,03h ; 3B61 |.......!.=......|
-         .db 0CDh,1Ah,38h,0CAh,83h,3Bh,0D1h,0E1h,23h,23h,23h,05h,0C2h,6Dh,3Bh,0C3h ; 3B71 |..8..;..###..m;.|
-         .db 06h,3Bh,0D1h,11h,9Fh,0B6h,3Eh,07h,12h,13h,21h,0B1h,3Dh,0Eh,04h,0EFh ; 3B81 |.;....>...!.=...|
-         .db 0E1h,0Eh,03h,79h,0B8h,0C2h,9Ch,3Bh,21h,0CCh,3Dh,0EFh,0C3h,1Eh,39h ; 3B91 |...y...;!.=...9|
+L_3B51:  LXI  H,0B663h            ; 3B51 21 63 b6
+         LXI  D,0009h             ; 3B54 11 09 00
+         DAD  D                   ; 3B57 19
+         PUSH H                   ; 3B58 e5
+         PUSH D                   ; 3B59 d5
+         CALL L_29DF              ; 3B5A cd df 29
+         POP  D                   ; 3B5D d1
+         DAD  D                   ; 3B5E 19
+         POP  D                   ; 3B5F d1
+         PUSH D                   ; 3B60 d5
+         MVI  C,03h               ; 3B61 0e 03
+         RST  5                   ; 3B63 ef
+         CALL L_0FB9              ; 3B64 cd b9 0f
+         POP  D                   ; 3B67 d1
+         LXI  H,3DA4h             ; 3B68 21 a4 3d
+         MVI  B,04h               ; 3B6B 06 04
+L_3B6D:  PUSH H                   ; 3B6D e5
+         PUSH D                   ; 3B6E d5
+         MVI  C,03h               ; 3B6F 0e 03
+         CALL L_381A              ; 3B71 cd 1a 38
+         JZ   L_3B83              ; 3B74 ca 83 3b
+         POP  D                   ; 3B77 d1
+         POP  H                   ; 3B78 e1
+         INX  H                   ; 3B79 23
+         INX  H                   ; 3B7A 23
+         INX  H                   ; 3B7B 23
+         DCR  B                   ; 3B7C 05
+         JNZ  L_3B6D              ; 3B7D c2 6d 3b
+         JMP  L_3B06              ; 3B80 c3 06 3b
+L_3B83:  POP  D                   ; 3B83 d1
+         LXI  D,0B69Fh            ; 3B84 11 9f b6
+         MVI  A,07h               ; 3B87 3e 07
+         STAX D                   ; 3B89 12
+         INX  D                   ; 3B8A 13
+         LXI  H,3DB1h             ; 3B8B 21 b1 3d
+         MVI  C,04h               ; 3B8E 0e 04
+         RST  5                   ; 3B90 ef
+         POP  H                   ; 3B91 e1
+         MVI  C,03h               ; 3B92 0e 03
+         MOV  A,C                 ; 3B94 79
+         CMP  B                   ; 3B95 b8
+         JNZ  L_3B9C              ; 3B96 c2 9c 3b
+         LXI  H,3DCCh             ; 3B99 21 cc 3d
+L_3B9C:  RST  5                   ; 3B9C ef
+         JMP  L_391E              ; 3B9D c3 1e 39
 L_3BA0:  LHLD 0A83Eh              ; 3BA0 2a 3e a8
 L_3BA3:  XCHG                     ; 3BA3 eb
 L_3BA4:  LXI  H,0B6A7h            ; 3BA4 21 a7 b6
@@ -6529,10 +7039,19 @@ L_3FB8:  .dbn 13,10,'Версия 2.2.2 от 17.09.2026'
          MVI  A,31h               ; 402B 3e 31
          STA  0DA31h              ; 402D 32 31 da
          JMP  0DA34h              ; 4030 c3 34 da
-         .db 0E5h,21h,13h,0C7h,22h,5Dh,0C0h,21h,04h,43h,22h,14h,0DFh,21h,3Ah,43h ; 4033 |.!.."].!.C"..!:C|
-         .db 22h,16h,0DFh,21h,4Fh,0Dh,22h,18h,0DFh,0E1h,0C9h,1Bh,5Bh,0Ch,1Bh,59h ; 4043 |"..!O.".....[..Y|
-         .db 21h,20h,89h,00h,0BBh,89h,00h,0BBh,1Bh,59h,36h,20h,88h,00h,0BCh,88h ; 4053 |! .......Y6 ....|
-         .db 00h,0BCh,1Bh,59h,37h,6Ch,00h                     ; 4063 |...Y7l.|
+L_4033:  PUSH H                   ; 4033 e5
+         LXI  H,0C713h            ; 4034 21 13 c7
+         SHLD 0C05Dh              ; 4037 22 5d c0
+         LXI  H,4304h             ; 403A 21 04 43
+         SHLD 0DF14h              ; 403D 22 14 df
+         LXI  H,433Ah             ; 4040 21 3a 43
+         SHLD 0DF16h              ; 4043 22 16 df
+         LXI  H,0D4Fh             ; 4046 21 4f 0d
+         SHLD 0DF18h              ; 4049 22 18 df
+         POP  H                   ; 404C e1
+         RET                      ; 404D c9
+         .db 1Bh,5Bh,0Ch,1Bh,59h,21h,20h,89h,00h,0BBh,89h,00h,0BBh,1Bh,59h,36h ; 404E |.[..Y! .......Y6|
+         .db 20h,88h,00h,0BCh,88h,00h,0BCh,1Bh,59h,37h,6Ch,00h ; 405E | .......Y7l.|
 L_406A:  LHLD 0006h               ; 406A 2a 06 00
          SPHL                     ; 406D f9
          SHLD 0009h               ; 406E 22 09 00
