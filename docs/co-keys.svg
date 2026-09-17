@@ -5,185 +5,240 @@
 <text x="630" y="78" fill="#9fa8e8" font-size="15" text-anchor="middle">файловая оболочка CO 2.0 под МикроДОС T-72</text>
 <text x="40" y="118" fill="#7ee081" font-size="17">Панели и командная строка</text>
 <line x1="40" y1="126" x2="606" y2="126" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="40" y="134" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="59" y="149" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
-<text x="90" y="149" fill="#e8e8f4" font-size="13">выполнить строку; если пуста -- действие по расширению из</text>
-<text x="90" y="167" fill="#e8e8f4" font-size="13">CO.EXT, на каталоге -- войти в него</text>
-<rect x="40" y="177" width="49" height="21" rx="4" fill="#f2f2fa"/>
-<text x="64" y="192" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
-<text x="101" y="192" fill="#e8e8f4" font-size="13">очистить командную строку; если пуста -- сменить значение</text>
-<text x="101" y="210" fill="#e8e8f4" font-size="13">цифр</text>
-<rect x="40" y="220" width="49" height="21" rx="4" fill="#f2f2fa"/>
-<text x="64" y="235" fill="#14149b" font-size="13" text-anchor="middle">ТАБ</text>
-<rect x="95" y="220" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="112" y="235" fill="#14149b" font-size="13" text-anchor="middle">↖</text>
-<text x="141" y="235" fill="#e8e8f4" font-size="13">перейти на другую панель</text>
-<rect x="40" y="245" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="57" y="260" fill="#14149b" font-size="13" text-anchor="middle">↑</text>
-<rect x="80" y="245" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="260" fill="#14149b" font-size="13" text-anchor="middle">↓</text>
-<text x="126" y="260" fill="#e8e8f4" font-size="13">курсор по панели</text>
-<rect x="40" y="270" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="57" y="285" fill="#14149b" font-size="13" text-anchor="middle">→</text>
-<rect x="80" y="270" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="285" fill="#14149b" font-size="13" text-anchor="middle">←</text>
-<text x="126" y="285" fill="#e8e8f4" font-size="13">курсор по командной строке</text>
-<rect x="40" y="295" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="310" fill="#14149b" font-size="13" text-anchor="middle">СС+→</text>
-<rect x="106" y="295" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="136" y="310" fill="#14149b" font-size="13" text-anchor="middle">СС+←</text>
-<text x="178" y="310" fill="#e8e8f4" font-size="13">курсор по панели через колонку</text>
-<rect x="40" y="320" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="59" y="335" fill="#14149b" font-size="13" text-anchor="middle">ЗБ</text>
-<text x="90" y="335" fill="#e8e8f4" font-size="13">стереть знак перед курсором</text>
-<rect x="40" y="345" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="59" y="360" fill="#14149b" font-size="13" text-anchor="middle">F1</text>
-<rect x="84" y="345" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="103" y="360" fill="#14149b" font-size="13" text-anchor="middle">F3</text>
-<text x="134" y="360" fill="#e8e8f4" font-size="13">следующая и предыдущая команда (помнит 14)</text>
-<rect x="40" y="370" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="59" y="385" fill="#14149b" font-size="13" text-anchor="middle">F4</text>
-<text x="90" y="385" fill="#e8e8f4" font-size="13">имя выделенного файла в командную строку</text>
-<rect x="40" y="395" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="59" y="410" fill="#14149b" font-size="13" text-anchor="middle">F2</text>
-<text x="90" y="410" fill="#e8e8f4" font-size="13">кодировка просмотра: К-8, РУС, ЛАТ, Р/Л</text>
-<rect x="40" y="420" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="57" y="435" fill="#14149b" font-size="13" text-anchor="middle">;</text>
-<text x="86" y="435" fill="#e8e8f4" font-size="13">затем буква -- встать на файл, который с неё начинается</text>
-<rect x="40" y="445" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="59" y="460" fill="#14149b" font-size="13" text-anchor="middle">ПС</text>
-<text x="90" y="460" fill="#e8e8f4" font-size="13">дописать к команде "&gt;C:CO.PTK"</text>
-<rect x="40" y="470" width="82" height="21" rx="4" fill="#f2f2fa"/>
-<text x="81" y="485" fill="#14149b" font-size="13" text-anchor="middle">Пробел</text>
-<text x="134" y="485" fill="#e8e8f4" font-size="13">восстановить системный экран</text>
+<rect x="40" y="134" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="149" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="88" y="149" fill="#e8e8f4" font-size="13">выполнить строку; если пуста -- действие по расширению из</text>
+<text x="88" y="167" fill="#e8e8f4" font-size="13">CO.EXT, на каталоге -- войти в него</text>
+<rect x="40" y="177" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="192" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
+<text x="99" y="192" fill="#e8e8f4" font-size="13">очистить командную строку; если пуста -- сменить значение</text>
+<text x="99" y="210" fill="#e8e8f4" font-size="13">цифр</text>
+<rect x="40" y="220" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="235" fill="#14149b" font-size="13" text-anchor="middle">ТАБ</text>
+<text x="92" y="235" fill="#e8e8f4" font-size="13">,</text>
+<rect x="111" y="220" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="126" y="235" fill="#14149b" font-size="13" text-anchor="middle">↖</text>
+<text x="153" y="235" fill="#e8e8f4" font-size="13">перейти на другую панель</text>
+<rect x="40" y="245" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="55" y="260" fill="#14149b" font-size="13" text-anchor="middle">↑</text>
+<text x="75" y="260" fill="#e8e8f4" font-size="13">,</text>
+<rect x="94" y="245" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="109" y="260" fill="#14149b" font-size="13" text-anchor="middle">↓</text>
+<text x="136" y="260" fill="#e8e8f4" font-size="13">курсор по панели</text>
+<rect x="40" y="270" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="55" y="285" fill="#14149b" font-size="13" text-anchor="middle">→</text>
+<text x="75" y="285" fill="#e8e8f4" font-size="13">,</text>
+<rect x="94" y="270" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="109" y="285" fill="#14149b" font-size="13" text-anchor="middle">←</text>
+<text x="136" y="285" fill="#e8e8f4" font-size="13">курсор по командной строке</text>
+<rect x="40" y="295" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="310" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="310" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="295" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="310" fill="#14149b" font-size="13" text-anchor="middle">→</text>
+<text x="124" y="310" fill="#e8e8f4" font-size="13">,</text>
+<rect x="143" y="295" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="161" y="310" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="185" y="310" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="192" y="295" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="207" y="310" fill="#14149b" font-size="13" text-anchor="middle">←</text>
+<text x="234" y="310" fill="#e8e8f4" font-size="13">курсор по панели через колонку</text>
+<rect x="40" y="320" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="335" fill="#14149b" font-size="13" text-anchor="middle">ЗБ</text>
+<text x="88" y="335" fill="#e8e8f4" font-size="13">стереть знак перед курсором</text>
+<rect x="40" y="345" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="360" fill="#14149b" font-size="13" text-anchor="middle">F1</text>
+<text x="81" y="360" fill="#e8e8f4" font-size="13">,</text>
+<rect x="100" y="345" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="118" y="360" fill="#14149b" font-size="13" text-anchor="middle">F3</text>
+<text x="148" y="360" fill="#e8e8f4" font-size="13">следующая и предыдущая команда (помнит 14)</text>
+<rect x="40" y="370" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="385" fill="#14149b" font-size="13" text-anchor="middle">F4</text>
+<text x="88" y="385" fill="#e8e8f4" font-size="13">имя выделенного файла в командную строку</text>
+<rect x="40" y="395" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="410" fill="#14149b" font-size="13" text-anchor="middle">F2</text>
+<text x="88" y="410" fill="#e8e8f4" font-size="13">кодировка просмотра: К-8, РУС, ЛАТ, Р/Л</text>
+<rect x="40" y="420" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="55" y="435" fill="#14149b" font-size="13" text-anchor="middle">;</text>
+<text x="82" y="435" fill="#e8e8f4" font-size="13">затем буква -- встать на файл, который с неё начинается</text>
+<rect x="40" y="445" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="460" fill="#14149b" font-size="13" text-anchor="middle">ПС</text>
+<text x="88" y="460" fill="#e8e8f4" font-size="13">дописать к команде "&gt;C:CO.PTK"</text>
+<rect x="40" y="470" width="80" height="21" rx="4" fill="#f2f2fa"/>
+<text x="80" y="485" fill="#14149b" font-size="13" text-anchor="middle">Пробел</text>
+<text x="132" y="485" fill="#e8e8f4" font-size="13">восстановить системный экран</text>
 <text x="40" y="531" fill="#7ee081" font-size="17">СС + цифра</text>
 <line x1="40" y1="539" x2="606" y2="539" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="40" y="547" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="562" fill="#14149b" font-size="13" text-anchor="middle">СС+1</text>
-<text x="112" y="562" fill="#e8e8f4" font-size="13">вид панели: 40 или 60 файлов</text>
-<rect x="40" y="572" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="587" fill="#14149b" font-size="13" text-anchor="middle">СС+2</text>
-<text x="112" y="587" fill="#e8e8f4" font-size="13">атрибуты файла</text>
-<rect x="40" y="597" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="612" fill="#14149b" font-size="13" text-anchor="middle">СС+3</text>
-<text x="112" y="612" fill="#e8e8f4" font-size="13">просмотр в КОИ-7</text>
-<rect x="40" y="622" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="637" fill="#14149b" font-size="13" text-anchor="middle">СС+4</text>
-<text x="112" y="637" fill="#e8e8f4" font-size="13">правка в WSR (WordStar; под T-72 не работает)</text>
-<rect x="40" y="647" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="662" fill="#14149b" font-size="13" text-anchor="middle">СС+5</text>
-<text x="112" y="662" fill="#e8e8f4" font-size="13">копировать с заменой имени, можно по маске</text>
-<rect x="40" y="672" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="687" fill="#14149b" font-size="13" text-anchor="middle">СС+6</text>
-<text x="112" y="687" fill="#e8e8f4" font-size="13">записать на магнитофон</text>
-<rect x="40" y="697" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="712" fill="#14149b" font-size="13" text-anchor="middle">СС+7</text>
-<text x="112" y="712" fill="#e8e8f4" font-size="13">выбрать дискету НЖМД; без винчестера -- печать файла</text>
-<rect x="40" y="722" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="737" fill="#14149b" font-size="13" text-anchor="middle">СС+8</text>
-<text x="112" y="737" fill="#e8e8f4" font-size="13">создать файл</text>
-<rect x="40" y="747" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="762" fill="#14149b" font-size="13" text-anchor="middle">СС+9</text>
-<text x="112" y="762" fill="#e8e8f4" font-size="13">загрузить файл в SID</text>
+<rect x="40" y="547" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="562" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="562" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="547" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="562" fill="#14149b" font-size="13" text-anchor="middle">1</text>
+<text x="131" y="562" fill="#e8e8f4" font-size="13">вид панели: 40 или 60 файлов</text>
+<rect x="40" y="572" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="587" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="587" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="572" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="587" fill="#14149b" font-size="13" text-anchor="middle">2</text>
+<text x="131" y="587" fill="#e8e8f4" font-size="13">атрибуты файла</text>
+<rect x="40" y="597" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="612" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="612" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="597" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="612" fill="#14149b" font-size="13" text-anchor="middle">3</text>
+<text x="131" y="612" fill="#e8e8f4" font-size="13">просмотр в КОИ-7</text>
+<rect x="40" y="622" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="637" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="637" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="622" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="637" fill="#14149b" font-size="13" text-anchor="middle">4</text>
+<text x="131" y="637" fill="#e8e8f4" font-size="13">правка в WSR (WordStar; под T-72 не работает)</text>
+<rect x="40" y="647" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="662" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="662" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="647" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="662" fill="#14149b" font-size="13" text-anchor="middle">5</text>
+<text x="131" y="662" fill="#e8e8f4" font-size="13">копировать с заменой имени, можно по маске</text>
+<rect x="40" y="672" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="687" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="687" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="672" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="687" fill="#14149b" font-size="13" text-anchor="middle">6</text>
+<text x="131" y="687" fill="#e8e8f4" font-size="13">записать на магнитофон</text>
+<rect x="40" y="697" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="712" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="712" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="697" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="712" fill="#14149b" font-size="13" text-anchor="middle">7</text>
+<text x="131" y="712" fill="#e8e8f4" font-size="13">выбрать дискету НЖМД; без винчестера -- печать файла</text>
+<rect x="40" y="722" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="737" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="737" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="722" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="737" fill="#14149b" font-size="13" text-anchor="middle">8</text>
+<text x="131" y="737" fill="#e8e8f4" font-size="13">создать файл</text>
+<rect x="40" y="747" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="762" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="762" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="747" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="762" fill="#14149b" font-size="13" text-anchor="middle">9</text>
+<text x="131" y="762" fill="#e8e8f4" font-size="13">загрузить файл в SID</text>
 <text x="40" y="808" fill="#7ee081" font-size="17">Ещё сочетания</text>
 <line x1="40" y1="816" x2="606" y2="816" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="40" y="824" width="71" height="21" rx="4" fill="#f2f2fa"/>
-<text x="75" y="839" fill="#14149b" font-size="13" text-anchor="middle">СС+ВК</text>
-<text x="123" y="839" fill="#e8e8f4" font-size="13">вторая строка CO.EXT для этого расширения</text>
-<rect x="40" y="849" width="71" height="21" rx="4" fill="#f2f2fa"/>
-<text x="75" y="864" fill="#14149b" font-size="13" text-anchor="middle">УС+ВК</text>
-<text x="123" y="864" fill="#e8e8f4" font-size="13">третья строка</text>
-<rect x="40" y="874" width="104" height="21" rx="4" fill="#f2f2fa"/>
-<text x="92" y="889" fill="#14149b" font-size="13" text-anchor="middle">СС+УС+ВК</text>
-<text x="156" y="889" fill="#e8e8f4" font-size="13">четвёртая строка</text>
-<rect x="40" y="899" width="60" height="21" rx="4" fill="#f2f2fa"/>
-<text x="70" y="914" fill="#14149b" font-size="13" text-anchor="middle">УС+4</text>
-<text x="112" y="914" fill="#e8e8f4" font-size="13">правка только что созданного файла</text>
+<rect x="40" y="824" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="839" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="839" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="824" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="107" y="839" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="137" y="839" fill="#e8e8f4" font-size="13">вторая строка CO.EXT для этого расширения</text>
+<rect x="40" y="849" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="864" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
+<text x="82" y="864" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="849" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="107" y="864" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="137" y="864" fill="#e8e8f4" font-size="13">третья строка</text>
+<rect x="40" y="874" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="889" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="82" y="889" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="874" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="107" y="889" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
+<text x="131" y="889" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="138" y="874" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="156" y="889" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="186" y="889" fill="#e8e8f4" font-size="13">четвёртая строка</text>
+<rect x="40" y="899" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="914" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
+<text x="82" y="914" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="89" y="899" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="104" y="914" fill="#14149b" font-size="13" text-anchor="middle">4</text>
+<text x="131" y="914" fill="#e8e8f4" font-size="13">правка только что созданного файла</text>
 <text x="654" y="118" fill="#7ee081" font-size="17">Метки</text>
 <line x1="654" y1="126" x2="1220" y2="126" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="654" y="134" width="49" height="21" rx="4" fill="#f2f2fa"/>
-<text x="678" y="149" fill="#14149b" font-size="13" text-anchor="middle">СТР</text>
-<text x="715" y="149" fill="#e8e8f4" font-size="13">отметить файл; при непустой строке -- дописать имя в неё</text>
-<rect x="654" y="159" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="174" fill="#14149b" font-size="13" text-anchor="middle">+</text>
-<text x="700" y="174" fill="#e8e8f4" font-size="13">отметить по маске</text>
-<rect x="654" y="184" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="199" fill="#14149b" font-size="13" text-anchor="middle">=</text>
-<text x="700" y="199" fill="#e8e8f4" font-size="13">отметить те же, что на другой панели</text>
-<rect x="654" y="209" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="224" fill="#14149b" font-size="13" text-anchor="middle">/</text>
-<text x="700" y="224" fill="#e8e8f4" font-size="13">обратить метки</text>
-<rect x="654" y="234" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="249" fill="#14149b" font-size="13" text-anchor="middle">-</text>
-<text x="700" y="249" fill="#e8e8f4" font-size="13">снять все метки</text>
-<rect x="654" y="259" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="274" fill="#14149b" font-size="13" text-anchor="middle">?</text>
-<text x="700" y="274" fill="#e8e8f4" font-size="13">размер файла с точностью до 128 байт</text>
+<rect x="654" y="134" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="677" y="149" fill="#14149b" font-size="13" text-anchor="middle">СТР</text>
+<text x="713" y="149" fill="#e8e8f4" font-size="13">отметить файл; при непустой строке -- дописать имя в неё</text>
+<rect x="654" y="159" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="174" fill="#14149b" font-size="13" text-anchor="middle">+</text>
+<text x="696" y="174" fill="#e8e8f4" font-size="13">отметить по маске</text>
+<rect x="654" y="184" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="199" fill="#14149b" font-size="13" text-anchor="middle">=</text>
+<text x="696" y="199" fill="#e8e8f4" font-size="13">отметить те же, что на другой панели</text>
+<rect x="654" y="209" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="224" fill="#14149b" font-size="13" text-anchor="middle">/</text>
+<text x="696" y="224" fill="#e8e8f4" font-size="13">обратить метки</text>
+<rect x="654" y="234" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="249" fill="#14149b" font-size="13" text-anchor="middle">-</text>
+<text x="696" y="249" fill="#e8e8f4" font-size="13">снять все метки</text>
+<rect x="654" y="259" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="274" fill="#14149b" font-size="13" text-anchor="middle">?</text>
+<text x="696" y="274" fill="#e8e8f4" font-size="13">размер файла с точностью до 128 байт</text>
 <text x="654" y="320" fill="#7ee081" font-size="17">Цифры -- при пустой командной строке</text>
 <line x1="654" y1="328" x2="1220" y2="328" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="654" y="336" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="351" fill="#14149b" font-size="13" text-anchor="middle">1</text>
-<text x="700" y="351" fill="#e8e8f4" font-size="13">помощь -- этот файл CO.HLP</text>
-<rect x="654" y="361" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="376" fill="#14149b" font-size="13" text-anchor="middle">2</text>
-<text x="700" y="376" fill="#e8e8f4" font-size="13">меню пользователя из CO.MNU</text>
-<rect x="654" y="386" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="401" fill="#14149b" font-size="13" text-anchor="middle">3</text>
-<text x="700" y="401" fill="#e8e8f4" font-size="13">просмотр файла</text>
-<rect x="654" y="411" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="426" fill="#14149b" font-size="13" text-anchor="middle">4</text>
-<text x="700" y="426" fill="#e8e8f4" font-size="13">правка файла в MEDIT</text>
-<rect x="654" y="436" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="451" fill="#14149b" font-size="13" text-anchor="middle">5</text>
-<text x="700" y="451" fill="#e8e8f4" font-size="13">копировать на другой диск</text>
-<rect x="654" y="461" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="476" fill="#14149b" font-size="13" text-anchor="middle">6</text>
-<text x="700" y="476" fill="#e8e8f4" font-size="13">переименовать</text>
-<rect x="654" y="486" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="501" fill="#14149b" font-size="13" text-anchor="middle">7</text>
-<text x="700" y="501" fill="#e8e8f4" font-size="13">сменить диск на панели</text>
-<rect x="654" y="511" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="526" fill="#14149b" font-size="13" text-anchor="middle">8</text>
-<text x="700" y="526" fill="#e8e8f4" font-size="13">удалить</text>
-<rect x="654" y="536" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="551" fill="#14149b" font-size="13" text-anchor="middle">9</text>
-<text x="700" y="551" fill="#e8e8f4" font-size="13">настройки: диск B, режим DIR, экран, проверка при</text>
-<text x="700" y="569" fill="#e8e8f4" font-size="13">копировании, сортировка</text>
-<rect x="654" y="579" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="594" fill="#14149b" font-size="13" text-anchor="middle">0</text>
-<text x="700" y="594" fill="#e8e8f4" font-size="13">погасить монитор</text>
+<rect x="654" y="336" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="351" fill="#14149b" font-size="13" text-anchor="middle">1</text>
+<text x="696" y="351" fill="#e8e8f4" font-size="13">помощь -- этот файл CO.HLP</text>
+<rect x="654" y="361" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="376" fill="#14149b" font-size="13" text-anchor="middle">2</text>
+<text x="696" y="376" fill="#e8e8f4" font-size="13">меню пользователя из CO.MNU</text>
+<rect x="654" y="386" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="401" fill="#14149b" font-size="13" text-anchor="middle">3</text>
+<text x="696" y="401" fill="#e8e8f4" font-size="13">просмотр файла</text>
+<rect x="654" y="411" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="426" fill="#14149b" font-size="13" text-anchor="middle">4</text>
+<text x="696" y="426" fill="#e8e8f4" font-size="13">правка файла в MEDIT</text>
+<rect x="654" y="436" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="451" fill="#14149b" font-size="13" text-anchor="middle">5</text>
+<text x="696" y="451" fill="#e8e8f4" font-size="13">копировать на другой диск</text>
+<rect x="654" y="461" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="476" fill="#14149b" font-size="13" text-anchor="middle">6</text>
+<text x="696" y="476" fill="#e8e8f4" font-size="13">переименовать</text>
+<rect x="654" y="486" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="501" fill="#14149b" font-size="13" text-anchor="middle">7</text>
+<text x="696" y="501" fill="#e8e8f4" font-size="13">сменить диск на панели</text>
+<rect x="654" y="511" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="526" fill="#14149b" font-size="13" text-anchor="middle">8</text>
+<text x="696" y="526" fill="#e8e8f4" font-size="13">удалить</text>
+<rect x="654" y="536" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="551" fill="#14149b" font-size="13" text-anchor="middle">9</text>
+<text x="696" y="551" fill="#e8e8f4" font-size="13">настройки: диск B, режим DIR, экран, проверка при</text>
+<text x="696" y="569" fill="#e8e8f4" font-size="13">копировании, сортировка</text>
+<rect x="654" y="579" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="594" fill="#14149b" font-size="13" text-anchor="middle">0</text>
+<text x="696" y="594" fill="#e8e8f4" font-size="13">погасить монитор</text>
 <text x="654" y="640" fill="#7ee081" font-size="17">Просмотрщик</text>
 <line x1="654" y1="648" x2="1220" y2="648" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="654" y="656" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="671" fill="#14149b" font-size="13" text-anchor="middle">↑</text>
-<rect x="694" y="656" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="711" y="671" fill="#14149b" font-size="13" text-anchor="middle">↓</text>
-<text x="740" y="671" fill="#e8e8f4" font-size="13">экран назад и вперёд</text>
-<rect x="654" y="681" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="673" y="696" fill="#14149b" font-size="13" text-anchor="middle">F1</text>
-<rect x="698" y="681" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="717" y="696" fill="#14149b" font-size="13" text-anchor="middle">F4</text>
-<text x="748" y="696" fill="#e8e8f4" font-size="13">строка вверх и вниз</text>
-<rect x="654" y="706" width="34" height="21" rx="4" fill="#f2f2fa"/>
-<text x="671" y="721" fill="#14149b" font-size="13" text-anchor="middle">↖</text>
-<text x="700" y="721" fill="#e8e8f4" font-size="13">развернуть на всю ширину экрана</text>
-<rect x="654" y="731" width="49" height="21" rx="4" fill="#f2f2fa"/>
-<text x="678" y="746" fill="#14149b" font-size="13" text-anchor="middle">СТР</text>
-<text x="715" y="746" fill="#e8e8f4" font-size="13">перейти к строке</text>
-<rect x="654" y="756" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="673" y="771" fill="#14149b" font-size="13" text-anchor="middle">ПС</text>
-<text x="704" y="771" fill="#e8e8f4" font-size="13">искать</text>
-<rect x="654" y="781" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="673" y="796" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
-<text x="704" y="796" fill="#e8e8f4" font-size="13">искать следующее</text>
-<rect x="654" y="806" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="673" y="821" fill="#14149b" font-size="13" text-anchor="middle">F2</text>
-<text x="704" y="821" fill="#e8e8f4" font-size="13">кодировка: К-8, РУС, ЛАТ, Р/Л</text>
-<rect x="654" y="831" width="38" height="21" rx="4" fill="#f2f2fa"/>
-<text x="673" y="846" fill="#14149b" font-size="13" text-anchor="middle">F3</text>
-<text x="704" y="846" fill="#e8e8f4" font-size="13">печать</text>
-<rect x="654" y="856" width="49" height="21" rx="4" fill="#f2f2fa"/>
-<text x="678" y="871" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
-<text x="715" y="871" fill="#e8e8f4" font-size="13">выход к панелям</text>
+<rect x="654" y="656" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="671" fill="#14149b" font-size="13" text-anchor="middle">↑</text>
+<text x="689" y="671" fill="#e8e8f4" font-size="13">,</text>
+<rect x="708" y="656" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="723" y="671" fill="#14149b" font-size="13" text-anchor="middle">↓</text>
+<text x="750" y="671" fill="#e8e8f4" font-size="13">экран назад и вперёд</text>
+<rect x="654" y="681" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="696" fill="#14149b" font-size="13" text-anchor="middle">F1</text>
+<text x="695" y="696" fill="#e8e8f4" font-size="13">,</text>
+<rect x="714" y="681" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="732" y="696" fill="#14149b" font-size="13" text-anchor="middle">F4</text>
+<text x="762" y="696" fill="#e8e8f4" font-size="13">строка вверх и вниз</text>
+<rect x="654" y="706" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="669" y="721" fill="#14149b" font-size="13" text-anchor="middle">↖</text>
+<text x="696" y="721" fill="#e8e8f4" font-size="13">развернуть на всю ширину экрана</text>
+<rect x="654" y="731" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="677" y="746" fill="#14149b" font-size="13" text-anchor="middle">СТР</text>
+<text x="713" y="746" fill="#e8e8f4" font-size="13">перейти к строке</text>
+<rect x="654" y="756" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="771" fill="#14149b" font-size="13" text-anchor="middle">ПС</text>
+<text x="702" y="771" fill="#e8e8f4" font-size="13">искать</text>
+<rect x="654" y="781" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="796" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="702" y="796" fill="#e8e8f4" font-size="13">искать следующее</text>
+<rect x="654" y="806" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="821" fill="#14149b" font-size="13" text-anchor="middle">F2</text>
+<text x="702" y="821" fill="#e8e8f4" font-size="13">кодировка: К-8, РУС, ЛАТ, Р/Л</text>
+<rect x="654" y="831" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="846" fill="#14149b" font-size="13" text-anchor="middle">F3</text>
+<text x="702" y="846" fill="#e8e8f4" font-size="13">печать</text>
+<rect x="654" y="856" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="677" y="871" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
+<text x="713" y="871" fill="#e8e8f4" font-size="13">выход к панелям</text>
 <text x="630" y="978" fill="#9fa8e8" font-size="12" text-anchor="middle">CO 2.0 -- Шишатский С.М., Харьков 1993. Сборка под MDOS T-72: github.com/ekundo/co-t72</text>
 </svg>

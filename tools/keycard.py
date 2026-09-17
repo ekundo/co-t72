@@ -97,17 +97,38 @@ ROW = 25                # шаг строки
 CONT = 18               # перенос внутри строки
 
 
-def layout(rows, x):
-    """Разложить строки группы: чипы и переносы описаний.
+PLUS = 13               # место под знак "+" между клавишами сочетания
+GAP = 24                # просвет между разными клавишами -- заметно больше, чем у "+"
 
-    В поле клавиш через пробел перечислены разные клавиши, делающие одно и то
-    же, -- каждая рисуется своей шапочкой.
+
+def parse_key(key):
+    """Разобрать поле клавиш.
+
+    Через пробел -- разные клавиши, делающие одно и то же. Через плюс --
+    сочетание: жать вместе. И то и другое рисуется отдельными шапочками, у
+    сочетания между ними ставится "+".
     """
+    return [[a] if a == '+' else a.split('+') for a in key.split()]
+
+
+def key_width(alts):
+    w = 0
+    for i, parts in enumerate(alts):
+        if i:
+            w += GAP
+        for j, k in enumerate(parts):
+            if j:
+                w += PLUS
+            w += max(30, 11 * len(k) + 14)
+    return w
+
+
+def layout(rows, x):
+    """Разложить строки группы: шапочки клавиш и переносы описаний."""
     out = []
     for key, desc in rows:
-        keys = key.split()
-        widths = [max(34, 11 * len(k) + 16) for k in keys]
-        kw = sum(widths) + 6 * (len(widths) - 1)
+        alts = parse_key(key)
+        kw = key_width(alts)
         room = int((COLW - kw - 12) / CHARW)
         words, line, lines = desc.split(), '', []
         for w in words:
@@ -118,7 +139,7 @@ def layout(rows, x):
             else:
                 line = t
         lines.append(line)
-        out.append((keys, widths, kw, lines))
+        out.append((alts, kw, lines))
     return out
 
 
@@ -129,7 +150,7 @@ def main():
 
     # сперва раскладка: группы по двум колонкам, поровну по высоте
     prepared = [(title, layout(rows, 0)) for title, rows in GROUPS]
-    heights = [30 + sum(ROW + CONT * (len(r[3]) - 1) for r in rows) + 22
+    heights = [30 + sum(ROW + CONT * (len(r[2]) - 1) for r in rows) + 22
                for _, rows in prepared]
     cols = [[], []]
     colh = [0, 0]
@@ -158,15 +179,28 @@ def main():
             out.append(f'<line x1="{x}" y1="{y+8}" x2="{x+COLW}" y2="{y+8}" '
                        f'stroke="{ACC}" stroke-width="1" opacity="0.45"/>')
             y += 30
-            for keys, widths, kw, lines in rows:
+            for alts, kw, lines in rows:
                 cx = x
-                for k, kwi in zip(keys, widths):
-                    out.append(f'<rect x="{cx}" y="{y-14}" width="{kwi}" '
-                               f'height="21" rx="4" fill="{CHIP}"/>')
-                    out.append(f'<text x="{cx + kwi//2}" y="{y+1}" '
-                               f'fill="{CHIPTX}" font-size="13" '
-                               f'text-anchor="middle">{esc(k)}</text>')
-                    cx += kwi + 6
+                for i, parts in enumerate(alts):
+                    if i:
+                        # запятая между разными клавишами: "ТАБ", "↖" -- это
+                        # две клавиши, а не одно сочетание
+                        out.append(f'<text x="{cx + 5}" y="{y+1}" fill="{FG}" '
+                                   f'font-size="13">,</text>')
+                        cx += GAP
+                    for j, k in enumerate(parts):
+                        if j:
+                            out.append(f'<text x="{cx + PLUS//2}" y="{y+1}" '
+                                       f'fill="{FG}" font-size="13" '
+                                       f'text-anchor="middle">+</text>')
+                            cx += PLUS
+                        kwi = max(30, 11 * len(k) + 14)
+                        out.append(f'<rect x="{cx}" y="{y-14}" width="{kwi}" '
+                                   f'height="21" rx="4" fill="{CHIP}"/>')
+                        out.append(f'<text x="{cx + kwi//2}" y="{y+1}" '
+                                   f'fill="{CHIPTX}" font-size="13" '
+                                   f'text-anchor="middle">{esc(k)}</text>')
+                        cx += kwi
                 for i, ln in enumerate(lines):
                     out.append(f'<text x="{x + kw + 12}" y="{y + 1 + i*CONT}" '
                                f'fill="{FG}" font-size="13">{esc(ln)}</text>')
