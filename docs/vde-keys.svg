@@ -1,0 +1,384 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 1464" width="1260" height="1464" font-family="Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace">
+<rect width="1260" height="1464" fill="#1414b4"/>
+<rect x="8" y="8" width="1244" height="1448" fill="none" stroke="#7ee081" stroke-width="2"/>
+<text x="630" y="52" fill="#e8e8f4" font-size="30" text-anchor="middle" letter-spacing="2">КЛАВИШИ VDE</text>
+<text x="630" y="78" fill="#9fa8e8" font-size="15" text-anchor="middle">экранный редактор VDE 2.67b под МикроДОС T-72</text>
+<text x="40" y="118" fill="#7ee081" font-size="17">Движение</text>
+<line x1="40" y1="126" x2="606" y2="126" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="40" y="134" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="55" y="149" fill="#14149b" font-size="13" text-anchor="middle">↑</text>
+<text x="75" y="149" fill="#e8e8f4" font-size="13">,</text>
+<rect x="94" y="134" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="112" y="149" fill="#14149b" font-size="13" text-anchor="middle">^E</text>
+<text x="142" y="149" fill="#e8e8f4" font-size="13">строка вверх</text>
+<rect x="40" y="159" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="55" y="174" fill="#14149b" font-size="13" text-anchor="middle">↓</text>
+<text x="75" y="174" fill="#e8e8f4" font-size="13">,</text>
+<rect x="94" y="159" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="112" y="174" fill="#14149b" font-size="13" text-anchor="middle">^X</text>
+<text x="142" y="174" fill="#e8e8f4" font-size="13">строка вниз</text>
+<rect x="40" y="184" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="55" y="199" fill="#14149b" font-size="13" text-anchor="middle">←</text>
+<text x="75" y="199" fill="#e8e8f4" font-size="13">,</text>
+<rect x="94" y="184" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="112" y="199" fill="#14149b" font-size="13" text-anchor="middle">^S</text>
+<text x="142" y="199" fill="#e8e8f4" font-size="13">знак влево</text>
+<rect x="40" y="209" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="55" y="224" fill="#14149b" font-size="13" text-anchor="middle">→</text>
+<text x="75" y="224" fill="#e8e8f4" font-size="13">,</text>
+<rect x="94" y="209" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="112" y="224" fill="#14149b" font-size="13" text-anchor="middle">^D</text>
+<text x="142" y="224" fill="#e8e8f4" font-size="13">знак вправо</text>
+<rect x="40" y="234" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="249" fill="#14149b" font-size="13" text-anchor="middle">^A</text>
+<text x="88" y="249" fill="#e8e8f4" font-size="13">слово влево</text>
+<rect x="40" y="259" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="274" fill="#14149b" font-size="13" text-anchor="middle">^F</text>
+<text x="88" y="274" fill="#e8e8f4" font-size="13">слово вправо</text>
+<rect x="40" y="284" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="299" fill="#14149b" font-size="13" text-anchor="middle">^R</text>
+<text x="88" y="299" fill="#e8e8f4" font-size="13">страница назад</text>
+<rect x="40" y="309" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="324" fill="#14149b" font-size="13" text-anchor="middle">^C</text>
+<text x="88" y="324" fill="#e8e8f4" font-size="13">страница вперёд</text>
+<rect x="40" y="334" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="349" fill="#14149b" font-size="13" text-anchor="middle">^W</text>
+<text x="88" y="349" fill="#e8e8f4" font-size="13">сдвинуть текст на строку назад, курсор оставить</text>
+<rect x="40" y="359" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="374" fill="#14149b" font-size="13" text-anchor="middle">^Z</text>
+<text x="88" y="374" fill="#e8e8f4" font-size="13">то же вперёд</text>
+<rect x="40" y="384" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="399" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="384" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="399" fill="#14149b" font-size="13" text-anchor="middle">↑</text>
+<text x="124" y="399" fill="#e8e8f4" font-size="13">в верхнюю строку экрана</text>
+<rect x="40" y="409" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="424" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="409" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="424" fill="#14149b" font-size="13" text-anchor="middle">↓</text>
+<text x="124" y="424" fill="#e8e8f4" font-size="13">в нижнюю</text>
+<rect x="40" y="434" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="449" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="434" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="449" fill="#14149b" font-size="13" text-anchor="middle">←</text>
+<text x="124" y="449" fill="#e8e8f4" font-size="13">в начало строки</text>
+<rect x="40" y="459" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="474" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="459" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="474" fill="#14149b" font-size="13" text-anchor="middle">→</text>
+<text x="124" y="474" fill="#e8e8f4" font-size="13">в конец строки</text>
+<rect x="40" y="484" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="499" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="484" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="499" fill="#14149b" font-size="13" text-anchor="middle">R</text>
+<text x="124" y="499" fill="#e8e8f4" font-size="13">в начало файла</text>
+<rect x="40" y="509" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="524" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="509" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="524" fill="#14149b" font-size="13" text-anchor="middle">C</text>
+<text x="124" y="524" fill="#e8e8f4" font-size="13">в конец файла</text>
+<rect x="40" y="534" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="549" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="534" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="549" fill="#14149b" font-size="13" text-anchor="middle">I</text>
+<text x="124" y="549" fill="#e8e8f4" font-size="13">перейти к странице или строке по номеру</text>
+<rect x="40" y="559" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="574" fill="#14149b" font-size="13" text-anchor="middle">^P</text>
+<rect x="82" y="559" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="574" fill="#14149b" font-size="13" text-anchor="middle">Z</text>
+<text x="124" y="574" fill="#e8e8f4" font-size="13">поставить метку</text>
+<rect x="40" y="584" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="599" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="584" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="599" fill="#14149b" font-size="13" text-anchor="middle">P</text>
+<text x="124" y="599" fill="#e8e8f4" font-size="13">вернуться к метке</text>
+<rect x="40" y="609" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="624" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="609" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="624" fill="#14149b" font-size="13" text-anchor="middle">B</text>
+<text x="124" y="624" fill="#e8e8f4" font-size="13">к началу блока</text>
+<text x="40" y="670" fill="#7ee081" font-size="17">Файл и выход</text>
+<line x1="40" y1="678" x2="606" y2="678" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="40" y="686" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="701" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="686" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="701" fill="#14149b" font-size="13" text-anchor="middle">S</text>
+<text x="124" y="701" fill="#e8e8f4" font-size="13">сохранить</text>
+<rect x="40" y="711" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="726" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="711" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="726" fill="#14149b" font-size="13" text-anchor="middle">D</text>
+<text x="124" y="726" fill="#e8e8f4" font-size="13">сохранить и открыть другой файл</text>
+<rect x="40" y="736" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="751" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="736" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="751" fill="#14149b" font-size="13" text-anchor="middle">X</text>
+<text x="124" y="751" fill="#e8e8f4" font-size="13">сохранить и выйти</text>
+<rect x="40" y="761" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="776" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="761" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="776" fill="#14149b" font-size="13" text-anchor="middle">Q</text>
+<text x="124" y="776" fill="#e8e8f4" font-size="13">выйти, не сохраняя</text>
+<rect x="40" y="786" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="801" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="786" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="801" fill="#14149b" font-size="13" text-anchor="middle">L</text>
+<text x="124" y="801" fill="#e8e8f4" font-size="13">загрузить другой файл</text>
+<rect x="40" y="811" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="826" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="811" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="826" fill="#14149b" font-size="13" text-anchor="middle">N</text>
+<text x="124" y="826" fill="#e8e8f4" font-size="13">сменить имя</text>
+<rect x="40" y="836" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="851" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="836" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="851" fill="#14149b" font-size="13" text-anchor="middle">E</text>
+<text x="124" y="851" fill="#e8e8f4" font-size="13">стереть файл с диска</text>
+<rect x="40" y="861" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="876" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="861" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="876" fill="#14149b" font-size="13" text-anchor="middle">F</text>
+<text x="124" y="876" fill="#e8e8f4" font-size="13">показать каталог</text>
+<rect x="40" y="886" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="901" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="886" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="901" fill="#14149b" font-size="13" text-anchor="middle">I</text>
+<text x="124" y="901" fill="#e8e8f4" font-size="13">сведения о файле и свободной памяти</text>
+<text x="40" y="947" fill="#7ee081" font-size="17">Что особенного в этой сборке</text>
+<line x1="40" y1="955" x2="606" y2="955" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="40" y="963" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="978" fill="#14149b" font-size="13" text-anchor="middle">РУС</text>
+<text x="99" y="978" fill="#e8e8f4" font-size="13">команды понимаются и в русской раскладке: ^K С работает</text>
+<text x="99" y="996" fill="#e8e8f4" font-size="13">так же, как ^K S</text>
+<rect x="40" y="1006" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="1021" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
+<text x="99" y="1021" fill="#e8e8f4" font-size="13">у автора это ESC: отмена, а также префикс -- АР2 со</text>
+<text x="99" y="1039" fill="#e8e8f4" font-size="13">стрелкой сдвигает экран, АР2 с цифрой запускает макрос</text>
+<rect x="40" y="1049" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="1064" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
+<text x="92" y="1064" fill="#e8e8f4" font-size="13">,</text>
+<rect x="111" y="1049" width="80" height="21" rx="4" fill="#f2f2fa"/>
+<text x="151" y="1064" fill="#14149b" font-size="13" text-anchor="middle">Пробел</text>
+<text x="203" y="1064" fill="#e8e8f4" font-size="13">снять сообщение об ошибке; на стенде только</text>
+<text x="203" y="1082" fill="#e8e8f4" font-size="13">пробел — АР2 эмулятор не умеет вводить</text>
+<rect x="40" y="1092" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="1107" fill="#14149b" font-size="13" text-anchor="middle">^J</text>
+<text x="88" y="1107" fill="#e8e8f4" font-size="13">подсказка; развёрнутое меню выключено — эта память отдана</text>
+<text x="88" y="1125" fill="#e8e8f4" font-size="13">тексту</text>
+<rect x="40" y="1135" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="1150" fill="#14149b" font-size="13" text-anchor="middle">^^</text>
+<text x="88" y="1150" fill="#e8e8f4" font-size="13">сменить регистр знака под курсором</text>
+<text x="654" y="118" fill="#7ee081" font-size="17">Правка</text>
+<line x1="654" y1="126" x2="1220" y2="126" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="654" y="134" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="149" fill="#14149b" font-size="13" text-anchor="middle">ЗБ</text>
+<text x="702" y="149" fill="#e8e8f4" font-size="13">стереть знак слева</text>
+<rect x="654" y="159" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="174" fill="#14149b" font-size="13" text-anchor="middle">^G</text>
+<text x="702" y="174" fill="#e8e8f4" font-size="13">стереть знак под курсором</text>
+<rect x="654" y="184" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="199" fill="#14149b" font-size="13" text-anchor="middle">^T</text>
+<text x="702" y="199" fill="#e8e8f4" font-size="13">стереть слово</text>
+<rect x="654" y="209" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="224" fill="#14149b" font-size="13" text-anchor="middle">^Y</text>
+<text x="702" y="224" fill="#e8e8f4" font-size="13">стереть строку</text>
+<rect x="654" y="234" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="249" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="696" y="234" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="249" fill="#14149b" font-size="13" text-anchor="middle">Y</text>
+<text x="738" y="249" fill="#e8e8f4" font-size="13">стереть до конца строки</text>
+<rect x="654" y="259" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="274" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="696" y="259" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="714" y="274" fill="#14149b" font-size="13" text-anchor="middle">ЗБ</text>
+<text x="744" y="274" fill="#e8e8f4" font-size="13">стереть до начала строки</text>
+<rect x="654" y="284" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="299" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="696" y="284" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="299" fill="#14149b" font-size="13" text-anchor="middle">T</text>
+<text x="738" y="299" fill="#e8e8f4" font-size="13">стереть до указанного знака</text>
+<rect x="654" y="309" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="324" fill="#14149b" font-size="13" text-anchor="middle">^U</text>
+<text x="702" y="324" fill="#e8e8f4" font-size="13">вернуть стёртое</text>
+<rect x="654" y="334" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="349" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="696" y="334" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="349" fill="#14149b" font-size="13" text-anchor="middle">U</text>
+<text x="738" y="349" fill="#e8e8f4" font-size="13">вернуть стёртую строку</text>
+<rect x="654" y="359" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="374" fill="#14149b" font-size="13" text-anchor="middle">^V</text>
+<text x="702" y="374" fill="#e8e8f4" font-size="13">вставка или замена; в этой сборке вставка включена сразу</text>
+<rect x="654" y="384" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="399" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="702" y="399" fill="#e8e8f4" font-size="13">разорвать строку</text>
+<rect x="654" y="409" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="424" fill="#14149b" font-size="13" text-anchor="middle">^N</text>
+<text x="702" y="424" fill="#e8e8f4" font-size="13">вставить возврат каретки, не сдвигая курсор</text>
+<rect x="654" y="434" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="449" fill="#14149b" font-size="13" text-anchor="middle">^B</text>
+<text x="702" y="449" fill="#e8e8f4" font-size="13">переформатировать абзац по полям</text>
+<rect x="654" y="459" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="677" y="474" fill="#14149b" font-size="13" text-anchor="middle">ТАБ</text>
+<text x="706" y="474" fill="#e8e8f4" font-size="13">,</text>
+<rect x="725" y="459" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="743" y="474" fill="#14149b" font-size="13" text-anchor="middle">^I</text>
+<text x="773" y="474" fill="#e8e8f4" font-size="13">табуляция</text>
+<text x="654" y="520" fill="#7ee081" font-size="17">Блоки</text>
+<line x1="654" y1="528" x2="1220" y2="528" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="654" y="536" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="551" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="536" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="551" fill="#14149b" font-size="13" text-anchor="middle">B</text>
+<text x="738" y="551" fill="#e8e8f4" font-size="13">начало блока</text>
+<rect x="654" y="561" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="576" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="561" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="576" fill="#14149b" font-size="13" text-anchor="middle">K</text>
+<text x="738" y="576" fill="#e8e8f4" font-size="13">конец блока</text>
+<rect x="654" y="586" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="601" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="586" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="601" fill="#14149b" font-size="13" text-anchor="middle">U</text>
+<text x="738" y="601" fill="#e8e8f4" font-size="13">снять пометку</text>
+<rect x="654" y="611" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="626" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="611" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="626" fill="#14149b" font-size="13" text-anchor="middle">C</text>
+<text x="738" y="626" fill="#e8e8f4" font-size="13">копировать к курсору</text>
+<rect x="654" y="636" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="651" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="636" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="651" fill="#14149b" font-size="13" text-anchor="middle">V</text>
+<text x="738" y="651" fill="#e8e8f4" font-size="13">перенести к курсору</text>
+<rect x="654" y="661" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="676" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="661" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="676" fill="#14149b" font-size="13" text-anchor="middle">Y</text>
+<text x="738" y="676" fill="#e8e8f4" font-size="13">стереть блок</text>
+<rect x="654" y="686" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="701" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="686" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="701" fill="#14149b" font-size="13" text-anchor="middle">W</text>
+<text x="738" y="701" fill="#e8e8f4" font-size="13">записать блок в файл</text>
+<rect x="654" y="711" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="726" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="711" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="726" fill="#14149b" font-size="13" text-anchor="middle">R</text>
+<text x="738" y="726" fill="#e8e8f4" font-size="13">вставить файл с диска</text>
+<rect x="654" y="736" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="751" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="696" y="736" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="751" fill="#14149b" font-size="13" text-anchor="middle">P</text>
+<text x="738" y="751" fill="#e8e8f4" font-size="13">напечатать блок</text>
+<text x="654" y="797" fill="#7ee081" font-size="17">Поиск</text>
+<line x1="654" y1="805" x2="1220" y2="805" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="654" y="813" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="828" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="696" y="813" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="828" fill="#14149b" font-size="13" text-anchor="middle">F</text>
+<text x="738" y="828" fill="#e8e8f4" font-size="13">найти</text>
+<rect x="654" y="838" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="853" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="696" y="838" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="853" fill="#14149b" font-size="13" text-anchor="middle">A</text>
+<text x="738" y="853" fill="#e8e8f4" font-size="13">найти и заменить</text>
+<rect x="654" y="863" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="878" fill="#14149b" font-size="13" text-anchor="middle">^L</text>
+<text x="695" y="878" fill="#e8e8f4" font-size="13">,</text>
+<rect x="714" y="863" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="732" y="878" fill="#14149b" font-size="13" text-anchor="middle">^\</text>
+<text x="762" y="878" fill="#e8e8f4" font-size="13">повторить последний поиск</text>
+<text x="654" y="924" fill="#7ee081" font-size="17">Экран и оформление</text>
+<line x1="654" y1="932" x2="1220" y2="932" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="654" y="940" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="955" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="940" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="955" fill="#14149b" font-size="13" text-anchor="middle">T</text>
+<text x="738" y="955" fill="#e8e8f4" font-size="13">линейка полей и табуляции</text>
+<rect x="654" y="965" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="980" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="965" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="980" fill="#14149b" font-size="13" text-anchor="middle">L</text>
+<text x="738" y="980" fill="#e8e8f4" font-size="13">левое поле</text>
+<rect x="654" y="990" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1005" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="990" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1005" fill="#14149b" font-size="13" text-anchor="middle">R</text>
+<text x="738" y="1005" fill="#e8e8f4" font-size="13">правое поле</text>
+<rect x="654" y="1015" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1030" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1015" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1030" fill="#14149b" font-size="13" text-anchor="middle">X</text>
+<text x="738" y="1030" fill="#e8e8f4" font-size="13">отсчитывать поля от текущего места</text>
+<rect x="654" y="1040" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1055" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1040" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1055" fill="#14149b" font-size="13" text-anchor="middle">C</text>
+<text x="738" y="1055" fill="#e8e8f4" font-size="13">выровнять строку по середине</text>
+<rect x="654" y="1065" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1080" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1065" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1080" fill="#14149b" font-size="13" text-anchor="middle">F</text>
+<text x="738" y="1080" fill="#e8e8f4" font-size="13">прижать строку вправо</text>
+<rect x="654" y="1090" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1105" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1090" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1105" fill="#14149b" font-size="13" text-anchor="middle">S</text>
+<text x="738" y="1105" fill="#e8e8f4" font-size="13">двойной междустрочный интервал</text>
+<rect x="654" y="1115" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1130" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1115" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1130" fill="#14149b" font-size="13" text-anchor="middle">A</text>
+<text x="738" y="1130" fill="#e8e8f4" font-size="13">автоотступ</text>
+<rect x="654" y="1140" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1155" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1140" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1155" fill="#14149b" font-size="13" text-anchor="middle">I</text>
+<text x="738" y="1155" fill="#e8e8f4" font-size="13">поставить позицию табуляции</text>
+<rect x="654" y="1165" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1180" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1165" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1180" fill="#14149b" font-size="13" text-anchor="middle">N</text>
+<text x="738" y="1180" fill="#e8e8f4" font-size="13">снять позицию табуляции</text>
+<rect x="654" y="1190" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1205" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1190" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1205" fill="#14149b" font-size="13" text-anchor="middle">V</text>
+<text x="738" y="1205" fill="#e8e8f4" font-size="13">переменная табуляция</text>
+<rect x="654" y="1215" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1230" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1215" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1230" fill="#14149b" font-size="13" text-anchor="middle">H</text>
+<text x="738" y="1230" fill="#e8e8f4" font-size="13">переносы</text>
+<rect x="654" y="1240" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1255" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1240" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1255" fill="#14149b" font-size="13" text-anchor="middle">P</text>
+<text x="738" y="1255" fill="#e8e8f4" font-size="13">длина страницы</text>
+<rect x="654" y="1265" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1280" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1265" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1280" fill="#14149b" font-size="13" text-anchor="middle">D</text>
+<text x="738" y="1280" fill="#e8e8f4" font-size="13">показывать возвраты каретки</text>
+<rect x="654" y="1290" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1305" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1290" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1305" fill="#14149b" font-size="13" text-anchor="middle">W</text>
+<text x="738" y="1305" fill="#e8e8f4" font-size="13">окно</text>
+<rect x="654" y="1315" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1330" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1315" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1330" fill="#14149b" font-size="13" text-anchor="middle">Q</text>
+<text x="738" y="1330" fill="#e8e8f4" font-size="13">убрать шапку</text>
+<rect x="654" y="1340" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1355" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1340" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1355" fill="#14149b" font-size="13" text-anchor="middle">Z</text>
+<text x="738" y="1355" fill="#e8e8f4" font-size="13">перерисовать экран</text>
+<rect x="654" y="1365" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1380" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
+<rect x="696" y="1365" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="711" y="1380" fill="#14149b" font-size="13" text-anchor="middle">↑</text>
+<text x="738" y="1380" fill="#e8e8f4" font-size="13">сделать текущую строку верхней</text>
+<text x="630" y="1444" fill="#9fa8e8" font-size="12" text-anchor="middle">VDE 2.67b — Eric Meyer, 1988. Перевод на 8080 и сборка под MDOS T-72: github.com/ekundo/co-t72</text>
+</svg>
