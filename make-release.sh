@@ -52,7 +52,10 @@ for v in f h hx k; do
     mkdir -p "$kit"
     cp "$WORK/$v/CO.COM" "$kit/"
     for f in co.prm co.mnu co.ext co.hlp co.zgr; do
-        cp "$CODIR/$f" "$kit/$(echo "$f" | tr a-z A-Z)"
+        # CO.HLP берём собранный сборкой -- см. tools/mkhlp.py
+        src=$CODIR/$f
+        [ "$f" = co.hlp ] && [ -f "$WORK/$v/CO.HLP" ] && src=$WORK/$v/CO.HLP
+        cp "$src" "$kit/$(echo "$f" | tr a-z A-Z)"
     done
     cp "$WORK/HDIR.COM" "$WORK/HDIREN.COM" "$kit/"
     cp "$rom" "$kit/"

@@ -178,6 +178,11 @@ mv "$OUT/coB.com" "$OUT/CO.COM"
 python3 "$HERE/tools/koi.py" "$OUT/CO.COM" "$OUT/coC.com"
 mv "$OUT/coC.com" "$OUT/CO.COM"
 
+# 3bi. Справка. Источник -- docs/co-help.md, оригинальный co.hlp больше не
+#      берётся: в маркдауне тот же текст, и правки под T-72 (клавиша "F2" в
+#      просмотрщике, символы в CO.EXT) живут там, а не заплаткой поверх файла.
+python3 "$HERE/tools/mkhlp.py" "$HERE/docs/co-help.md" -o "$OUT/CO.HLP"
+
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
 # Тело накладки остаётся на месте загрузки, под стек едет только то, что ниже.
@@ -227,8 +232,11 @@ else
 fi
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
-    [ -f "$CODIR/co.$f" ] && \
-        python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$CODIR/co.$f"
+    # CO.HLP берём собранный, если он есть -- см. mkhlp.py выше
+    src=$CODIR/co.$f
+    [ "$f" = hlp ] && [ -f "$OUT/CO.HLP" ] && src=$OUT/CO.HLP
+    [ -f "$src" ] && \
+        python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$src" "CO.$(echo "$f" | tr a-z A-Z)"
 done
 printf 'CO\r\n' > "$OUT/initialc.sub"
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIALC.SUB
@@ -241,8 +249,11 @@ python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/initialc.sub" INITIAL
 python3 "$HERE/tools/cpmimg.py" --geom fdd create "$OUT/co-t72.fdd"
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
 for f in prm mnu ext hlp zgr; do
-    [ -f "$CODIR/co.$f" ] && \
-        python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$CODIR/co.$f"
+    src=$CODIR/co.$f
+    [ "$f" = hlp ] && [ -f "$OUT/CO.HLP" ] && src=$OUT/CO.HLP
+    [ -f "$src" ] && \
+        python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$src" \
+            "CO.$(echo "$f" | tr a-z A-Z)"
 done
 printf 'A:CO\r\n' > "$OUT/initial.sub"
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/initial.sub" INITIAL.SUB
