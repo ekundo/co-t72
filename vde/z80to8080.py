@@ -738,7 +738,14 @@ def main():
 
     ov = {}
     for path in a.overrides:
-        ov.update(read_overrides(path))
+        got = read_overrides(path)
+        # две правки на одну строку -- почти наверняка опечатка в номере: одна
+        # молча отменит другую, и искать это потом долго
+        both = set(ov) & set(got)
+        if both:
+            sys.exit('%s: правки на те же строки, что и раньше: %s'
+                     % (os.path.basename(path), ', '.join(sorted(both))))
+        ov.update(got)
     job = Job(ov, defines)
     os.makedirs(a.outdir, exist_ok=True)
     for path in list(a.symbols) + list(a.sources):
