@@ -34,6 +34,17 @@ VERSION=$(sed -n "s/.*'Версия \([0-9.]*\) от.*/\1/p" "$HERE/co-src/co.as
 [ -n "$VERSION" ] || { echo "не понял версию из co-src/co.asm" >&2; exit 1; }
 echo "выпуск CO $VERSION"
 
+# Редактор в выпуск. VDE собирается из авторского исходника, которого в
+# репозитории нет: его добывает vde/fetch-src.sh. Без редактора выпуск не
+# собираем -- на клавише "СС"-"4" в CO стоит именно он.
+VDECOM=$HERE/work/vde/VDE.COM
+[ -f "$HERE/work/vde/src/vdx1.asm" ] || {
+    echo "нет исходника VDE -- запусти vde/fetch-src.sh" >&2; exit 1; }
+sh "$HERE/vde/build.sh" >"$OUT/.vde.log" 2>&1 || {
+    tail -5 "$OUT/.vde.log" >&2; echo "VDE не собралась" >&2; exit 1; }
+rm -f "$OUT/.vde.log"
+echo "VDE.COM: $(stat -f%z "$VDECOM") байт"
+
 # HDIR -- один на все сборки: адрес ОС в нём единственный и одинаковый.
 python3 "$HERE/tools/asm8080.py" "$HERE/tools/hdir.asm"    -o "$WORK/HDIR.COM"   >/dev/null
 python3 "$HERE/tools/asm8080.py" "$HERE/tools/hdir-en.asm" -o "$WORK/HDIREN.COM" >/dev/null
@@ -45,9 +56,9 @@ for v in f h hx k; do
     name=co-t72$v
     echo
     echo "=== $name ==="
-    "$HERE/patch-co.sh" "$CO" "$EDD" "$WORK/$v" "$rom" >"$WORK/$v.log" 2>&1 || {
+    "$HERE/patch-co.sh" "$CO" "$EDD" "$WORK/$v" "$rom" "$VDECOM" >"$WORK/$v.log" 2>&1 || {
         tail -20 "$WORK/$v.log" >&2; echo "сборка $v не удалась" >&2; exit 1; }
-    grep -E 'обработчик БСВВ на|таблица дискет НЖМД на|перенос хвоста' "$WORK/$v.log" || true
+    grep -E 'обработчик БСВВ на|таблица дискет НЖМД на|перенос хвоста|WSR -> VDE' "$WORK/$v.log" || true
 
     kit=$WORK/kit-$v/$name
     mkdir -p "$kit"
@@ -59,6 +70,11 @@ for v in f h hx k; do
         cp "$src" "$kit/$(echo "$f" | tr a-z A-Z)"
     done
     cp "$WORK/HDIR.COM" "$WORK/HDIREN.COM" "$kit/"
+    cp "$VDECOM" "$kit/VDE.COM"
+    for doc in vde266.doc vde266.qrf; do
+        [ -f "$HERE/work/vde/dist/$doc" ] && cp "$HERE/work/vde/dist/$doc" \
+            "$kit/$(echo "$doc" | tr a-z A-Z)"
+    done
     cp "$rom" "$kit/"
     sh "$HERE/tools/relnote.sh" "$v" "$VERSION" > "$kit/README.txt"
 

@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 1161" width="1260" height="1161" font-family="Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace">
-<rect width="1260" height="1161" fill="#1414b4"/>
-<rect x="8" y="8" width="1244" height="1145" fill="none" stroke="#7ee081" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1260 1179" width="1260" height="1179" font-family="Menlo, Consolas, &quot;DejaVu Sans Mono&quot;, monospace">
+<rect width="1260" height="1179" fill="#1414b4"/>
+<rect x="8" y="8" width="1244" height="1163" fill="none" stroke="#7ee081" stroke-width="2"/>
 <text x="630" y="52" fill="#e8e8f4" font-size="30" text-anchor="middle" letter-spacing="2">КЛАВИШИ CO</text>
 <text x="630" y="78" fill="#9fa8e8" font-size="15" text-anchor="middle">файловая оболочка CO 2.0 под МикроДОС T-72</text>
 <text x="40" y="118" fill="#7ee081" font-size="17">Панели и командная строка</text>
@@ -188,65 +188,66 @@
 <text x="696" y="800" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
 <rect x="703" y="785" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="718" y="800" fill="#14149b" font-size="13" text-anchor="middle">4</text>
-<text x="745" y="800" fill="#e8e8f4" font-size="13">открыть файл в WSR (WordStar; под T-72 не работает)</text>
-<rect x="654" y="810" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="825" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
-<text x="696" y="825" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="810" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="718" y="825" fill="#14149b" font-size="13" text-anchor="middle">5</text>
-<text x="745" y="825" fill="#e8e8f4" font-size="13">копировать с заменой имени, можно по маске</text>
-<rect x="654" y="835" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="850" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
-<text x="696" y="850" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="835" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="718" y="850" fill="#14149b" font-size="13" text-anchor="middle">6</text>
-<text x="745" y="850" fill="#e8e8f4" font-size="13">записать на магнитофон</text>
-<rect x="654" y="860" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="875" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
-<text x="696" y="875" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="860" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="718" y="875" fill="#14149b" font-size="13" text-anchor="middle">7</text>
-<text x="745" y="875" fill="#e8e8f4" font-size="13">выбрать дискету НЖМД; без винчестера — напечатать файл</text>
-<rect x="654" y="885" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="900" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
-<text x="696" y="900" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="885" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="718" y="900" fill="#14149b" font-size="13" text-anchor="middle">8</text>
-<text x="745" y="900" fill="#e8e8f4" font-size="13">создать файл</text>
-<rect x="654" y="910" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="925" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
-<text x="696" y="925" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="910" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="718" y="925" fill="#14149b" font-size="13" text-anchor="middle">9</text>
-<text x="745" y="925" fill="#e8e8f4" font-size="13">загрузить файл в SID</text>
-<text x="654" y="971" fill="#7ee081" font-size="17">Ещё сочетания</text>
-<line x1="654" y1="979" x2="1220" y2="979" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="654" y="987" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="1002" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
-<text x="696" y="1002" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="987" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="721" y="1002" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
-<text x="751" y="1002" fill="#e8e8f4" font-size="13">выполнить вторую строку CO.EXT для этого расширения</text>
-<rect x="654" y="1012" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="1027" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
-<text x="696" y="1027" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="1012" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="721" y="1027" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
-<text x="751" y="1027" fill="#e8e8f4" font-size="13">выполнить третью</text>
-<rect x="654" y="1037" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="1052" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
-<text x="696" y="1052" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="1037" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="721" y="1052" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
-<text x="745" y="1052" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="752" y="1037" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="770" y="1052" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
-<text x="800" y="1052" fill="#e8e8f4" font-size="13">выполнить четвёртую</text>
-<rect x="654" y="1062" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="672" y="1077" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
-<text x="696" y="1077" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
-<rect x="703" y="1062" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="718" y="1077" fill="#14149b" font-size="13" text-anchor="middle">4</text>
-<text x="745" y="1077" fill="#e8e8f4" font-size="13">создать файл и сразу открыть его в редакторе</text>
-<text x="630" y="1141" fill="#9fa8e8" font-size="12" text-anchor="middle">CO 2.0 — Шишатский С.М., Харьков 1993. Сборка под MDOS T-72: github.com/ekundo/co-t72</text>
+<text x="745" y="800" fill="#e8e8f4" font-size="13">открыть файл в VDE -- экранном редакторе с клавишами</text>
+<text x="745" y="818" fill="#e8e8f4" font-size="13">WordStar; клавиши в нём по "^J"</text>
+<rect x="654" y="828" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="843" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="696" y="843" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="828" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="718" y="843" fill="#14149b" font-size="13" text-anchor="middle">5</text>
+<text x="745" y="843" fill="#e8e8f4" font-size="13">копировать с заменой имени, можно по маске</text>
+<rect x="654" y="853" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="868" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="696" y="868" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="853" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="718" y="868" fill="#14149b" font-size="13" text-anchor="middle">6</text>
+<text x="745" y="868" fill="#e8e8f4" font-size="13">записать на магнитофон</text>
+<rect x="654" y="878" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="893" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="696" y="893" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="878" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="718" y="893" fill="#14149b" font-size="13" text-anchor="middle">7</text>
+<text x="745" y="893" fill="#e8e8f4" font-size="13">выбрать дискету НЖМД; без винчестера — напечатать файл</text>
+<rect x="654" y="903" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="918" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="696" y="918" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="903" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="718" y="918" fill="#14149b" font-size="13" text-anchor="middle">8</text>
+<text x="745" y="918" fill="#e8e8f4" font-size="13">создать файл</text>
+<rect x="654" y="928" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="943" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="696" y="943" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="928" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="718" y="943" fill="#14149b" font-size="13" text-anchor="middle">9</text>
+<text x="745" y="943" fill="#e8e8f4" font-size="13">загрузить файл в SID</text>
+<text x="654" y="989" fill="#7ee081" font-size="17">Ещё сочетания</text>
+<line x1="654" y1="997" x2="1220" y2="997" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="654" y="1005" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1020" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="696" y="1020" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="1005" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="721" y="1020" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="751" y="1020" fill="#e8e8f4" font-size="13">выполнить вторую строку CO.EXT для этого расширения</text>
+<rect x="654" y="1030" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1045" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
+<text x="696" y="1045" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="1030" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="721" y="1045" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="751" y="1045" fill="#e8e8f4" font-size="13">выполнить третью</text>
+<rect x="654" y="1055" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1070" fill="#14149b" font-size="13" text-anchor="middle">СС</text>
+<text x="696" y="1070" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="1055" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="721" y="1070" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
+<text x="745" y="1070" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="752" y="1055" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="770" y="1070" fill="#14149b" font-size="13" text-anchor="middle">ВК</text>
+<text x="800" y="1070" fill="#e8e8f4" font-size="13">выполнить четвёртую</text>
+<rect x="654" y="1080" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="672" y="1095" fill="#14149b" font-size="13" text-anchor="middle">УС</text>
+<text x="696" y="1095" fill="#e8e8f4" font-size="13" text-anchor="middle">+</text>
+<rect x="703" y="1080" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="718" y="1095" fill="#14149b" font-size="13" text-anchor="middle">4</text>
+<text x="745" y="1095" fill="#e8e8f4" font-size="13">создать файл и сразу открыть его в редакторе</text>
+<text x="630" y="1159" fill="#9fa8e8" font-size="12" text-anchor="middle">CO 2.0 — Шишатский С.М., Харьков 1993. Сборка под MDOS T-72: github.com/ekundo/co-t72</text>
 </svg>

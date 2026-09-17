@@ -17,6 +17,21 @@ EDD=${2:?подлинный os-t72.edd как основа}
 HERE=$(cd "$(dirname "$0")" && pwd)
 V06X=$HERE/tools/vector06sdl/build/v06x
 ROM=${4:-$HERE/tools/MDOS_T-72/BIN/os-t72f.rom}
+# Пятый аргумент -- VDE.COM. Если он задан, редактор кладётся в оба образа, а в
+# CO имя программы на клавише "СС"-"4" меняется с WSR на VDE. Без него всё
+# остаётся как было: указывать клавишей на файл, которого в выпуске нет, незачем.
+VDE=${5:-}
+[ -z "$VDE" ] || VDE=$(cd "$(dirname "$VDE")" && pwd)/$(basename "$VDE")
+[ -z "$VDE" ] || [ -f "$VDE" ] || { echo "нет редактора: $VDE" >&2; exit 1; }
+# Авторская документация лежит рядом с редактором, в dist/ (её добывает
+# vde/fetch-src.sh). Руководство большое: на дискету кладём и его, и краткую
+# справку, а на квазидиск -- только справку, там 256 КБ на всё.
+VDEDOC=
+VDEQRF=
+if [ -n "$VDE" ]; then
+    [ -f "$(dirname "$VDE")/dist/vde266.doc" ] && VDEDOC=$(dirname "$VDE")/dist/vde266.doc
+    [ -f "$(dirname "$VDE")/dist/vde266.qrf" ] && VDEQRF=$(dirname "$VDE")/dist/vde266.qrf
+fi
 [ -f "$ROM" ] || { echo "нет МикроДОС: $ROM" >&2; exit 1; }
 ROM=$(cd "$(dirname "$ROM")" && pwd)/$(basename "$ROM")
 mkdir -p "${3:-out}"
@@ -108,6 +123,14 @@ AFLAG=$(sed -n 's/^aflag=//p' "$OUT/dsel.log")
 PDTAB=$(sed -n 's/^pdtab=//p' "$OUT/dsel.log")
 rm -f "$OUT/dsel.log"
 mv "$OUT/coD.com" "$OUT/CO.COM"
+
+# 3ac. "СС"-"4" открывает файл в VDE, а не в WSR: WordStar заточен под КОИ-7 и
+#      под T-72 толком не работает, а VDE переведена на 8080 и держит КОИ-8
+#      (см. vde/README.md). Имена программ лежат в CO таблицей по 11 байт (8+3)
+#      одно за другим: MEDIT, WSR, SID. Имя меняется на месте -- длина та же,
+#      ничего не съезжает. Ищем по содержимому, а не по адресу: у разных
+#      выпусков CO таблица стоит в разных местах.
+[ -z "$VDE" ] || python3 "$HERE/tools/wsr2vde.py" "$OUT/CO.COM"
 
 # 3b. СС+7 -- выбор дискеты НЖМД вместо печати файла. Подробности -- в
 #     tools/hddsel.py; на стенде до конца не проверить, v06x не эмулирует НЖМД.
@@ -241,10 +264,18 @@ if [ -x "$V06X" ] && [ -f "$ROM" ]; then
     printf '9 A:0\r\n' > "$OUT/initialc-boot.sub"
     python3 "$HERE/tools/kdimg.py" put "$OUT/os-base.edd" \
         "$OUT/initialc-boot.sub" INITIALC.SUB >/dev/null
+    # Предел кадров -- 3000. На 1800 шаг срывался через раз: сценарий печатает
+    # команду неспешно (иначе ССР теряет знаки), и на медленной загрузке набор
+    # не успевал закончиться до предела. Ловила это сверка даты системы ниже,
+    # но выпуск при этом просто не собирался.
+    #
+    # каталог прогонов может и отсутствовать -- на свежем клоне или в worktree;
+    # без него cd ниже молча срывается, и шаг записи ОС не выполняется вовсе
+    mkdir -p "$HERE/run"
     ( cd "$HERE/run" && V06X_EDD_SAVE="$OUT/co-t72.edd" "$V06X" --rom "$ROM" \
         --edd "$OUT/os-base.edd" --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$HERE/scripts/write-os.chai" \
-        --max-frame 1800 --novideo --nosound >/dev/null 2>&1 ) || true
+        --max-frame 3000 --novideo --nosound >/dev/null 2>&1 ) || true
     # Мало проверить, что OS.COM на месте: он есть и в подлинном образе. Пока
     # шаг выше молча не срабатывал, в сборку уезжала система 1995 года, а с ней
     # CO под T-72 не работает. Поэтому сверяем дату сборки с образом системы.
@@ -269,6 +300,8 @@ fi
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/HDIR.COM" HDIR.COM
+[ -z "$VDE" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDE" VDE.COM
+[ -z "$VDEQRF" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDEQRF" VDE266.QRF
 if [ ! -f "$TMPL_EDD" ]; then
     # без шаблона комплект кладём сами
     for f in prm mnu ext zgr; do
@@ -301,6 +334,9 @@ fi
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/HDIR.COM" HDIR.COM
+[ -z "$VDE" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDE" VDE.COM
+[ -z "$VDEQRF" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEQRF" VDE266.QRF
+[ -z "$VDEDOC" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEDOC" VDE266.DOC
 # OS.COM на дискете -- та же сборка, что и на квазидиске: её туда только что
 # записала сама система. Дискета с чужой OS.COM опасна ровно так же, как
 # квазидиск: тёплый старт поднимет её, а не нашу.
