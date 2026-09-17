@@ -91,6 +91,9 @@ fi
 
 probe() {   # имя, обработчик, клавиши для keytyper
     name=$1; want=$2; keys=$3
+    # ONLY=имя -- прогнать один сценарий: удобно, когда разбираешься с ним
+    # по следу обращений, а не смотришь общую картину.
+    [ -n "${ONLY:-}" ] && [ "$ONLY" != "$name" ] && return 0
     cat > "$TMP/$name.chai" <<EOF
 $KDPATCH
 def framefunc(frameno) {
@@ -123,7 +126,11 @@ EOF
     # COVDIR -- куда складывать карты исполнения: по ним видно, какой код за
     # весь прогон ни разу не исполнялся (кандидаты в мёртвый).
     [ -n "${COVDIR:-}" ] && { mkdir -p "$COVDIR"; cp "$TMP/$name.cov" "$COVDIR/"; }
-    res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" <<'PY'
+    # DATDIR -- куда складывать карты окна A000-DFFF. Сам след обращений весит
+    # десятки мегабайт, поэтому кладём не его, а сводку: по байту на адрес,
+    # 1 -- читали, 2 -- писали, 3 -- и то и другое. Их сводит tools/winmap.py.
+    [ -n "${DATDIR:-}" ] && { mkdir -p "$DATDIR"; [ -n "${RAWDAT:-}" ] && cp "$TMP/$name.dat" "$DATDIR/"; }
+    res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" "${DATDIR:+$DATDIR/$name.win}" <<'PY'
 import re, sys
 cov = open(sys.argv[1], 'rb').read()
 want = int(sys.argv[3], 16)
@@ -137,12 +144,31 @@ if not cov[0x091B - 0x100]:
 OSPC = {0xE415, 0xE418, 0xE41C, 0xE41F, 0xE3C8, 0xE3CA,
         0xE489, 0xE48C, 0xE490, 0xE493}
 win = set()
+# Сводка по всему окну: 1 -- читали, 2 -- писали, 4 -- это делал сам CO, а не
+# дописанный сборкой код. Четвёртый разряд и решает, куда можно класть своё:
+# наши накладки трогают окно сами, и без разбора по pc они выглядели бы как
+# чужая занятая память.
+seen = bytearray(0x4000)
+OURS = ((0x40DB, 0x40FF), (0x4100, 0x4FFF), (0xA448, 0xA78B),
+        (0xB740, 0xBBFF))   # стаб стека, пусковое, накладки в окне, код под стеком
 for ln in open(sys.argv[2]):
-    m = re.match(r'([rw]) ([0-9a-f]{4})=[0-9a-f]{2} pc=([0-9a-f]{4})', ln)
-    if m and int(m.group(3), 16) in OSPC:
-        a = int(m.group(2), 16)
-        if not 0xDFC9 <= a <= 0xDFFF:
-            win.add(a)
+    m = re.match(r'([rw]) ([0-9a-f]{4})=[0-9a-f]{2} pc=([0-9a-f]{4}) bank=([0-9a-f]{2})', ln)
+    if not m:
+        continue
+    a, pc, bank = int(m.group(2), 16), int(m.group(3), 16), int(m.group(4), 16)
+    # A000-DFFF -- это либо ОЗУ квазидиска, либо видеопамять: решает разряд 20h
+    # в порте 10h. Буферы CO живут в квазидиске, а рисование идёт по тем же
+    # адресам при погашенном окне -- без этой проверки экран выглядел бы как
+    # занятая память.
+    if 0xA000 <= a <= 0xDFFF and bank & 0x20:
+        bit = 1 if m.group(1) == 'r' else 2
+        if not any(lo <= pc <= hi for lo, hi in OURS):
+            bit |= 4
+        seen[a - 0xA000] |= bit
+    if pc in OSPC and not 0xDFC9 <= a <= 0xDFFF:
+        win.add(a)
+if len(sys.argv) > 4 and sys.argv[4]:
+    open(sys.argv[4], 'wb').write(bytes(seen))
 clean = 'чисто' if not win else '%04X-%04X' % (min(win), max(win))
 print('%s %s %d' % (fired, clean, sum(1 for b in cov if b)))
 PY
@@ -155,6 +181,12 @@ PY
 printf '%-14s %-8s %-4s %-10s %s\n' функция обработчик было в_окне адресов
 printf '%-14s %-8s %-4s %-10s %s\n' -------------- -------- ---- ---------- --------
 
+# Меню пользователя чистит у себя таблицу по B728-B755, а туда сборка
+# кладёт свой код: после меню первое же перечитывание каталога с файлом
+# длиннее 16 КБ уходит в затёртую склейку экстентов. Сценарий держит
+# это место под присмотром -- см. docs/co-buffers.md.
+probe менюпотом   045A '"2", 300, "Escape", 200, "7", 200, "Return", 400, "Down", 60, "Down", 60'
+probe просмотрдлин 2870 '"Down", 30, "Down", 30, "3", 400, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Escape", 300, "7", 300'
 probe вниз        045A '"Down", 40, "Down", 40'
 probe вверх       0477 '"Down", 40, "Up", 40'
 probe влево       0464 '"Left", 40'

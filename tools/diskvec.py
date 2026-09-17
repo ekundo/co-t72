@@ -34,10 +34,11 @@ CO делает это по 4078, в начале своей инициализ�
 
 import argparse
 import sys
+import layout
 
 ORG = 0x100
 FILE_AT = 0x4100        # с этого адреса в файле лежит переносимый хвост
-RUNTIME = 0xB740        # ... а работает он отсюда, см. relocstub.py
+RUNTIME = layout.STACK_LO   # ... а работает он отсюда, см. relocstub.py
 CEILING = 0xBC00        # буфер дисковода ОС -- выше хвосту нельзя
 VECTOR = 0xE213         # операнд JMP по E212: дисковый обработчик БСВВ
 
@@ -79,6 +80,7 @@ def main():
     d += body
     open(a.outfile, 'wb').write(bytes(d))
     print('дисковый обработчик из E213: %d байт по %04X' % (len(body), org))
+    layout.note('стек', org, len(body), 'дисковый обработчик')
     print('init=%04X' % org)
 
 

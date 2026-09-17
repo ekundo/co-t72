@@ -54,6 +54,7 @@ CO пишет CO.PRM целиком своей копией и затирает 
 
 import argparse
 import sys
+import layout
 
 ORG = 0x100
 TABLE = 0x0637         # таблица «клавиша -> адрес» второго уровня
@@ -327,7 +328,7 @@ def main():
     # чтении чужого диска.
     if len(d) % 128:
         sys.exit('образ не выровнен по записи: %d байт' % len(d))
-    at = 0xB740 + (len(d) - 0x4000)
+    at = layout.STACK_LO + (len(d) - 0x4000)
     globals()['_at'] = at
     code = build(at)
     init_at = build_init_addr[0]
@@ -360,6 +361,7 @@ def main():
     open(args.outfile, 'wb').write(bytes(d))
     print('выбор дискеты НЖМД: %d байт, работает по %04X, СС+7 переставлен с %04X'
           % (len(code), at, OLD))
+    layout.note('стек', at, len(code), 'дискета НЖМД')
     print('init=%04X' % init_at)
     # Для hdprobe.py: что именно переставлено, чтобы он мог вернуть как было,
     # если система скажет, что винчестера нет.

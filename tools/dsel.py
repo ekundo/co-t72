@@ -106,9 +106,10 @@ C:» вместо «равно C:». Работает так же; здесь о
 import argparse
 import os
 import sys
+import layout
 
 ORG = 0x100
-RUNTIME = 0xB740      # куда relocstub.py уводит хвост (было B700 -- см. его шапку)
+RUNTIME = layout.STACK_LO   # куда relocstub.py уводит хвост, см. его шапку
 
 # точки входа CO
 SEL_PANEL = 0x0E4D     # HL += 1, если активна вторая панель
@@ -524,6 +525,7 @@ def main():
         d += b'\0'
     open(args.outfile, 'wb').write(bytes(d))
     print('диск D: код по %04X, меню %04X, трамплинов %d' % (at, menu, len(tramp)))
+    layout.note('стек', at, len(code), 'диск D:')
     print('dflag=%04X' % labels['dflag'])
     print('aflag=%04X' % labels['aflag'])
     print('pdtab=%04X' % labels['pdtab'])

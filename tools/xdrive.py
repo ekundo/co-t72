@@ -15,6 +15,7 @@ import os
 import sys
 
 import asm8080
+import layout
 
 ORG = 0x100
 HOOK = 0x104D
@@ -53,6 +54,8 @@ def main():
           % (len(body), where, HOOK))
     if a.at:
         print('winnext=%04X' % (run + len(body)))
+    # Для tools/layout.py: где эта врезка живёт и сколько занимает.
+    layout.note('окно', run if a.at else org, len(body), 'поиск по X:')
 
 
 if __name__ == '__main__':

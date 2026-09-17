@@ -25,10 +25,11 @@ import os
 import sys
 
 import asm8080
+import layout
 
 ORG = 0x100
 FILE_AT = 0x4100        # с этого адреса в файле лежит переносимый хвост
-RUNTIME = 0xB740        # ... а работает он отсюда, см. relocstub.py
+RUNTIME = layout.STACK_LO   # ... а работает он отсюда, см. relocstub.py
 CEILING = 0xBC00        # буфер дисковода ОС -- выше хвосту нельзя
 HOOK = 0x3F01           # LDA B6A8 в цикле разбора CO.ZGR
 HOOK_OLD = bytes([0x3A, 0xA8, 0xB6])
@@ -65,6 +66,8 @@ def main():
     open(a.outfile, 'wb').write(bytes(d))
     print('проверка наличия файла: %d байт по %04X%s, врезка по %04X'
           % (len(body), org, ' (по адресу загрузки)' if a.inplace else '', HOOK))
+    layout.note('загрузка' if a.inplace else 'стек', org, len(body),
+                'проверка CO.ZGR')
 
 
 if __name__ == '__main__':

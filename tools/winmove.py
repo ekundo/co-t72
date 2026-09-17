@@ -25,6 +25,7 @@ A448-A5FF под телом надписи, и ещё два выше. Слеж�
 
 import argparse
 import sys
+import layout
 
 ORG = 0x100
 LABEL = 0xA600          # тело надписи в рамке панели -- выше него не заходить
@@ -70,6 +71,7 @@ def main():
     open(a.outfile, 'wb').write(bytes(d))
     print('перенос накладок в окно: %04X..%04X -> %04X, переносчик %d байт по %04X'
           % (src, src + n - 1, dst, len(body), org))
+    layout.note('загрузка', org, len(body), 'переносчик накладок')
     print('init=%04X' % org)
 
 

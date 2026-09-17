@@ -17,6 +17,7 @@ import os
 import sys
 
 import asm8080
+import layout
 
 ORG = 0x100
 PAIR = bytes([0xCD, 0xF4, 0x17])            # CALL SETDMA
@@ -77,6 +78,8 @@ def main():
              sum(len(x) for _, _, x in BIOS)))
     if a.at:
         print('winnext=%04X' % (run + len(body)))
+    # Для tools/layout.py: где эта врезка живёт и сколько занимает.
+    layout.note('окно', run if a.at else org, len(body), 'обмен вне окна')
 
 
 if __name__ == '__main__':

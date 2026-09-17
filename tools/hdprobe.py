@@ -27,6 +27,7 @@ hddsel.py переставляет СС+7 с печати файла на выб
 
 import argparse
 import sys
+import layout
 
 ORG = 0x100
 FILE_AT = 0x4100        # с этого адреса в файле лежит переносимый хвост
@@ -199,6 +200,7 @@ def main():
              ''.join((', признак D: по %04X' % dflag if dflag else '',
                       ', признак A:/B: по %04X' % aflag if aflag else '',
                       ', таблица дисков по %04X' % pdtab if pdtab else ''))))
+    layout.note('загрузка', org, len(body), 'проба оборудования')
     print('init=%04X' % org)
 
 

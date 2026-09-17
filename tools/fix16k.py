@@ -30,9 +30,10 @@ CO считает по последнему экстенту (`1A9E`: RC окр�
 
 import argparse
 import sys
+import layout
 
 ORG = 0x100
-RUNTIME = 0xB740       # где код работает: под стеком CO (BC00), выше буферов
+RUNTIME = layout.STACK_LO   # где код работает: под стеком CO, выше его буферов
                        # и выше строкового буфера CO -- см. relocstub.py
 FILE_AT = 0x4100       # где он лежит в файле -- в хвосте за образом
 ROW = 13               # строка списка: имя 8 + пробел + тип 3 + размер 1
@@ -158,6 +159,7 @@ def main():
     open(args.outfile, 'wb').write(bytes(d))
     print('склейка экстентов: %d байт, работает по %04X, образ вырос до %d байт'
           % (len(code), at, len(d)))
+    layout.note('стек', at, len(code), 'склейка экстентов')
 
 
 if __name__ == '__main__':
