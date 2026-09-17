@@ -120,6 +120,9 @@ EOF
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
         --max-frame $MAXFRAME --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
+    # COVDIR -- куда складывать карты исполнения: по ним видно, какой код за
+    # весь прогон ни разу не исполнялся (кандидаты в мёртвый).
+    [ -n "${COVDIR:-}" ] && { mkdir -p "$COVDIR"; cp "$TMP/$name.cov" "$COVDIR/"; }
     res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" <<'PY'
 import re, sys
 cov = open(sys.argv[1], 'rb').read()
