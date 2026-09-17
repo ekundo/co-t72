@@ -167,8 +167,8 @@
 <text x="203" y="1125" fill="#e8e8f4" font-size="13">пробел — АР2 эмулятор не умеет вводить</text>
 <rect x="40" y="1135" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="1150" fill="#14149b" font-size="13" text-anchor="middle">^J</text>
-<text x="88" y="1150" fill="#e8e8f4" font-size="13">подсказка; развёрнутое меню выключено — эта память отдана</text>
-<text x="88" y="1168" fill="#e8e8f4" font-size="13">тексту</text>
+<text x="88" y="1150" fill="#e8e8f4" font-size="13">меню с клавишами; подменю -- по ^K, ^O и ^Q. В этой сборке</text>
+<text x="88" y="1168" fill="#e8e8f4" font-size="13">включено, стоит 1008 байт текстового буфера из 31 369</text>
 <rect x="40" y="1178" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="1193" fill="#14149b" font-size="13" text-anchor="middle">^^</text>
 <text x="88" y="1193" fill="#e8e8f4" font-size="13">сменить регистр знака под курсором: жать УС и клавишу `^` (в</text>
