@@ -29,7 +29,7 @@ GROUPS = [
         ('F1  F3', 'следующая и предыдущая команда (помнит 14)'),
         ('F4', 'имя выделенного файла в командную строку'),
         ('F2', 'кодировка просмотра: К-8, РУС, ЛАТ, Р/Л'),
-        (';', 'встать на файл по первой букве'),
+        (';', 'затем буква -- встать на файл, который с неё начинается'),
         ('ПС', 'дописать к команде ">C:CO.PTK"'),
         ('Пробел', 'восстановить системный экран'),
     ]),
@@ -98,10 +98,16 @@ CONT = 18               # перенос внутри строки
 
 
 def layout(rows, x):
-    """Разложить строки группы: чипы и переносы описаний."""
+    """Разложить строки группы: чипы и переносы описаний.
+
+    В поле клавиш через пробел перечислены разные клавиши, делающие одно и то
+    же, -- каждая рисуется своей шапочкой.
+    """
     out = []
     for key, desc in rows:
-        kw = max(46, 11 * len(key) + 16)
+        keys = key.split()
+        widths = [max(34, 11 * len(k) + 16) for k in keys]
+        kw = sum(widths) + 6 * (len(widths) - 1)
         room = int((COLW - kw - 12) / CHARW)
         words, line, lines = desc.split(), '', []
         for w in words:
@@ -112,7 +118,7 @@ def layout(rows, x):
             else:
                 line = t
         lines.append(line)
-        out.append((key, kw, lines))
+        out.append((keys, widths, kw, lines))
     return out
 
 
@@ -123,7 +129,7 @@ def main():
 
     # сперва раскладка: группы по двум колонкам, поровну по высоте
     prepared = [(title, layout(rows, 0)) for title, rows in GROUPS]
-    heights = [30 + sum(ROW + CONT * (len(l) - 1) for _, _, l in rows) + 22
+    heights = [30 + sum(ROW + CONT * (len(r[3]) - 1) for r in rows) + 22
                for _, rows in prepared]
     cols = [[], []]
     colh = [0, 0]
@@ -152,11 +158,15 @@ def main():
             out.append(f'<line x1="{x}" y1="{y+8}" x2="{x+COLW}" y2="{y+8}" '
                        f'stroke="{ACC}" stroke-width="1" opacity="0.45"/>')
             y += 30
-            for key, kw, lines in rows:
-                out.append(f'<rect x="{x}" y="{y-14}" width="{kw}" height="21" '
-                           f'rx="4" fill="{CHIP}"/>')
-                out.append(f'<text x="{x + kw//2}" y="{y+1}" fill="{CHIPTX}" '
-                           f'font-size="13" text-anchor="middle">{esc(key)}</text>')
+            for keys, widths, kw, lines in rows:
+                cx = x
+                for k, kwi in zip(keys, widths):
+                    out.append(f'<rect x="{cx}" y="{y-14}" width="{kwi}" '
+                               f'height="21" rx="4" fill="{CHIP}"/>')
+                    out.append(f'<text x="{cx + kwi//2}" y="{y+1}" '
+                               f'fill="{CHIPTX}" font-size="13" '
+                               f'text-anchor="middle">{esc(k)}</text>')
+                    cx += kwi + 6
                 for i, ln in enumerate(lines):
                     out.append(f'<text x="{x + kw + 12}" y="{y + 1 + i*CONT}" '
                                f'fill="{FG}" font-size="13">{esc(ln)}</text>')
