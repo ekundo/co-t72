@@ -88,86 +88,92 @@
 <text x="97" y="574" fill="#14149b" font-size="13" text-anchor="middle">Z</text>
 <text x="124" y="574" fill="#e8e8f4" font-size="13">поставить метку</text>
 <rect x="40" y="584" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="58" y="599" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
-<rect x="82" y="584" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="599" fill="#14149b" font-size="13" text-anchor="middle">P</text>
-<text x="124" y="599" fill="#e8e8f4" font-size="13">вернуться к метке</text>
+<text x="58" y="599" fill="#14149b" font-size="13" text-anchor="middle">^P</text>
+<text x="88" y="599" fill="#e8e8f4" font-size="13">затем буква -- вставить управляющий код принтера</text>
 <rect x="40" y="609" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="624" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
 <rect x="82" y="609" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="624" fill="#14149b" font-size="13" text-anchor="middle">B</text>
-<text x="124" y="624" fill="#e8e8f4" font-size="13">к началу блока</text>
-<text x="40" y="670" fill="#7ee081" font-size="17">Файл и выход</text>
-<line x1="40" y1="678" x2="606" y2="678" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="40" y="686" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="58" y="701" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
-<rect x="82" y="686" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="701" fill="#14149b" font-size="13" text-anchor="middle">S</text>
-<text x="124" y="701" fill="#e8e8f4" font-size="13">сохранить</text>
+<text x="97" y="624" fill="#14149b" font-size="13" text-anchor="middle">P</text>
+<text x="124" y="624" fill="#e8e8f4" font-size="13">вернуться к метке</text>
+<rect x="40" y="634" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="649" fill="#14149b" font-size="13" text-anchor="middle">^Q</text>
+<rect x="82" y="634" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="649" fill="#14149b" font-size="13" text-anchor="middle">B</text>
+<text x="124" y="649" fill="#e8e8f4" font-size="13">к началу блока</text>
+<text x="40" y="695" fill="#7ee081" font-size="17">Файл и выход</text>
+<line x1="40" y1="703" x2="606" y2="703" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
 <rect x="40" y="711" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="726" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="711" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="726" fill="#14149b" font-size="13" text-anchor="middle">D</text>
-<text x="124" y="726" fill="#e8e8f4" font-size="13">сохранить и открыть другой файл</text>
+<text x="97" y="726" fill="#14149b" font-size="13" text-anchor="middle">S</text>
+<text x="124" y="726" fill="#e8e8f4" font-size="13">сохранить</text>
 <rect x="40" y="736" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="751" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="736" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="751" fill="#14149b" font-size="13" text-anchor="middle">X</text>
-<text x="124" y="751" fill="#e8e8f4" font-size="13">сохранить и выйти</text>
+<text x="97" y="751" fill="#14149b" font-size="13" text-anchor="middle">D</text>
+<text x="124" y="751" fill="#e8e8f4" font-size="13">сохранить и открыть другой файл</text>
 <rect x="40" y="761" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="776" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="761" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="776" fill="#14149b" font-size="13" text-anchor="middle">Q</text>
-<text x="124" y="776" fill="#e8e8f4" font-size="13">выйти, не сохраняя</text>
+<text x="97" y="776" fill="#14149b" font-size="13" text-anchor="middle">X</text>
+<text x="124" y="776" fill="#e8e8f4" font-size="13">сохранить и выйти</text>
 <rect x="40" y="786" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="801" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="786" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="801" fill="#14149b" font-size="13" text-anchor="middle">L</text>
-<text x="124" y="801" fill="#e8e8f4" font-size="13">загрузить другой файл</text>
+<text x="97" y="801" fill="#14149b" font-size="13" text-anchor="middle">Q</text>
+<text x="124" y="801" fill="#e8e8f4" font-size="13">выйти, не сохраняя</text>
 <rect x="40" y="811" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="826" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="811" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="826" fill="#14149b" font-size="13" text-anchor="middle">N</text>
-<text x="124" y="826" fill="#e8e8f4" font-size="13">сменить имя</text>
+<text x="97" y="826" fill="#14149b" font-size="13" text-anchor="middle">L</text>
+<text x="124" y="826" fill="#e8e8f4" font-size="13">загрузить другой файл</text>
 <rect x="40" y="836" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="851" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="836" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="851" fill="#14149b" font-size="13" text-anchor="middle">E</text>
-<text x="124" y="851" fill="#e8e8f4" font-size="13">стереть файл с диска</text>
+<text x="97" y="851" fill="#14149b" font-size="13" text-anchor="middle">N</text>
+<text x="124" y="851" fill="#e8e8f4" font-size="13">сменить имя</text>
 <rect x="40" y="861" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="876" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="861" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="876" fill="#14149b" font-size="13" text-anchor="middle">F</text>
-<text x="124" y="876" fill="#e8e8f4" font-size="13">показать каталог</text>
+<text x="97" y="876" fill="#14149b" font-size="13" text-anchor="middle">E</text>
+<text x="124" y="876" fill="#e8e8f4" font-size="13">стереть файл с диска</text>
 <rect x="40" y="886" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="901" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="82" y="886" width="30" height="21" rx="4" fill="#f2f2fa"/>
-<text x="97" y="901" fill="#14149b" font-size="13" text-anchor="middle">I</text>
-<text x="124" y="901" fill="#e8e8f4" font-size="13">сведения о файле и свободной памяти</text>
-<text x="40" y="947" fill="#7ee081" font-size="17">Что особенного в этой сборке</text>
-<line x1="40" y1="955" x2="606" y2="955" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
-<rect x="40" y="963" width="47" height="21" rx="4" fill="#f2f2fa"/>
-<text x="63" y="978" fill="#14149b" font-size="13" text-anchor="middle">РУС</text>
-<text x="99" y="978" fill="#e8e8f4" font-size="13">команды понимаются и в русской раскладке: ^K С работает</text>
-<text x="99" y="996" fill="#e8e8f4" font-size="13">так же, как ^K S</text>
-<rect x="40" y="1006" width="47" height="21" rx="4" fill="#f2f2fa"/>
-<text x="63" y="1021" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
-<text x="99" y="1021" fill="#e8e8f4" font-size="13">у автора это ESC: отмена, а также префикс -- АР2 со</text>
-<text x="99" y="1039" fill="#e8e8f4" font-size="13">стрелкой сдвигает экран, АР2 с цифрой запускает макрос</text>
-<rect x="40" y="1049" width="47" height="21" rx="4" fill="#f2f2fa"/>
-<text x="63" y="1064" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
-<text x="92" y="1064" fill="#e8e8f4" font-size="13">,</text>
-<rect x="111" y="1049" width="80" height="21" rx="4" fill="#f2f2fa"/>
-<text x="151" y="1064" fill="#14149b" font-size="13" text-anchor="middle">Пробел</text>
-<text x="203" y="1064" fill="#e8e8f4" font-size="13">снять сообщение об ошибке; на стенде только</text>
-<text x="203" y="1082" fill="#e8e8f4" font-size="13">пробел — АР2 эмулятор не умеет вводить</text>
-<rect x="40" y="1092" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="58" y="1107" fill="#14149b" font-size="13" text-anchor="middle">^J</text>
-<text x="88" y="1107" fill="#e8e8f4" font-size="13">подсказка; развёрнутое меню выключено — эта память отдана</text>
-<text x="88" y="1125" fill="#e8e8f4" font-size="13">тексту</text>
+<text x="97" y="901" fill="#14149b" font-size="13" text-anchor="middle">F</text>
+<text x="124" y="901" fill="#e8e8f4" font-size="13">показать каталог</text>
+<rect x="40" y="911" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="926" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
+<rect x="82" y="911" width="30" height="21" rx="4" fill="#f2f2fa"/>
+<text x="97" y="926" fill="#14149b" font-size="13" text-anchor="middle">I</text>
+<text x="124" y="926" fill="#e8e8f4" font-size="13">сведения о файле и свободной памяти</text>
+<text x="40" y="972" fill="#7ee081" font-size="17">Что особенного в этой сборке</text>
+<line x1="40" y1="980" x2="606" y2="980" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
+<rect x="40" y="988" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="1003" fill="#14149b" font-size="13" text-anchor="middle">РУС</text>
+<text x="99" y="1003" fill="#e8e8f4" font-size="13">команды понимаются и в русской раскладке: ^K С работает</text>
+<text x="99" y="1021" fill="#e8e8f4" font-size="13">так же, как ^K S</text>
+<rect x="40" y="1031" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="1046" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
+<text x="99" y="1046" fill="#e8e8f4" font-size="13">у автора это ESC: отмена и второй префикс -- со стрелками</text>
+<text x="99" y="1064" fill="#e8e8f4" font-size="13">вверх и вниз сдвигает экран на четверть, вправо и влево на</text>
+<text x="99" y="1082" fill="#e8e8f4" font-size="13">32 столбца, с цифрой запускает макрос, с M задаёт его</text>
+<rect x="40" y="1092" width="47" height="21" rx="4" fill="#f2f2fa"/>
+<text x="63" y="1107" fill="#14149b" font-size="13" text-anchor="middle">АР2</text>
+<text x="92" y="1107" fill="#e8e8f4" font-size="13">,</text>
+<rect x="111" y="1092" width="80" height="21" rx="4" fill="#f2f2fa"/>
+<text x="151" y="1107" fill="#14149b" font-size="13" text-anchor="middle">Пробел</text>
+<text x="203" y="1107" fill="#e8e8f4" font-size="13">снять сообщение об ошибке; на стенде только</text>
+<text x="203" y="1125" fill="#e8e8f4" font-size="13">пробел — АР2 эмулятор не умеет вводить</text>
 <rect x="40" y="1135" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="58" y="1150" fill="#14149b" font-size="13" text-anchor="middle">^^</text>
-<text x="88" y="1150" fill="#e8e8f4" font-size="13">сменить регистр знака под курсором</text>
+<text x="58" y="1150" fill="#14149b" font-size="13" text-anchor="middle">^J</text>
+<text x="88" y="1150" fill="#e8e8f4" font-size="13">подсказка; развёрнутое меню выключено — эта память отдана</text>
+<text x="88" y="1168" fill="#e8e8f4" font-size="13">тексту</text>
+<rect x="40" y="1178" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="58" y="1193" fill="#14149b" font-size="13" text-anchor="middle">^^</text>
+<text x="88" y="1193" fill="#e8e8f4" font-size="13">сменить регистр знака под курсором: жать УС и клавишу `^` (в</text>
+<text x="88" y="1211" fill="#e8e8f4" font-size="13">РУС на ней «Ч»). Русские буквы тоже переключает, кроме ю, ш,</text>
+<text x="88" y="1229" fill="#e8e8f4" font-size="13">э, щ, ч и ъ -- они выпадают из проверки диапазона</text>
 <text x="654" y="118" fill="#7ee081" font-size="17">Правка</text>
 <line x1="654" y1="126" x2="1220" y2="126" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
 <rect x="654" y="134" width="36" height="21" rx="4" fill="#f2f2fa"/>
@@ -269,7 +275,7 @@
 <text x="672" y="751" fill="#14149b" font-size="13" text-anchor="middle">^K</text>
 <rect x="696" y="736" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="711" y="751" fill="#14149b" font-size="13" text-anchor="middle">P</text>
-<text x="738" y="751" fill="#e8e8f4" font-size="13">напечатать блок</text>
+<text x="738" y="751" fill="#e8e8f4" font-size="13">печать: весь текст или помеченный блок -- по параметрам</text>
 <text x="654" y="797" fill="#7ee081" font-size="17">Поиск</text>
 <line x1="654" y1="805" x2="1220" y2="805" stroke="#7ee081" stroke-width="1" opacity="0.45"/>
 <rect x="654" y="813" width="36" height="21" rx="4" fill="#f2f2fa"/>
@@ -374,7 +380,7 @@
 <text x="672" y="1355" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
 <rect x="696" y="1340" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="711" y="1355" fill="#14149b" font-size="13" text-anchor="middle">Z</text>
-<text x="738" y="1355" fill="#e8e8f4" font-size="13">перерисовать экран</text>
+<text x="738" y="1355" fill="#e8e8f4" font-size="13">погасить экран до нажатия</text>
 <rect x="654" y="1365" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="672" y="1380" fill="#14149b" font-size="13" text-anchor="middle">^O</text>
 <rect x="696" y="1365" width="30" height="21" rx="4" fill="#f2f2fa"/>

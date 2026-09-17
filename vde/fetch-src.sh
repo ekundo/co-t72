@@ -14,6 +14,7 @@ set -e
 HERE=$(cd "$(dirname "$0")" && pwd)
 WORK=$(cd "$HERE/.." && pwd)/work/vde
 LBR=http://cpmarchives.classiccmp.org//cpm/Software/WalnutCD/enterprs/cpm/utils/s/vde267sc.lbr
+DIST=http://cpmarchives.classiccmp.org//cpm/Software/WalnutCD/enterprs/cpm/utils/s/vde266.lbr
 LBRATE=https://www.ibiblio.org/pub/linux/utils/compress/lbrate-1.1.tar.gz
 
 mkdir -p "$WORK/src"
@@ -33,5 +34,15 @@ if [ ! -f src/vdx1.asm ]; then
     (cd src && ../lbrate vde267sc.lbr)
 fi
 
-ls -l src/*.asm
+# Авторский выпуск: он нам не для сборки, а ради руководства (vde266.doc),
+# краткой справки (vde266.qrf) и описания настройки терминала (vinst266.doc) --
+# по ним сверяется карточка клавиш.
+if [ ! -f dist/vde266.doc ]; then
+    echo "качаю выпуск ради документации"
+    mkdir -p dist
+    curl -sL --max-time 120 -o dist/vde266.lbr "$DIST"
+    (cd dist && ../lbrate vde266.lbr)
+fi
+
+ls -l src/*.asm dist/*.doc dist/*.qrf 2>/dev/null
 echo "готово -- дальше vde/build.sh"
