@@ -23,7 +23,7 @@
 пустой строки между абзацами нет. Нужна пустая строка в этом месте -- оставьте
 две.
 """
-import argparse, pathlib, re, sys
+import argparse, pathlib, re
 
 WIDTH = 79
 
