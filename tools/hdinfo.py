@@ -42,10 +42,11 @@ import os
 import sys
 
 import asm8080
+import layout
 
 ORG = 0x100
 FILE_AT = 0x4100        # с этого адреса в файле лежит переносимый хвост
-RUNTIME = 0xB740        # ... а работает он отсюда, см. relocstub.py
+RUNTIME = layout.STACK_LO   # ... а работает он отсюда, см. relocstub.py
 BODY = 0xA600           # а накладка -- вот отсюда, в дыре между буферами CO
 HOOK = 0x097E           # конец отрисовки панели
 HOOK_OLD = bytes([0xC3, 0xF3, 0x0F])    # JMP 0FF3 -- то, что там стоит
@@ -93,8 +94,11 @@ def main():
         d[at_ptk - ORG] = PTK_NEW
 
     nxt = int(a.init, 16) if a.init else 0
-    at_copy = org                       # копировщик переезжает под стек
-    at_body = ORG + len(d) + 22         # ... а тело остаётся на месте загрузки
+    # И копировщик, и тело остаются по адресу загрузки: копировщик нужен один
+    # раз при старте, а под стеком каждый байт на счету -- там живёт постоянный
+    # код, и сверху на него растёт стек.
+    at_copy = ORG + len(d)
+    at_body = at_copy + 22
     loop = at_copy + 9
     copier = bytes([0x21, at_body & 0xFF, at_body >> 8,      # LXI H,тело
                     0x11, BODY & 0xFF, BODY >> 8,            # LXI D,A600
@@ -109,8 +113,10 @@ def main():
     open(a.outfile, 'wb').write(bytes(d))
     print('номер и метка дискеты: тело %d байт по %04X, копировщик по %04X, '
           'исходник на месте по %04X' % (len(body), BODY, at_copy, at_body))
+    layout.note('окно', BODY, len(body), 'номер и метка дискеты')
+    layout.note('загрузка', at_body, len(body), 'исходник надписи')
     print('init=%04X' % at_copy)
-    print('keep=%04X' % at_body)
+    print('keep=%04X' % at_copy)
 
 
 if __name__ == '__main__':
