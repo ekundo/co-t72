@@ -345,7 +345,7 @@ def main():
     if beg < 0:
         sys.exit('не нашёл строку клавиш второго набора -- незнакомый выпуск CO')
     end = d.index(b'\0', beg)
-    bar = bytes(d[beg:end])
+    bar = was_bar = bytes(d[beg:end])
     for old, new in RENAME:
         o, n = old.encode('koi8-r'), new.encode('koi8-r')
         if o not in bar:
@@ -365,7 +365,11 @@ def main():
     # если система скажет, что винчестера нет.
     print('slot=%04X' % (slot + ORG))
     print('old=%04X' % OLD)
-    print('bar=%04X:%s' % (beg + ORG, d[beg:end].hex()))
+    # Отдаём ИСХОДНУЮ строку, а не переставленную: hdprobe.py кладёт её обратно,
+    # когда система говорит, что винчестера нет. Раньше здесь печаталась уже
+    # переименованная, и на сборках без НЖМД внизу оставалось «7-Hdd» при
+    # работающей печати.
+    print('bar=%04X:%s' % (beg + ORG, was_bar.hex()))
 
 
 if __name__ == '__main__':
