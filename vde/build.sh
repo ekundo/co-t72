@@ -18,7 +18,7 @@ GEN=$WORK/gen
 
 mkdir -p "$GEN"
 python3 "$HERE/z80to8080.py" "$SRC/vdx1.asm" "$SRC/vdx2.asm" "$SRC/vdx3.asm" \
-    -o "$GEN" -v "$HERE/overrides.asm" -v "$HERE/t72-profile.asm" \
+    -o "$GEN" -v "$HERE/overrides.asm" -v "$HERE/t72-profile.asm" -v "$HERE/koi8.asm" \
     -s "$HERE/vde-t72.asm" -s "$HERE/runtime.asm" \
     -r "$WORK/report.txt" >"$WORK/translate.log"
 tail -n +1 "$WORK/translate.log" | sed -n '1,6p'
