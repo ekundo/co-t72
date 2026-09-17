@@ -72,10 +72,19 @@ fi
 # сценария панель переводится на D: обычным путём: 7-Диск, стрелка вправо, ВК.
 # Сценарий в этом случае набирается позже: CO поднимается только к 1300-му кадру,
 # а переключение надо успеть сделать после него.
+#
+# DRIVE=B -- то же самое с панелью на втором дисководе. Ему подключается вторая
+# дискета (копия сборочной): каталог диска B: CO держит копией в ОЗУ по 4000, и
+# всё, что сборка дописала по адресу загрузки, этим каталогом затирается. Без
+# такого прогона это и проскочило в 2.2.2.
 DRIVE=${DRIVE:-C}
-SWITCH=; PROBEAT=1500; MAXFRAME=3200; EDD2=
+SWITCH=; PROBEAT=1500; MAXFRAME=3200; EDD2=; FDD2=
 if [ "$DRIVE" = "D" ]; then
     SWITCH='if (frameno == 1400) { keytyper.types([60, "7", 200, "Right", 60, "Return", 200]) }'
+    PROBEAT=2100
+    MAXFRAME=4200
+elif [ "$DRIVE" = "B" ]; then
+    SWITCH='if (frameno == 1400) { keytyper.types([60, "7", 200, "Left", 60, "Return", 200]) }'
     PROBEAT=2100
     MAXFRAME=4200
 fi
@@ -96,10 +105,13 @@ EOF
     if [ "$DRIVE" = "D" ]; then
         cp "$OUT/co-t72.edd" "$TMP/$name-d.edd"
         EDD2="--edd $TMP/$name-d.edd"
+    elif [ "$DRIVE" = "B" ]; then
+        cp "$OUT/co-t72.fdd" "$TMP/$name-b.fdd"
+        FDD2="--fdd $TMP/$name-b.fdd"
     fi
     { ( cd "$RUN" && V06X_COV_LO=0x0100 V06X_COV_HI=0xBFFF V06X_COV_FILE="$TMP/$name.cov" \
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
-        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" --edd "$TMP/$name.edd" $EDD2 \
+        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
         --max-frame $MAXFRAME --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null

@@ -3,8 +3,9 @@
 
     ./koi.py CO.COM out.com
 
-Сам код -- в koi.asm, здесь только сборка и врезки. Накладка остаётся по адресу
-загрузки, ниже A000.
+Сам код -- в koi.asm, здесь только сборка и врезки. С ключом --at накладка
+собирается на адрес в окне ОЗУ, а в образе лежит в хвосте: оттуда её при старте
+переносит tools/winmove.py. Без ключа работает по адресу загрузки.
 
 Врезок две:
   328D -- цикл вывода знака в просмотрщике, было "CPI 20h / CC 331F";
@@ -35,13 +36,15 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('infile')
     p.add_argument('outfile')
+    p.add_argument('--at', help='адрес, по которому накладка будет работать')
     a = p.parse_args()
 
     d = bytearray(open(a.infile, 'rb').read())
     org = ORG + len(d)
+    run = int(a.at, 16) if a.at else org
 
     asm = asm8080.Asm()
-    asm.sym.update({'ORIGIN': org})
+    asm.sym.update({'ORIGIN': run})
     src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'koi.asm')
     _, body = asm.assemble(src)
 
@@ -63,9 +66,13 @@ def main():
     d += body
 
     open(a.outfile, 'wb').write(bytes(d))
-    print('кодировки в просмотрщике: %d байт по %04X (по адресу загрузки), '
+    where = ('%04X (в окне, исходник по %04X)' % (run, org)) if a.at \
+        else '%04X (по адресу загрузки)' % org
+    print('кодировки в просмотрщике: %d байт по %s, '
           'врезки по %04X и %04X, знакогенератор при запуске снят по %04X'
-          % (len(body), org, PUT, INIT, EXTFONT))
+          % (len(body), where, PUT, INIT, EXTFONT))
+    if a.at:
+        print('winnext=%04X' % (run + len(body)))
 
 
 if __name__ == '__main__':

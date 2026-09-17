@@ -160,23 +160,45 @@ mv "$OUT/co9.com" "$OUT/CO.COM"
 #      одновременно не работает, драйвер на время пересылки с D: гасит окно ОЗУ
 #      A000-DFFF, и буфер в этом окне обменивается данными с видеопамятью. У CO
 #      там просмотрщик (читает файл прямо в A000) и настройки CO.PRM. Подробности
-#      -- в tools/dmawin.asm. Накладка остаётся по адресу загрузки, ниже A000.
-python3 "$HERE/tools/dmawin.py" "$OUT/CO.COM" "$OUT/coA.com"
-mv "$OUT/coA.com" "$OUT/CO.COM"
+#      -- в tools/dmawin.asm.
+# Три постоянные накладки подряд -- обмен, поиск по дискам и кодировки -- едут
+# в окно ОЗУ: по адресу загрузки их затирает каталог диска B:, который CO
+# держит копией в 4000..4FFF. Подробности -- в tools/winmove.py.
+WIN=A448
+WINSRC=$(printf '%X' $((0x100 + $(wc -c < "$OUT/CO.COM"))))
+win() {   # win <инструмент> <аргументы...> -- собрать накладку на адрес $WIN
+    tool=$1; shift
+    python3 "$HERE/tools/$tool" "$OUT/CO.COM" "$OUT/coW.com" --at "$WIN" "$@" \
+        >"$OUT/win.log"
+    grep -v '^winnext=' "$OUT/win.log"
+    WIN=$(sed -n 's/^winnext=//p' "$OUT/win.log")
+    rm -f "$OUT/win.log"
+    mv "$OUT/coW.com" "$OUT/CO.COM"
+}
+
+win dmawin.py
 
 # 3bg. Поиск программы по "X:" перебирает C:, A: и B:, а про второй квазидиск не
 #      знает -- панели диск D: знают, а этот перебор мимо. Добавляем D: сразу за
 #      C:, по признаку от пробы оборудования. Подробности -- в tools/xdrive.asm.
-python3 "$HERE/tools/xdrive.py" "$OUT/CO.COM" "$OUT/coB.com" --dflag "$DFLAG"
-mv "$OUT/coB.com" "$OUT/CO.COM"
+win xdrive.py --dflag "$DFLAG"
 
 # 3bh. Кодировки в просмотрщике. Меню F2 переключало набор знакогенератора
 #      командами T-34, которых у T-72 нет вовсе. Основной набор консоли T-72 --
 #      КОИ-8, поэтому показать файл в нужной кодировке можно, ничего в системе
 #      не переключая: CO пересчитывает код перед выводом знака. Подробности --
 #      в tools/koi.asm.
-python3 "$HERE/tools/koi.py" "$OUT/CO.COM" "$OUT/coC.com"
-mv "$OUT/coC.com" "$OUT/CO.COM"
+win koi.py
+
+# 3bj. Переносчик накладок в окно: отрабатывает один раз при старте, в пусковой
+#      цепочке, до первого чтения каталога. Сам остаётся по адресу загрузки.
+WINLEN=$(( 0x100 + $(wc -c < "$OUT/CO.COM") - 0x$WINSRC ))
+python3 "$HERE/tools/winmove.py" "$OUT/CO.COM" "$OUT/coX.com" \
+    --src "$WINSRC" --len "$WINLEN" --dst A448 --init "$INIT" >"$OUT/win.log"
+grep -v '^init=' "$OUT/win.log"
+INIT=$(sed -n 's/^init=//p' "$OUT/win.log")
+rm -f "$OUT/win.log"
+mv "$OUT/coX.com" "$OUT/CO.COM"
 
 # 3bi. Справка. Источник -- docs/co-help.md, оригинальный co.hlp больше не
 #      берётся: в маркдауне тот же текст, и правки под T-72 (клавиша "F2" в

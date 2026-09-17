@@ -35,13 +35,15 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('infile')
     p.add_argument('outfile')
+    p.add_argument('--at', help='адрес, по которому накладка будет работать')
     a = p.parse_args()
 
     d = bytearray(open(a.infile, 'rb').read())
     org = ORG + len(d)
+    run = int(a.at, 16) if a.at else org
 
     asm = asm8080.Asm()
-    asm.sym.update({'ORIGIN': org})
+    asm.sym.update({'ORIGIN': run})
     src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dmawin.asm')
     _, body = asm.assemble(src)
 
@@ -67,10 +69,14 @@ def main():
     d += body
 
     open(a.outfile, 'wb').write(bytes(d))
-    print('обмен через буфер вне окна: %d байт по %04X (по адресу загрузки), '
+    where = ('%04X (в окне, исходник по %04X)' % (run, org)) if a.at \
+        else '%04X (по адресу загрузки)' % org
+    print('обмен через буфер вне окна: %d байт по %s, '
           'врезок %d через БДОС и %d в БСВВ'
-          % (len(body), org, len(READS) + len(WRITES),
-             sum(len(a) for _, _, a in BIOS)))
+          % (len(body), where, len(READS) + len(WRITES),
+             sum(len(x) for _, _, x in BIOS)))
+    if a.at:
+        print('winnext=%04X' % (run + len(body)))
 
 
 if __name__ == '__main__':

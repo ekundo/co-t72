@@ -27,13 +27,15 @@ def main():
     p.add_argument('outfile')
     p.add_argument('--dflag', required=True,
                    help='адрес признака «второй квазидиск есть» (dsel.py)')
+    p.add_argument('--at', help='адрес, по которому накладка будет работать')
     a = p.parse_args()
 
     d = bytearray(open(a.infile, 'rb').read())
     org = ORG + len(d)
+    run = int(a.at, 16) if a.at else org
 
     asm = asm8080.Asm()
-    asm.sym.update({'ORIGIN': org, 'DFLAG': int(a.dflag, 16)})
+    asm.sym.update({'ORIGIN': run, 'DFLAG': int(a.dflag, 16)})
     src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'xdrive.asm')
     _, body = asm.assemble(src)
 
@@ -41,12 +43,16 @@ def main():
     if bytes(d[off:off + len(HOOK_OLD)]) != HOOK_OLD:
         sys.exit('по %04X не переход к диску A:, а %s'
                  % (HOOK, d[off:off + len(HOOK_OLD)].hex()))
-    d[off:off + len(HOOK_OLD)] = bytes([0xCD, org & 0xFF, org >> 8, 0, 0])
+    d[off:off + len(HOOK_OLD)] = bytes([0xCD, run & 0xFF, run >> 8, 0, 0])
     d += body
 
     open(a.outfile, 'wb').write(bytes(d))
-    print('поиск по X: с диском D:: %d байт по %04X (по адресу загрузки), '
-          'врезка по %04X' % (len(body), org, HOOK))
+    where = ('%04X (в окне, исходник по %04X)' % (run, org)) if a.at \
+        else '%04X (по адресу загрузки)' % org
+    print('поиск по X: с диском D:: %d байт по %s, врезка по %04X'
+          % (len(body), where, HOOK))
+    if a.at:
+        print('winnext=%04X' % (run + len(body)))
 
 
 if __name__ == '__main__':
