@@ -24,6 +24,11 @@ mkdir -p "$WORK/vde-t72"
 cp "$COM" "$WORK/vde-t72/VDE.COM"
 cp "$ROOT/docs/vde-keys.svg" "$WORK/vde-t72/VDE-KEYS.svg"
 sh "$HERE/relnote.sh" "$COM" > "$WORK/vde-t72/README.txt"
+# Авторская документация из выпуска VDE: руководство и краткая справка.
+for doc in vde266.doc vde266.qrf vinst266.doc; do
+    [ -f "$ROOT/work/vde/dist/$doc" ] && cp "$ROOT/work/vde/dist/$doc" \
+        "$WORK/vde-t72/$(echo "$doc" | tr a-z A-Z)"
+done
 
 ( cd "$WORK" && rm -f "$OUT/vde-t72.zip" && zip -qr "$OUT/vde-t72.zip" vde-t72 )
 rm -rf "$WORK"
