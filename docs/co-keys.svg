@@ -187,7 +187,7 @@
 <text x="696" y="369" fill="#e8e8f4" font-size="13">показать встроенную справку -- файл CO.HLP</text>
 <rect x="654" y="379" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="669" y="394" fill="#14149b" font-size="13" text-anchor="middle">2</text>
-<text x="696" y="394" fill="#e8e8f4" font-size="13">открыть меню пользователя из CO.MNU</text>
+<text x="696" y="394" fill="#e8e8f4" font-size="13">открыть меню пользователя -- его задаёт файл CO.MNU</text>
 <rect x="654" y="404" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="669" y="419" fill="#14149b" font-size="13" text-anchor="middle">3</text>
 <text x="696" y="419" fill="#e8e8f4" font-size="13">открыть файл в просмотрщике</text>
