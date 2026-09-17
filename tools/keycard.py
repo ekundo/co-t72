@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Карточка клавиш CO -- картинкой для README.
+
+    python3 tools/keycard.py -o docs/co-keys.svg
+
+Клавиши те же, что в справке (docs/co-help.md); здесь они разложены по группам,
+чтобы держать перед глазами. Правится таблица ниже, картинка пересобирается.
+"""
+import argparse
+
+W, H = 1260, 1000
+BG = '#1414b4'          # синий экран Вектора
+FG = '#e8e8f4'
+DIM = '#9fa8e8'
+CHIP = '#f2f2fa'
+CHIPTX = '#14149b'
+ACC = '#7ee081'
+
+GROUPS = [
+    ('Панели и командная строка', [
+        ('ВК', 'выполнить строку; если пуста -- действие по расширению из CO.EXT,'
+               ' на каталоге -- войти в него'),
+        ('АР2', 'очистить командную строку; если пуста -- сменить значение цифр'),
+        ('ТАБ  ↖', 'перейти на другую панель'),
+        ('↑ ↓', 'курсор по панели'),
+        ('→ ←', 'курсор по командной строке'),
+        ('СС+→  СС+←', 'курсор по панели через колонку'),
+        ('ЗБ', 'стереть знак перед курсором'),
+        ('F1  F3', 'следующая и предыдущая команда (помнит 14)'),
+        ('F4', 'имя выделенного файла в командную строку'),
+        ('F2', 'кодировка просмотра: К-8, РУС, ЛАТ, Р/Л'),
+        (';', 'встать на файл по первой букве'),
+        ('ПС', 'дописать к команде ">C:CO.PTK"'),
+        ('Пробел', 'восстановить системный экран'),
+    ]),
+    ('Метки', [
+        ('СТР', 'отметить файл; при непустой строке -- дописать имя в неё'),
+        ('+', 'отметить по маске'),
+        ('=', 'отметить те же, что на другой панели'),
+        ('/', 'обратить метки'),
+        ('-', 'снять все метки'),
+        ('?', 'размер файла с точностью до 128 байт'),
+    ]),
+    ('Цифры -- при пустой командной строке', [
+        ('1', 'помощь -- этот файл CO.HLP'),
+        ('2', 'меню пользователя из CO.MNU'),
+        ('3', 'просмотр файла'),
+        ('4', 'правка файла в MEDIT'),
+        ('5', 'копировать на другой диск'),
+        ('6', 'переименовать'),
+        ('7', 'сменить диск на панели'),
+        ('8', 'удалить'),
+        ('9', 'настройки: диск B, режим DIR, экран, проверка при копировании, сортировка'),
+        ('0', 'погасить монитор'),
+    ]),
+    ('СС + цифра', [
+        ('СС+1', 'вид панели: 40 или 60 файлов'),
+        ('СС+2', 'атрибуты файла'),
+        ('СС+3', 'просмотр в КОИ-7'),
+        ('СС+4', 'правка в WSR (WordStar; под T-72 не работает)'),
+        ('СС+5', 'копировать с заменой имени, можно по маске'),
+        ('СС+6', 'записать на магнитофон'),
+        ('СС+7', 'выбрать дискету НЖМД; без винчестера -- печать файла'),
+        ('СС+8', 'создать файл'),
+        ('СС+9', 'загрузить файл в SID'),
+    ]),
+    ('Просмотрщик', [
+        ('↑ ↓', 'экран назад и вперёд'),
+        ('F1  F4', 'строка вверх и вниз'),
+        ('↖', 'развернуть на всю ширину экрана'),
+        ('СТР', 'перейти к строке'),
+        ('ПС', 'искать'),
+        ('ВК', 'искать следующее'),
+        ('F2', 'кодировка: К-8, РУС, ЛАТ, Р/Л'),
+        ('F3', 'печать'),
+        ('АР2', 'выход к панелям'),
+    ]),
+    ('Ещё сочетания', [
+        ('СС+ВК', 'вторая строка CO.EXT для этого расширения'),
+        ('УС+ВК', 'третья строка'),
+        ('СС+УС+ВК', 'четвёртая строка'),
+        ('УС+4', 'правка только что созданного файла'),
+    ]),
+]
+
+FOOT = ('CO 2.0 -- Шишатский С.М., Харьков 1993. Сборка под MDOS T-72: '
+        'github.com/ekundo/co-t72')
+
+
+def esc(t):
+    return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
+COLW = 566              # ширина колонки
+CHARW = 8.6             # ширина знака при font-size 13 -- с запасом на чужой шрифт
+ROW = 25                # шаг строки
+CONT = 18               # перенос внутри строки
+
+
+def layout(rows, x):
+    """Разложить строки группы: чипы и переносы описаний."""
+    out = []
+    for key, desc in rows:
+        kw = max(46, 11 * len(key) + 16)
+        room = int((COLW - kw - 12) / CHARW)
+        words, line, lines = desc.split(), '', []
+        for w in words:
+            t = (line + ' ' + w).strip()
+            if len(t) > room and line:
+                lines.append(line)
+                line = w
+            else:
+                line = t
+        lines.append(line)
+        out.append((key, kw, lines))
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('-o', '--out', required=True)
+    a = ap.parse_args()
+
+    # сперва раскладка: группы по двум колонкам, поровну по высоте
+    prepared = [(title, layout(rows, 0)) for title, rows in GROUPS]
+    heights = [30 + sum(ROW + CONT * (len(l) - 1) for _, _, l in rows) + 22
+               for _, rows in prepared]
+    cols = [[], []]
+    colh = [0, 0]
+    for (title, rows), h in zip(prepared, heights):
+        c = 0 if colh[0] <= colh[1] else 1
+        cols[c].append((title, rows))
+        colh[c] += h
+    height = 110 + max(colh) + 46
+
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {height}" '
+           f'width="{W}" height="{height}" font-family="Menlo, Consolas, '
+           f'&quot;DejaVu Sans Mono&quot;, monospace">',
+           f'<rect width="{W}" height="{height}" fill="{BG}"/>',
+           f'<rect x="8" y="8" width="{W-16}" height="{height-16}" fill="none" '
+           f'stroke="{ACC}" stroke-width="2"/>',
+           f'<text x="{W//2}" y="52" fill="{FG}" font-size="30" '
+           f'text-anchor="middle" letter-spacing="2">КЛАВИШИ CO</text>',
+           f'<text x="{W//2}" y="78" fill="{DIM}" font-size="15" '
+           f'text-anchor="middle">файловая оболочка CO 2.0 под МикроДОС T-72</text>']
+
+    for c, x in ((0, 40), (1, 654)):
+        y = 118
+        for title, rows in cols[c]:
+            out.append(f'<text x="{x}" y="{y}" fill="{ACC}" font-size="17">'
+                       f'{esc(title)}</text>')
+            out.append(f'<line x1="{x}" y1="{y+8}" x2="{x+COLW}" y2="{y+8}" '
+                       f'stroke="{ACC}" stroke-width="1" opacity="0.45"/>')
+            y += 30
+            for key, kw, lines in rows:
+                out.append(f'<rect x="{x}" y="{y-14}" width="{kw}" height="21" '
+                           f'rx="4" fill="{CHIP}"/>')
+                out.append(f'<text x="{x + kw//2}" y="{y+1}" fill="{CHIPTX}" '
+                           f'font-size="13" text-anchor="middle">{esc(key)}</text>')
+                for i, ln in enumerate(lines):
+                    out.append(f'<text x="{x + kw + 12}" y="{y + 1 + i*CONT}" '
+                               f'fill="{FG}" font-size="13">{esc(ln)}</text>')
+                y += ROW + CONT * (len(lines) - 1)
+            y += 22
+
+    out.append(f'<text x="{W//2}" y="{height-20}" fill="{DIM}" font-size="12" '
+               f'text-anchor="middle">{esc(FOOT)}</text>')
+    out.append('</svg>')
+    open(a.out, 'w').write('\n'.join(out) + '\n')
+    print('%s: %d байт, %dx%d' % (a.out, sum(len(l) for l in out), W, height))
+
+
+if __name__ == '__main__':
+    main()
