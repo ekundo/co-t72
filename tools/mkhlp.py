@@ -3,7 +3,7 @@
 
 Источник правды -- маркдаун; здесь он раскладывается по колонкам так, как это
 делал автор справки: КОИ-8, CRLF, ширина 79, абзац с отступа в пять пробелов,
-выключка по обоим краям.
+выравнивание по обоим краям.
 
 Что во что превращается:
 
@@ -27,9 +27,13 @@ import argparse, pathlib, re
 
 WIDTH = 79
 
+# У T-72 в кодах КОИ-8, где стоит "ё" (0B3h/0A3h), лежит псевдографика -- буквы
+# там нет. В маркдауне писать "ё" удобно, поэтому меняем её на выводе.
+YO = str.maketrans('ёЁ', 'еЕ')
+
 
 def justify(words, width, indent, last):
-    """Строка из слов с выключкой по обоим краям; last -- последняя в абзаце."""
+    """Строка из слов, растянутая пробелами по обоим краям; last -- последняя."""
     text = ' '.join(words)
     if last or len(words) == 1:
         return ' ' * indent + text
@@ -166,7 +170,7 @@ def main():
     ap.add_argument('md')
     ap.add_argument('-o', '--out', required=True)
     a = ap.parse_args()
-    lines = render(pathlib.Path(a.md).read_text())
+    lines = render(pathlib.Path(a.md).read_text().translate(YO))
     while lines and not lines[0]:
         lines.pop(0)
     while lines and not lines[-1]:
