@@ -110,7 +110,7 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
     esac
     # Архивные сценарии кладут свои файлы на C: и смысла на других дисках не
     # имеют: панель там открыта на B: или D:, а .PK2 лежат на C:.
-    [ -n "$arc" ] && [ -n "${DRIVE:-}" ] && return 0
+    [ -n "$arc" ] && [ "${DRIVE:-C}" != C ] && return 0
     # ONLY=имя -- прогнать один сценарий: удобно, когда разбираешься с ним
     # по следу обращений, а не смотришь общую картину.
     [ -n "${ONLY:-}" ] && [ "$ONLY" != "$name" ] && return 0
@@ -131,11 +131,24 @@ EOF
     [ -f "$OUT/CO.PRM" ] && python3 "$HERE/tools/kdimg.py" put \
         "$TMP/$name.edd" "$OUT/CO.PRM" CO.PRM >/dev/null
     if [ -n "$arc" ]; then
-        printf 'PK2' > "$TMP/$name.pk2"
-        for f in TEST.PK2 TEST2.PK2 ARC2.COM; do
+        # Настоящий архив и настоящий ARC2 лежат в work/co/ (их туда кладут
+        # руками: ARC2 -- чужая программа, в репозитории ей не место). Есть --
+        # берём их, нет -- обходимся пустышками: список архивов CO покажет и по
+        # ним, а вот распаковать сможет только настоящий.
+        if [ -f "$HERE/work/co/TEST.PK2" ] && [ -f "$HERE/work/co/ARC2.COM" ]; then
             python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
-                "$TMP/$name.pk2" "$f" >/dev/null
-        done
+                "$HERE/work/co/TEST.PK2" TEST.PK2 >/dev/null
+            python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
+                "$HERE/work/co/ARC2.COM" ARC2.COM >/dev/null
+            python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
+                "$HERE/work/co/TEST.PK2" TEST2.PK2 >/dev/null
+        else
+            printf 'PK2' > "$TMP/$name.pk2"
+            for f in TEST.PK2 TEST2.PK2 ARC2.COM; do
+                python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
+                    "$TMP/$name.pk2" "$f" >/dev/null
+            done
+        fi
     fi
     if [ "$DRIVE" = "D" ]; then
         cp "$OUT/co-t72.edd" "$TMP/$name-d.edd"
@@ -147,6 +160,7 @@ EOF
     { ( cd "$RUN" && V06X_COV_LO=0x0100 V06X_COV_HI=0xBFFF V06X_COV_FILE="$TMP/$name.cov" \
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
         V06X_GUARD="$GUARD" V06X_RAM_SAVE="$TMP/$name.ram" V06X_LPT=1 \
+        V06X_EDD_SAVE="$TMP/$name-out.edd" \
         "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
@@ -239,7 +253,9 @@ if guard == 'цел' and depth.get('guard'):
 # строку; если она перестанет работать, в списке появятся двойники, а сортировка
 # CO на двух одинаковых строках лезет в соседние (см. tools/fix16k.py).
 rows = 'нет_снимка'
-if len(sys.argv) > 7 and os.path.exists(sys.argv[7]):
+if alien:
+    rows = 'чужая_программа'
+elif len(sys.argv) > 7 and os.path.exists(sys.argv[7]):
     ram = open(sys.argv[7], 'rb').read()
     rows = 'цел'
     seen = {}
@@ -321,7 +337,7 @@ probe размер      1345 '"\001Left Shift", 10, "/", 20, "\002Left Shift", 4
 probe печать      306F '"Down", 30, "Down", 30, "3", 400, "F3", 300, "Return", 250, "1", 40, "Return", 700'
 probe магнитофон  29AC '"Down", 30, "Down", 30, "\001Left Shift", 10, "6", 20, "\002Left Shift", 300, "Return", 600'
 probe архив       2BA6 '";", 150, "T", 250, "3", 500, "F8", 150, "Down", 100, "Up", 100' архив
-probe распаковка  2BE1 '";", 150, "T", 250, "3", 500, "F8", 150, "Return", 600' архив-чужой
+probe распаковка  2BE1 '";", 150, "T", 250, "3", 500, "F8", 150, "Return", 400, "Return", 700' архив-чужой
 
 # Глубокие сценарии: те же функции, но доведённые до конца. Мелкие пробы выше
 # показывают, что обработчик вызвался; эти -- что он отработал целиком. Из них
