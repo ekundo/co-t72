@@ -850,10 +850,27 @@ index b3c0e00..2713ca7 100644
  
  void start_gdb_server(Board & board)
 diff --git a/src/vio.h b/src/vio.h
-index 0c183fc..91eb88f 100644
+index 0c183fc..a3169c1 100644
 --- a/src/vio.h
 +++ b/src/vio.h
-@@ -271,6 +271,10 @@ public:
+@@ -1,4 +1,5 @@
+ #pragma once
++#include <stdlib.h>
+ 
+ #include <stdio.h>
+ #include <string.h>
+@@ -107,6 +108,10 @@ public:
+                 break;
+             case 0x05:
+                 result = this->PC2;
++                // V06X_LPT=1 -- сказать программе, что принтер готов. Без
++                // этого печать в CO ждёт готовности вечно (3099: IN 05h /
++                // ANI 01h), и весь путь печати из прогона выпадает.
++                if (getenv("V06X_LPT")) result |= 1;
+                 break;
+             case 0x06:
+                 result = this->PB2;
+@@ -271,6 +276,10 @@ public:
                  // kvas 
                  this->kvaz.control_write(w8);
                  break;

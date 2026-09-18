@@ -127,7 +127,7 @@ EOF
     fi
     { ( cd "$RUN" && V06X_COV_LO=0x0100 V06X_COV_HI=0xBFFF V06X_COV_FILE="$TMP/$name.cov" \
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
-        V06X_GUARD="$GUARD" V06X_RAM_SAVE="$TMP/$name.ram" \
+        V06X_GUARD="$GUARD" V06X_RAM_SAVE="$TMP/$name.ram" V06X_LPT=1 \
         "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
@@ -282,6 +282,25 @@ probe сс5         073A '"\001Left Shift", 10, "5", 20, "\002Left Shift", 300'
 probe сс6         06EE '"\001Left Shift", 10, "6", 20, "\002Left Shift", 300'
 probe сс8         213D '"\001Left Shift", 10, "8", 20, "\002Left Shift", 300'
 
+
+# Вторая половина сценариев -- не «клавиша нажалась», а доведённое до конца
+# дело: меню выбирается, файл создаётся, текст ищется и печатается. Без них
+# карта исполнения показывала 28% кода: почти всё, что за первым нажатием,
+# оставалось непройденным.
+probe менюпункт   3D24 '"2", 300, "G", 600' чужой
+probe новыйфайл   198F '"\001Left Shift", 10, "8", 20, "\002Left Shift", 200, "T", 20, "S", 20, "T", 20, "1", 200, "Return", 500'
+probe переимен    21CD '"6", 250, "X", 30, "Return", 500'
+probe удаление    2840 '"Down", 40, "Down", 40, "8", 300, "Y", 300'
+probe атрибуты    0C2F '"\001Left Shift", 10, "2", 20, "\002Left Shift", 250, "Return", 400'
+probe история     0805 '"F3", 200, "F1", 200'
+probe вставить    36C2 '"F4", 300'
+probe просмпоиск  2FEA '"Down", 30, "Down", 30, "3", 400, "Right Alt", 200, "C", 30, "O", 30, "Return", 400'
+probe просмпечать 2F91 '"Down", 30, "Down", 30, "3", 400, "F3", 300, "Return", 400'
+probe просмокно   2E9A '"Down", 30, "Down", 30, "3", 400, "F4", 100, "F4", 100, "F1", 100, "Right", 100, "Left", 100'
+probe сортировка  2479 '"9", 300, "Left", 100, "Left", 100, "Return", 400'
+probe размер      1345 '"\001Left Shift", 10, "/", 20, "\002Left Shift", 400'
+probe печать      306F '"Down", 30, "Down", 30, "3", 400, "F3", 300, "Return", 250, "1", 40, "Return", 700'
+probe магнитофон  29AC '"Down", 30, "Down", 30, "\001Left Shift", 10, "6", 20, "\002Left Shift", 300, "Return", 600'
 
 # Глубокие сценарии: те же функции, но доведённые до конца. Мелкие пробы выше
 # показывают, что обработчик вызвался; эти -- что он отработал целиком. Из них
