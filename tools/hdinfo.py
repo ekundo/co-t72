@@ -114,6 +114,7 @@ def main():
     print('номер и метка дискеты: тело %d байт по %04X, копировщик по %04X, '
           'исходник на месте по %04X' % (len(body), BODY, at_copy, at_body))
     layout.note('окно', BODY, len(body), 'номер и метка дискеты')
+    layout.moved(BODY, len(body), at_body, 'надпись в окно')
     layout.note('загрузка', at_body, len(body), 'исходник надписи')
     print('init=%04X' % at_copy)
     print('keep=%04X' % at_copy)

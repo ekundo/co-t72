@@ -56,6 +56,10 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$RUN"
 
+# Куски, куда никто не должен писать: это наш дописанный код. Их адреса
+# сборка записала в layout.txt, а сторож стека сидит в самом эмуляторе.
+GUARD=$(python3 -c 'import sys,os; rows=[l.strip().split(",") for l in open(sys.argv[1])] if os.path.exists(sys.argv[1]) else []; print(",".join("%04X-%04X" % (int(r[1],16), int(r[1],16)+int(r[2])-1) for r in rows if len(r)>2 and r[0] in ("окно","стек")))' "$OUT/layout.txt")
+
 ok=0; bad=0
 
 # KDFIX=1 -- наложить в ОЗУ диагностическую правку драйвера квазидиска (см.
@@ -123,18 +127,21 @@ EOF
     fi
     { ( cd "$RUN" && V06X_COV_LO=0x0100 V06X_COV_HI=0xBFFF V06X_COV_FILE="$TMP/$name.cov" \
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
+        V06X_GUARD="$GUARD" V06X_RAM_SAVE="$TMP/$name.ram" \
         "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
         --max-frame $MAXFRAME --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
     # COVDIR -- куда складывать карты исполнения: по ним видно, какой код за
     # весь прогон ни разу не исполнялся (кандидаты в мёртвый).
-    [ -n "${COVDIR:-}" ] && { mkdir -p "$COVDIR"; cp "$TMP/$name.cov" "$COVDIR/"; }
+    # имя с буквой диска: прогоны на C:, B: и D: идут по разным веткам кода,
+    # и складывать их надо вместе, а не поверх друг друга
+    [ -n "${COVDIR:-}" ] && { mkdir -p "$COVDIR"; cp "$TMP/$name.cov" "$COVDIR/${DRIVE:-C}-$name.cov"; }
     # DATDIR -- куда складывать карты окна A000-DFFF. Сам след обращений весит
     # десятки мегабайт, поэтому кладём не его, а сводку: по байту на адрес,
     # 1 -- читали, 2 -- писали, 3 -- и то и другое. Их сводит tools/winmap.py.
     [ -n "${DATDIR:-}" ] && { mkdir -p "$DATDIR"; [ -n "${RAWDAT:-}" ] && cp "$TMP/$name.dat" "$DATDIR/"; }
-    res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" "${DATDIR:+$DATDIR/$name.win}" "$OUT/layout.txt" "$alien" <<'PY'
+    res=$(python3 - "$TMP/$name.cov" "$TMP/$name.dat" "$want" "${DATDIR:+$DATDIR/$name.win}" "$OUT/layout.txt" "$alien" "$TMP/$name.ram" <<'PY'
 import os, re, sys
 cov = open(sys.argv[1], 'rb').read()
 hurt = {}                       # куда писал не наш код: адрес -> pc
@@ -149,6 +156,7 @@ if not cov[0x091B - 0x100]:
 OSPC = {0xE415, 0xE418, 0xE41C, 0xE41F, 0xE3C8, 0xE3CA,
         0xE489, 0xE48C, 0xE490, 0xE493}
 win = set()
+depth = {}                      # последние строки следа: глубина стека и сторож
 # Сводка по всему окну: 1 -- читали, 2 -- писали, 4 -- это делал сам CO, а не
 # дописанный сборкой код. Четвёртый разряд и решает, куда можно класть своё:
 # наши накладки трогают окно сами, и без разбора по pc они выглядели бы как
@@ -157,6 +165,12 @@ seen = bytearray(0x4000)
 OURS = ((0x40DB, 0x40FF), (0x4100, 0x4FFF), (0xA448, 0xA78B),
         (0xB740, 0xBBFF))   # стаб стека, пусковое, накладки в окне, код под стеком
 for ln in open(sys.argv[2]):
+    if ln.startswith('stack_low='):
+        depth['low'] = ln.strip().split('=', 1)[1]
+        continue
+    if ln.startswith('stack_guard='):
+        depth['guard'] = ln.strip().split('=', 1)[1]
+        continue
     m = re.match(r'([rw]) ([0-9a-f]{4})=[0-9a-f]{2} pc=([0-9a-f]{4}) bank=([0-9a-f]{2})', ln)
     if not m:
         continue
@@ -174,6 +188,7 @@ for ln in open(sys.argv[2]):
         seen[a - 0xA000] |= bit
     if pc in OSPC and not 0xDFC9 <= a <= 0xDFFF:
         win.add(a)
+
 if len(sys.argv) > 4 and sys.argv[4]:
     open(sys.argv[4], 'wb').write(bytes(seen))
 clean = 'чисто' if not win else '%04X-%04X' % (min(win), max(win))
@@ -196,19 +211,40 @@ elif len(sys.argv) > 5 and os.path.exists(sys.argv[5]):
         if any(lo <= a <= hi for lo, hi in mine):
             guard = 'ЗАТЁРТ_%04X_из_%04X' % (a, hurt[a])
             break
-print('%s %s %s %d' % (fired, clean, guard, sum(1 for b in cov if b)))
+# Вторая половина той же проверки -- стек. Стековые обращения в след не
+# пишутся, поэтому за них отвечает сторож в самом эмуляторе: V06X_GUARD.
+if guard == 'цел' and depth.get('guard'):
+    guard = 'СТЕК_' + depth['guard'].replace(':', '_из_')
+# Список панели: не завелось ли в нём двух строк с одним именем. Файл длиннее
+# 16 КБ лежит в каталоге несколькими экстентами, и склейка сводит их в одну
+# строку; если она перестанет работать, в списке появятся двойники, а сортировка
+# CO на двух одинаковых строках лезет в соседние (см. tools/fix16k.py).
+rows = 'нет_снимка'
+if len(sys.argv) > 7 and os.path.exists(sys.argv[7]):
+    ram = open(sys.argv[7], 'rb').read()
+    rows = 'цел'
+    seen = {}
+    for i in range(ram[0xB689]):
+        e = 0xA954 + i * 13
+        key = bytes(ram[e:e + 8] + ram[e + 9:e + 12])
+        if key in seen:
+            rows = 'ДВОЙНИК_' + key.decode('koi8-r', 'replace').strip()
+            break
+        seen[key] = i
+print('%s %s %s %s %s %d' % (fired, clean, guard, rows, depth.get('low', '----'),
+                             sum(1 for b in cov if b)))
 PY
 )
     set -- $res
-    printf '%-14s %-8s %-4s %-10s %-18s %s\n' "$name" "$want" "$1" "$2" "$3" "$4"
-    case "$1:$3" in
-        да:цел|да:чужая_программа) ok=$((ok+1)) ;;
+    printf '%-14s %-8s %-4s %-10s %-18s %-14s %-6s %s\n' "$name" "$want" "$1" "$2" "$3" "$4" "$5" "$6"
+    case "$1:$3:$4" in
+        да:цел:цел|да:чужая_программа:*|да:цел:нет_снимка) ok=$((ok+1)) ;;
         *) bad=$((bad+1)) ;;
     esac
 }
 
-printf '%-14s %-8s %-4s %-10s %-18s %s\n' функция обработчик было в_окне наш_код адресов
-printf '%-14s %-8s %-4s %-10s %-18s %s\n' -------------- -------- ---- ---------- ------------------ --------
+printf '%-14s %-8s %-4s %-10s %-18s %-14s %-6s %s\n' функция обработчик было в_окне наш_код список стек адресов
+printf '%-14s %-8s %-4s %-10s %-18s %-14s %-6s %s\n' -------------- -------- ---- ---------- ------------------ -------------- ------ --------
 
 # Меню пользователя чистит у себя таблицу по B728-B755, а туда сборка
 # кладёт свой код: после меню первое же перечитывание каталога с файлом

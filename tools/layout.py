@@ -59,21 +59,41 @@ def note(where, addr, length, name):
             f.write(line[len('layout='):] + '\n')
 
 
+def moved(dst, length, src, name):
+    """Отметить перенос: что при старте копируется из образа в память.
+
+    По этим строкам проверка сверяет память после прогона с самим образом --
+    так видно, цел ли перенесённый код к концу работы. Следа обращений для
+    этого мало: стековые обращения в него не пишутся, а стек лежит как раз над
+    дописанным кодом."""
+    line = 'layout=перенос,%04X,%d,%04X,%s' % (dst, length, src, name)
+    print(line)
+    path = os.environ.get('CO_LAYOUT')
+    if path:
+        with open(path, 'a') as f:
+            f.write(line[len('layout='):] + '\n')
+
+
 def read(path):
-    out = []
+    out, moves = [], []
     for ln in open(path):
         ln = ln.strip()
         if not ln:
             continue
+        if ln.startswith('перенос,'):
+            _, dst, length, src, name = ln.split(',', 4)
+            moves.append((int(dst, 16), int(length), int(src, 16), name))
+            continue
         where, addr, length, name = ln.split(',', 3)
         out.append((where, int(addr, 16), int(length), name))
-    return out
+    return out, moves
 
 
 def main():
     if len(sys.argv) != 2:
         sys.exit('раскладка: ./layout.py out/layout.txt')
-    items = sorted(read(sys.argv[1]), key=lambda x: (x[0], x[1]))
+    items, moves = read(sys.argv[1])
+    items.sort(key=lambda x: (x[0], x[1]))
     bad = []
 
     print('Раскладка дописанного:')
@@ -123,6 +143,12 @@ def main():
                                         addr + length - 1 <= LOAD_HI):
             bad.append('загрузка: «%s» (%04X..%04X) вне %04X..%04X'
                        % (name, addr, addr + length - 1, LOAD_LO, LOAD_HI))
+
+    if moves:
+        print('\nПереносится при старте:')
+        for dst, length, src, name in sorted(moves):
+            print('  %04X-%04X %5d  из %04X  %s'
+                  % (dst, dst + length - 1, length, src, name))
 
     if bad:
         print('\nНе сходится:')

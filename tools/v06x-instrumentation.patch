@@ -1,0 +1,866 @@
+diff --git a/src/board.cpp b/src/board.cpp
+index 43a5a25..3961f51 100644
+--- a/src/board.cpp
++++ b/src/board.cpp
+@@ -1,5 +1,6 @@
+ #include <stdio.h>
+ #include <vector>
++#include <string>
+ #include <functional>
+ #include <algorithm>
+ #include "i8080.h"
+@@ -16,6 +17,109 @@ extern "C" unsigned int boots_bin_len;
+ 
+ using namespace i8080cpu;
+ 
++// PC-range trace, enabled with V06X_TRACE_LO / V06X_TRACE_HI / V06X_TRACE_FILE.
++// Scripted breakpoints cannot do this job: script_attached() raises
++// script_interrupt and execute_frame() then returns before reaching the
++// instruction loop, so the machine stops instead of tracing.
++static FILE* trace_file = nullptr;
++static int trace_lo = 0;
++static int trace_hi = -1;
++static int trace_last_pc = -1;
++// Optional gate: tracing only runs between V06X_TRACE_ARM and V06X_TRACE_DISARM,
++// so a single OS call can be isolated instead of the whole run. Each arming
++// bumps a window counter that is printed with every line.
++static int trace_arm = -1;
++static int trace_disarm = -1;
++static bool trace_armed = true;
++static int trace_window = 0;
++extern int hal_last_bank;   // last value written to port 10h -- which memory is visible at A000-DFFF
++// V06X_TRACE_ALL logs every instruction in the range instead of only the first
++// of a run -- needed to diff two runs instruction by instruction.
++// V06X_TRACE_MAX caps the number of logged lines so the file stays usable.
++static bool trace_all = false;
++static long trace_max = 0;
++static long trace_count = 0;
++
++// Execution coverage bitmap, enabled with V06X_COV_LO / V06X_COV_HI /
++// V06X_COV_FILE. Every executed PC in the range is marked, so the dump is an
++// exact set of instruction starts -- which static disassembly of a program full
++// of jump tables cannot give.
++static unsigned char* cov = nullptr;
++static int cov_lo = 0;
++static int cov_hi = -1;
++static const char* cov_path = nullptr;
++
++static void cov_dump()
++{
++    if (!cov || !cov_path) return;
++    FILE* f = fopen(cov_path, "wb");
++    if (!f) return;
++    fwrite(cov, 1, (size_t)(cov_hi - cov_lo + 1), f);
++    fclose(f);
++}
++
++static void cov_init()
++{
++    const char* lo = getenv("V06X_COV_LO");
++    const char* hi = getenv("V06X_COV_HI");
++    cov_path = getenv("V06X_COV_FILE");
++    if (!lo || !hi || !cov_path) return;
++    cov_lo = (int)strtol(lo, nullptr, 0);
++    cov_hi = (int)strtol(hi, nullptr, 0);
++    if (cov_hi < cov_lo) return;
++    cov = (unsigned char*)calloc((size_t)(cov_hi - cov_lo + 1), 1);
++    atexit(cov_dump);
++}
++
++// Кольцевой буфер трассы: держим в памяти последние V06X_TRACE_RING строк и
++// сбрасываем их по требованию. Нужно, когда интересен КОНЕЦ прогона, а не
++// начало: обычная трасса упирается в лимит задолго до отказа.
++static std::vector<std::string> trace_ring;
++static size_t trace_ring_pos = 0;
++
++void trace_dump_ring(const char * path)
++{
++    if (trace_ring.empty()) return;
++    FILE * f = fopen(path, "w");
++    if (!f) return;
++    for (size_t i = 0; i < trace_ring.size(); ++i) {
++        const std::string & s = trace_ring[(trace_ring_pos + i) % trace_ring.size()];
++        if (!s.empty()) fputs(s.c_str(), f);
++    }
++    fclose(f);
++    fprintf(stderr, "трасса (последние %zu шагов) в %s\n", trace_ring.size(), path);
++}
++
++static void trace_init()
++{
++    cov_init();
++    const char* lo = getenv("V06X_TRACE_LO");
++    const char* hi = getenv("V06X_TRACE_HI");
++    const char* path = getenv("V06X_TRACE_FILE");
++    if (!lo || !hi || !path) return;
++    trace_lo = (int)strtol(lo, nullptr, 0);
++    trace_hi = (int)strtol(hi, nullptr, 0);
++    const char* arm = getenv("V06X_TRACE_ARM");
++    const char* dis = getenv("V06X_TRACE_DISARM");
++    if (arm && dis) {
++        trace_arm = (int)strtol(arm, nullptr, 0);
++        trace_disarm = (int)strtol(dis, nullptr, 0);
++        trace_armed = false;
++    }
++    trace_all = getenv("V06X_TRACE_ALL") != nullptr;
++    const char* mx = getenv("V06X_TRACE_MAX");
++    trace_max = mx ? strtol(mx, nullptr, 0) : 0;
++    const char* ring = getenv("V06X_TRACE_RING");
++    if (ring) {
++        size_t n = (size_t)strtol(ring, nullptr, 0);
++        if (n) trace_ring.assign(n, std::string());
++    }
++    trace_file = fopen(path, "w");
++    fprintf(stderr, "pc-trace: %04x..%04x -> %s (%s)\n", trace_lo, trace_hi,
++            path, trace_file ? "open" : "FAILED");
++    atexit([]{ if (trace_file) fclose(trace_file); });
++}
++
+ Board::Board(Memory& _memory, IO& _io, PixelFiller& _filler, Soundnik& _snd,
+   TV& _tv, WavPlayer& _tape_player, Debug& _debug)
+   : memory(_memory)
+@@ -35,6 +139,7 @@ Board::Board(Memory& _memory, IO& _io, PixelFiller& _filler, Soundnik& _snd,
+ 
+ void Board::init()
+ {
++    trace_init();
+     i8080_hal_bind(memory, io, *this);
+     cadence::set_cadence(
+       this->tv.get_refresh_rate(), cadence_frames, cadence_length);
+@@ -147,6 +252,64 @@ int Board::execute_frame(bool update_screen)
+         this->filler.irq = false;
+         // DBG_FRM(F1,F2,printf("%05d %04x: ", this->between + this->instr_time,
+         // i8080_pc()));
++        if (cov) {
++            int pc = i8080_pc();
++            if (pc >= cov_lo && pc <= cov_hi) cov[pc - cov_lo] = 1;
++        }
++
++        if (trace_file) {
++            int pc = i8080_pc();
++            if (trace_arm >= 0) {
++                if (pc == trace_arm) { trace_armed = true; ++trace_window; }
++                else if (pc == trace_disarm) trace_armed = false;
++            }
++            if (!trace_armed) { /* gated off */ }
++            else if (pc < trace_lo || pc > trace_hi) {
++                // leaving the window re-arms the filter, so every *entry* into
++                // the range is logged even when the same address is re-entered
++                trace_last_pc = -1;
++            }
++            else if (trace_all || pc != trace_last_pc) {
++                trace_last_pc = pc;
++                if (!trace_ring.empty()) {
++                    char buf[512];
++                    int sp2 = i8080_regs_sp();
++                    snprintf(buf, sizeof buf,
++                      "w%d %04x bank=%02x sp=%04x a=%02x bc=%04x de=%04x hl=%04x "
++                      "bytes=%02x %02x %02x\n",
++                      trace_window, pc, hal_last_bank & 0xFF, sp2, i8080_regs_a(),
++                      i8080_regs_bc(), i8080_regs_de(), i8080_regs_hl(),
++                      this->memory.read(pc, false), this->memory.read(pc + 1, false),
++                      this->memory.read(pc + 2, false));
++                    trace_ring[trace_ring_pos] = buf;
++                    trace_ring_pos = (trace_ring_pos + 1) % trace_ring.size();
++                } else {
++                if (trace_max && ++trace_count > trace_max) {
++                    fclose(trace_file);
++                    trace_file = nullptr;
++                }
++                if (!trace_file) break;
++                int sp = i8080_regs_sp();
++                fprintf(trace_file,
++                  "w%d %04x bank=%02x sp=%04x a=%02x bc=%04x de=%04x hl=%04x ret=%04x "
++                  "bytes=%02x %02x %02x stack=%04x,%04x,%04x,%04x,%04x,%04x\n",
++                  trace_window, pc, hal_last_bank & 0xFF, sp, i8080_regs_a(),
++                  i8080_regs_bc(), i8080_regs_de(), i8080_regs_hl(),
++                  this->memory.read(sp, true) |
++                    (this->memory.read(sp + 1, true) << 8),
++                  this->memory.read(pc, false),
++                  this->memory.read(pc + 1, false),
++                  this->memory.read(pc + 2, false),
++                  this->memory.read(sp + 2, true) | (this->memory.read(sp + 3, true) << 8),
++                  this->memory.read(sp + 4, true) | (this->memory.read(sp + 5, true) << 8),
++                  this->memory.read(sp + 6, true) | (this->memory.read(sp + 7, true) << 8),
++                  this->memory.read(sp + 8, true) | (this->memory.read(sp + 9, true) << 8),
++                  this->memory.read(sp + 10, true) | (this->memory.read(sp + 11, true) << 8),
++                  this->memory.read(sp + 12, true) | (this->memory.read(sp + 13, true) << 8));
++                }
++            }
++        }
++
+         // script hook
+         if (this->scripting && check_breakpoint()) {
+             this->script_interrupt = true;
+diff --git a/src/board.h b/src/board.h
+index e4fdebf..360a267 100644
+--- a/src/board.h
++++ b/src/board.h
+@@ -68,6 +68,8 @@ class Board
+     std::vector<Watchpoint> io_watchpoints;
+ 
+   public:
++    Memory & get_memory() { return memory; }   // чтобы выгрузить квазидиск на лету
++
+     std::function<void(void)> poll_debugger;
+     std::function<void(void)> onbreakpoint = nullptr;
+     std::function<void(void)> onframetimer;
+diff --git a/src/debug.h b/src/debug.h
+index 6215f09..4cef0b5 100644
+--- a/src/debug.h
++++ b/src/debug.h
+@@ -89,7 +89,8 @@ class Debug
+ 
+     static const constexpr size_t MEM_BANK_SIZE = 0x10000;
+     static const constexpr size_t RAM_SIZE = MEM_BANK_SIZE;
+-    static const constexpr size_t RAM_DISK_SIZE = MEM_BANK_SIZE * 4;
++    // два квазидиска по 4 страницы: адреса доходят до 0x8FFFF
++    static const constexpr size_t RAM_DISK_SIZE = MEM_BANK_SIZE * 8;
+     static const constexpr size_t GLOBAL_MEM_SIZE = RAM_SIZE + RAM_DISK_SIZE;
+     static const constexpr size_t TRACE_LOG_SIZE = 100000;
+ 
+diff --git a/src/emulator.cpp b/src/emulator.cpp
+index b1239ff..ab50c90 100644
+--- a/src/emulator.cpp
++++ b/src/emulator.cpp
+@@ -1,4 +1,10 @@
++#include <cstdlib>
++
+ #include "emulator.h"
++#include "options.h"
++#include "i8080.h"
++
++using namespace i8080cpu;
+ 
+ static void kick_timer()
+ {
+@@ -23,6 +29,82 @@ Emulator::~Emulator()
+     }
+ }
+ 
++void Emulator::dump_state_now()
++{
++    // Снимок для разбора зависаний: где стоит процессор и какой стек. Пишем
++    // рядом с логом, чтобы можно было прислать одним файлом.
++    const char * path = getenv("V06X_STATE_FILE");
++    FILE * f = fopen(path ? path : "v06x-state.txt", "a");
++    if (!f) return;
++    Memory & mem = board.get_memory();
++    int pc = i8080_pc(), sp = i8080_regs_sp();
++    fprintf(f, "PC=%04X SP=%04X A=%02X BC=%04X DE=%04X HL=%04X port10=%02X\n",
++            pc, sp, i8080_regs_a(), i8080_regs_bc(), i8080_regs_de(),
++            i8080_regs_hl(), mem.get_last_control());
++    fprintf(f, "  прерывания: %s\n", i8080_iff() ? "разрешены" : "ЗАПРЕЩЕНЫ");
++    fprintf(f, "  код у PC:");
++    for (int i = 0; i < 12; ++i) fprintf(f, " %02X", mem.get_byte(pc + i, false));
++    fprintf(f, "\n  стек:");
++    for (int i = 0; i < 8; ++i)
++        fprintf(f, " %04X", mem.get_byte(sp + i * 2, true) |
++                            (mem.get_byte(sp + i * 2 + 1, true) << 8));
++    fprintf(f, "\n");
++    // переменные CO: буквы дисков панелей и его рабочая область
++    static const struct { int at, len; const char * what; } areas[] = {
++        {0x0000, 16, "нулевая страница"},
++        {0x3E8D, 16, "индикатор и буквы панелей"},
++        {0xA830, 32, "переменные CO A830"},
++        {0xA860, 48, "переменные CO A860"},
++    };
++    for (auto & a : areas) {
++        fprintf(f, "  %04X %s:", a.at, a.what);
++        for (int i = 0; i < a.len; ++i)
++            fprintf(f, " %02X", mem.get_byte(a.at + i, false));
++        fprintf(f, "\n");
++    }
++    fclose(f);
++    extern void trace_dump_ring(const char * path);
++    const char * ring = getenv("V06X_TRACE_RING_FILE");
++    trace_dump_ring(ring ? ring : "v06x-trace-ring.txt");
++    fprintf(stderr, "состояние записано в %s\n", path ? path : "v06x-state.txt");
++}
++
++void Emulator::dump_ram_now()
++{
++    // Снимок памяти, какой её видит процессор, -- 64 КБ в файл из V06X_RAM_SAVE.
++    // Нужен проверкам: по нему видно, цел ли дописанный в CO код к концу
++    // прогона. Следом за стеком по следу обращений не уследишь -- стековые
++    // обращения в него не пишутся, их слишком много.
++    const char * path = getenv("V06X_RAM_SAVE");
++    if (!path) return;
++    FILE * f = fopen(path, "wb");
++    if (!f) return;
++    Memory & mem = board.get_memory();
++    for (int a = 0; a <= 0xFFFF; ++a) fputc(mem.get_byte(a, false), f);
++    fclose(f);
++}
++
++void Emulator::save_edd_now()
++{
++    if (Options.eddfile.size() == 0) {
++        fprintf(stderr, "квазидиск не подключён -- сохранять нечего\n");
++        return;
++    }
++    const char * env = getenv("V06X_EDD_SAVE");
++    std::string path = env ? std::string(env) : Options.eddfile[0] + ".saved";
++    // подложить исходный образ мы не вправе, поэтому по умолчанию пишем рядом
++    board.get_memory().save_edd(path.c_str(), 0x10000, 0x40000);
++    fprintf(stderr, "квазидиск сохранён в %s\n", path.c_str());
++
++    if (Options.eddfile.size() > 1) {
++        const char * env2 = getenv("V06X_EDD_SAVE2");
++        std::string path2 = env2 ? std::string(env2)
++                                 : Options.eddfile[1] + ".saved";
++        board.get_memory().save_edd(path2.c_str(), 0x50000, 0x40000);
++        fprintf(stderr, "второй квазидиск сохранён в %s\n", path2.c_str());
++    }
++}
++
+ bool Emulator::handle_keyboard_event(SDL_KeyboardEvent & event)
+ {
+     switch (event.keysym.scancode) 
+@@ -37,6 +119,20 @@ bool Emulator::handle_keyboard_event(SDL_KeyboardEvent & event)
+                     return true;
+                 }
+             break;
++        case SDL_SCANCODE_D:
++            if (event.keysym.mod & (KMOD_GUI | KMOD_ALT)) {
++                dump_state_now();
++                return true;
++            }
++            break;
++        case SDL_SCANCODE_S:
++            // выгрузить текущий квазидиск: сам эмулятор его нигде не сохраняет,
++            // а без этого всё, что записано на диск C:, теряется при выходе
++            if (event.keysym.mod & (KMOD_GUI | KMOD_ALT)) {
++                save_edd_now();
++                return true;
++            }
++            break;
+         default:
+             break;
+     }
+@@ -120,6 +216,7 @@ void Emulator::handle_render(threadevent & event, bool & stopping)
+         }
+         DBG_QUEUE(putchar('R'); fflush(stdout););
+         if (Options.max_frame >= 0 && frame_no >= Options.max_frame) {
++            dump_ram_now();
+             ui_to_engine_queue.push(threadevent(QUIT, 0));
+             stopping = true;
+         }
+diff --git a/src/emulator.h b/src/emulator.h
+index 1431046..6342fbb 100644
+--- a/src/emulator.h
++++ b/src/emulator.h
+@@ -79,6 +79,9 @@ private:
+     void handle_render(threadevent & event, bool & stopping);
+     void join_emulator_thread();
+     bool handle_keyboard_event(SDL_KeyboardEvent & event);
++    void dump_ram_now();
++    void save_edd_now();
++    void dump_state_now();
+     int wait_event(SDL_Event * event, threadevent & ev, int timeout);
+ 
+     void refresh_joysticks();
+diff --git a/src/hal.cpp b/src/hal.cpp
+index b6b3651..17f96f4 100644
+--- a/src/hal.cpp
++++ b/src/hal.cpp
+@@ -13,30 +13,162 @@ static Memory * memory;
+ static IO * io;
+ static Board * board;
+ 
++// Data-access trace: V06X_DATA_LO / V06X_DATA_HI / V06X_DATA_FILE. Logs each
++// distinct (pc, addr, direction) triple that reads or writes the range, ignoring
++// opcode fetch. This is how operands still pointing at a relocated work area are
++// found: a disassembler cannot see references inside code it never reached.
++#include <set>
++#include <vector>
++#include <utility>
++#include <string.h>
++#include <stdlib.h>
++static FILE * data_file = nullptr;
++static int data_lo = 0, data_hi = -1;
++static std::set<uint64_t> data_seen;
++static bool data_nodedup = false;   // V06X_DATA_ALL=1 logs every access, not just new (pc,addr) pairs
++
++// last value written to port 10h -- the quasi-disk bank window control. Logged
++// alongside data accesses so it is visible whether a given read of A000-DFFF saw
++// main RAM or the bank.
++int hal_last_bank = -1;
++
++static inline void data_trace(int addr, char rw, int val)
++{
++    if (!data_file || addr < data_lo || addr > data_hi) return;
++    int pc = i8080cpu::i8080_pc();
++    uint64_t key = ((uint64_t)pc << 24) | ((uint64_t)addr << 8) | (uint64_t)rw;
++    if (!data_nodedup && !data_seen.insert(key).second) return;
++    fprintf(data_file, "%c %04x=%02x pc=%04x bank=%02x\n", rw, addr, val & 0xFF, pc, hal_last_bank & 0xFF);
++}
++
++// Самый нижний адрес, куда уходил стек. Стековые обращения в след не пишутся
++// (их слишком много), но одна цифра нужна: под стеком у CO живёт дописанный
++// код, и запас до него до сих пор был на глазок. Пишем её последней строкой
++// того же файла.
++// Самый нижний адрес, куда уходил стек самого CO. Стек у него опущен на BC00,
++// а ниже, с B756, лежит дописанный сборкой код -- нужно знать, насколько
++// близко к нему стек подходил.
++static int stack_low = 0x10000;
++
++// Охраняемые куски: V06X_GUARD="B756-BBE7,A448-A78B". Если стек зайдёт сюда,
++// запоминаем первый такой адрес и того, кто его записал. Обычный след
++// обращений этого не видит: стековые в него не пишутся.
++static std::vector<std::pair<int,int>> guard_ranges;
++static int guard_hit = -1, guard_pc = 0;
++
++static void guard_init()
++{
++    const char * env = getenv("V06X_GUARD");
++    if (!env) return;
++    int lo = 0, hi = 0;
++    while (*env) {
++        if (sscanf(env, "%x-%x", &lo, &hi) == 2) guard_ranges.push_back({lo, hi});
++        const char * comma = strchr(env, ',');
++        if (!comma) break;
++        env = comma + 1;
++    }
++}
++
++static inline void guard_watch(int addr, int pc)
++{
++    if (guard_hit >= 0) return;
++    for (auto & r : guard_ranges)
++        if (addr >= r.first && addr <= r.second) { guard_hit = addr; guard_pc = pc; return; }
++}
++
++static inline void stack_watch(int addr)
++{
++    // Считаем только те обращения, которые делает сам CO: у БДОС, у БСВВ и у
++    // загрузчика свои стеки в других местах, и они к делу не относятся. CO
++    // живёт по 0100-4FFF, а дописанный сборкой код -- под стеком, с B756.
++    int pc = i8080cpu::i8080_pc();
++    bool co = (pc >= 0x0100 && pc <= 0x4FFF) || (pc >= 0xA400 && pc <= 0xBBFF);
++    if (!co) return;
++    // CO и сам уводит SP в буфер, когда переписывает память командами PUSH:
++    // так он двигает картинку панелей (03EF), чистит окно просмотрщика (347D,
++    // 0D7B) и так же работает наш обмен с диском (A448). Это не стек, и в
++    // счёт глубины идти не должно.
++    if ((pc >= 0x03EF && pc <= 0x0414) || (pc >= 0x0D7B && pc <= 0x0DF9) ||
++        (pc >= 0x347D && pc <= 0x3540) || (pc >= 0xA448 && pc <= 0xA4CB))
++        return;
++    // и только после того, как CO поставил свой стек: до этого он работает
++    // на стеке ССР, а тот лежит в нулевой странице
++    if (addr >= 0x8000 && addr < stack_low) stack_low = addr;
++    guard_watch(addr, pc);
++}
++
++static void data_dump()
++{
++    if (!data_file) return;
++    if (stack_low <= 0xFFFF) fprintf(data_file, "stack_low=%04x\n", stack_low);
++    if (guard_hit >= 0)
++        fprintf(data_file, "stack_guard=%04x:%04x\n", guard_hit, guard_pc);
++    fclose(data_file);
++    data_file = nullptr;
++}
++
++static FILE * port_file = nullptr;
++static int port_watch = -1;
++
++static void port_dump() { if (port_file) fclose(port_file); }
++
++static void port_trace_init()
++{
++    const char * p = getenv("V06X_PORT");
++    const char * path = getenv("V06X_PORT_FILE");
++    if (!p || !path) return;
++    port_watch = (int)strtol(p, nullptr, 0);
++    port_file = fopen(path, "w");
++    atexit(port_dump);
++}
++
++void hal_data_trace_init()
++{
++    const char * lo = getenv("V06X_DATA_LO");
++    const char * hi = getenv("V06X_DATA_HI");
++    const char * path = getenv("V06X_DATA_FILE");
++    if (!lo || !hi || !path) return;
++    data_lo = (int)strtol(lo, nullptr, 0);
++    data_hi = (int)strtol(hi, nullptr, 0);
++    data_file = fopen(path, "w");
++    data_nodedup = getenv("V06X_DATA_ALL") != nullptr;
++    guard_init();
++    atexit(data_dump);
++}
++
+ void i8080_hal_bind(Memory & _mem, IO & _io, Board & _board)
+ {
+     memory = &_mem;
+     io = &_io;
+     board = &_board;
++    hal_data_trace_init();
++    port_trace_init();
+ }
+ 
+ int i8080_hal_memory_read_byte(int addr, const bool _is_opcode)
+ {
+-    return memory->read(addr, false, _is_opcode);
++    int v = memory->read(addr, false, _is_opcode);
++    if (!_is_opcode) data_trace(addr, 'r', v);
++    return v;
+ }
+ 
+ void i8080_hal_memory_write_byte(int addr, int value)
+ {
++    data_trace(addr, 'w', value);
+     return memory->write(addr, value, false);
+ }
+ 
+ int i8080_hal_memory_read_word(int addr, bool stack)
+ {
++    if (!stack) data_trace(addr, 'r', memory->read(addr, stack));
++    else stack_watch(addr);
+     return memory->read(addr, stack) | (memory->read(addr+1, stack) << 8);
+ }
+ 
+ void i8080_hal_memory_write_word(int addr, int word, bool stack)
+ {
++    if (!stack) data_trace(addr, 'w', word & 0377);
++    else stack_watch(addr);
+     memory->write(addr, word & 0377, stack);
+     memory->write(addr + 1, word >> 8, stack);
+ }
+@@ -51,6 +183,14 @@ int i8080_hal_io_input(int port)
+ void i8080_hal_io_output(int port, int value)
+ {
+     //printf("output port %02x=%02x\n", port, value);
++    // Port-write trace: V06X_PORT / V06X_PORT_FILE. Every write to the chosen
++    // port is logged with the pc that made it -- used to compare who owns the
++    // quasi-disk bank window (port 10h) and in what state it is left.
++    if (port == 0x10) hal_last_bank = value;
++    if (port_file && port == port_watch) {
++        fprintf(port_file, "%04x out %02x=%02x\n",
++                i8080cpu::i8080_pc(), port, value);
++    }
+     io->output(port, value);
+ }
+ 
+diff --git a/src/main.cpp b/src/main.cpp
+index e816b4e..2f9da31 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -34,6 +34,20 @@ void load_edd(Memory & memory)
+     }
+ }
+ 
++static void save_edd_at_exit(Memory & memory)
++{
++    const char * path = getenv("V06X_EDD_SAVE");
++    if (path && Options.eddfile.size()) {
++        memory.save_edd(path, 0x10000, 0x40000);
++        fprintf(stderr, "квазидиск сохранён в %s\n", path);
++    }
++    const char * path2 = getenv("V06X_EDD_SAVE2");
++    if (path2 && Options.eddfile.size() > 1) {
++        memory.save_edd(path2, 0x50000, 0x40000);
++        fprintf(stderr, "второй квазидиск сохранён в %s\n", path2);
++    }
++}
++
+ void load_rom(Memory & memory)
+ {
+     memory.init_from_vector(util::load_binfile(Options.romfile), 
+@@ -222,6 +236,7 @@ int main(int argc, char ** argv)
+ 
+     board.reset(Board::ResetMode::BLKVVOD);
+ 
++    memory.enable_kvaz2(Options.eddfile.size() > 1);
+     if (Options.eddfile.size() != 0) {
+         load_edd(memory);
+     }
+@@ -263,6 +278,8 @@ int main(int argc, char ** argv)
+         ProfilerStop();
+     }
+ #endif
++    save_edd_at_exit(memory);
++
+ 
+     return 0;
+ }
+diff --git a/src/memory.cpp b/src/memory.cpp
+index fb0c452..b3624da 100644
+--- a/src/memory.cpp
++++ b/src/memory.cpp
+@@ -1,7 +1,9 @@
+ #include <inttypes.h>
+ #include <string.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ #include <vector>
++#include <algorithm>
+ 
+ #include "memory.h"
+ #include "i8080.h"
+@@ -27,6 +29,7 @@ Memory::Memory() : mode_stack(false), mode_map(false), page_map(0),
+ //       10       screen page
+ void Memory::control_write(uint8_t w8)
+ {
++    this->last_control = w8;
+     this->mode_stack = (w8 & 0x10) != 0;
+     this->mode_map = w8 & 0xe0;
+ 
+@@ -37,25 +40,53 @@ void Memory::control_write(uint8_t w8)
+     //        w8, this->mode_stack, this->mode_map, this->page_map, this->page_stack);
+ }
+ 
++// Второй квазидиск: та же плата на порту 011h, страницы лежат следом за
++// первым. Если второй --edd не задан, платы нет: порт не дешифруется, запись в
++// него не делает ничего -- как на Векторе с одной платой.
++void Memory::control_write2(uint8_t w8)
++{
++    if (!this->kvaz2_present) return;
++
++    this->last_control2 = w8;
++    this->mode_stack2 = (w8 & 0x10) != 0;
++    this->mode_map2 = w8 & 0xe0;
++
++    this->page_map2 = ((w8 & 3) + 5) << 16;
++    this->page_stack2 = (((w8 & 0xc) >> 2) + 5) << 16;
++}
++
++// Окно и стек выбираются по одной плате за раз, стек имеет приоритет над окном:
++// у МикроДОС при обмене с D: стек смотрит во второй квазидиск, а окно
++// A000-DFFF остаётся за первым -- там лежит ОЗУ системы.
++static inline bool in_window(uint8_t mode_map, uint32_t addr)
++{
++    return ((mode_map & 0x20) && (addr >= 0xa000) && (addr <= 0xdfff))
++        || ((mode_map & 0x40) && (addr >= 0x8000) && (addr <= 0x9fff))
++        || ((mode_map & 0x80) && (addr >= 0xe000) && (addr <= 0xffff));
++}
++
+ uint32_t Memory::bigram_select(uint32_t addr, bool stackrq) const
+ {
+-    if (!(this->mode_map || this->mode_stack)) {
+-        return addr;
+-    } else if (this->mode_stack && stackrq) {
++    if (this->mode_stack && stackrq) {
+         return addr + this->page_stack;
+-    } else if ((this->mode_map & 0x20) && (addr >= 0xa000) && (addr <= 0xdfff)) {
+-        return addr + this->page_map;
+-    } else if ((this->mode_map & 0x40) && (addr >= 0x8000) && (addr <= 0x9fff)) {
+-        return addr + this->page_map;
+-    } else if ((this->mode_map & 0x80) && (addr >= 0xe000) && (addr <= 0xffff)) {
++    }
++    if (this->mode_stack2 && stackrq) {
++        return addr + this->page_stack2;
++    }
++    if (this->mode_map && in_window(this->mode_map, addr)) {
+         return addr + this->page_map;
+     }
++    if (this->mode_map2 && in_window(this->mode_map2, addr)) {
++        return addr + this->page_map2;
++    }
+     return addr;
+ }
+ 
+ uint32_t Memory::tobank(uint32_t a) const
+ {
+-    return (a & 0x78000) | ((a<<2)&0x7ffc) | ((a>>13)&3);
++    // старшие биты адреса проходят насквозь; их стало на один больше --
++    // со вторым квазидиском полный адрес доходит до 0x8FFFF
++    return (a & 0xf8000) | ((a<<2)&0x7ffc) | ((a>>13)&3);
+ }
+ 
+ uint8_t Memory::read(uint32_t addr, bool stackrq, const bool _is_opcode) const
+@@ -100,6 +131,7 @@ uint8_t Memory::get_byte(uint32_t addr, bool stackrq) const
+     return value;
+ }
+ 
++
+ void Memory::write(uint32_t addr, uint8_t w8, bool stackrq)
+ {
+     uint32_t bigaddr = this->bigram_select(addr & 0xffff, stackrq);
+@@ -117,6 +149,18 @@ void Memory::write(uint32_t addr, uint8_t w8, bool stackrq)
+     if (debug_onwrite) debug_onwrite(bigaddr, w8);
+ }
+ 
++void Memory::save_edd(const char * path, uint32_t start_addr, uint32_t size) const
++{
++    FILE * f = fopen(path, "wb");
++    if (!f) return;
++    // квазидиск хранится в bytes[] с перемешиванием адресов (tobank), поэтому
++    // выгружаем так же, как init_from_vector его укладывал -- иначе получится каша
++    std::vector<uint8_t> out(size);
++    this->export_bytes(out.data(), start_addr, size);
++    fwrite(out.data(), 1, size, f);
++    fclose(f);
++}
++
+ void Memory::init_from_vector(const vector<uint8_t> & from, uint32_t start_addr)
+ {
+     // clear the main ram because otherwise switching roms is a pain
+@@ -160,6 +204,11 @@ void Memory::serialize(std::vector<uint8_t> &to) {
+     tmp.push_back((uint8_t)mode_map);
+     tmp.push_back((uint8_t)(page_map>>16));
+     tmp.push_back((uint8_t)(page_stack>>16));
++    tmp.push_back((uint8_t)kvaz2_present);
++    tmp.push_back((uint8_t)mode_stack2);
++    tmp.push_back((uint8_t)mode_map2);
++    tmp.push_back((uint8_t)(page_map2>>16));
++    tmp.push_back((uint8_t)(page_stack2>>16));
+     tmp.push_back(sizeof(this->bytes)/65536); // normally 1+4, but we could get many ramdisks later
+     tmp.insert(std::end(tmp), this->bytes, this->bytes + sizeof(this->bytes));
+     tmp.insert(std::end(tmp), std::begin(this->bootbytes), std::end(this->bootbytes));
+@@ -174,6 +223,11 @@ void Memory::deserialize(std::vector<uint8_t>::iterator it, uint32_t size)
+     this->mode_map = (uint8_t) *it++;
+     this->page_map = ((uint32_t) *it++) << 16;
+     this->page_stack = ((uint32_t) *it++) << 16;
++    this->kvaz2_present = (bool) *it++;
++    this->mode_stack2 = (bool) *it++;
++    this->mode_map2 = (uint8_t) *it++;
++    this->page_map2 = ((uint32_t) *it++) << 16;
++    this->page_stack2 = ((uint32_t) *it++) << 16;
+     uint32_t stored_ramsize = 65536 * *it++;
+     size_t nbytes = std::min(stored_ramsize, (uint32_t)sizeof(this->bytes));
+     std::copy(it, it + nbytes, this->bytes);
+diff --git a/src/memory.h b/src/memory.h
+index 4a56c22..816c51c 100644
+--- a/src/memory.h
++++ b/src/memory.h
+@@ -7,7 +7,9 @@
+ #include <vector>
+ #include <functional>
+ 
+-#define TOTAL_MEMORY (64 * 1024 + 256 * 1024)
++// 64К основного ОЗУ и два квазидиска по 256К: второй -- порт 011h, диск D:
++#define KVAZ_SIZE    (256 * 1024)
++#define TOTAL_MEMORY (64 * 1024 + 2 * KVAZ_SIZE)
+ 
+ 
+ class Memory {
+@@ -17,10 +19,21 @@ public:
+ private:
+     uint8_t bytes[TOTAL_MEMORY];
+     bool mode_stack;
++    uint8_t last_control = 0;   // сырое значение, записанное в порт 10h
+     uint8_t mode_map;
+     uint32_t page_map;
+     uint32_t page_stack;
+ 
++    // второй квазидиск (порт 011h). Существует, только если задан второй --edd:
++    // на Векторе без второй платы порт не дешифруется вовсе, и МикроДОС это
++    // видит -- диска D: у неё тогда нет.
++    bool kvaz2_present = false;
++    bool mode_stack2 = false;
++    uint8_t last_control2 = 0;
++    uint8_t mode_map2 = 0;
++    uint32_t page_map2 = 0;
++    uint32_t page_stack2 = 0;
++
+     std::vector<uint8_t> bootbytes;
+ 
+     heatmap_t heatmap;
+@@ -29,6 +42,7 @@ private:
+ 
+ public:
+     uint32_t bigram_select(uint32_t addr, bool stackrq) const;
++    uint8_t get_last_control() const { return last_control; }
+     uint8_t get_byte(uint32_t addr, bool stackrq) const;
+     /* virtual addr, physical addr, stackrq, value */
+     std::function<void(uint32_t,uint32_t,bool,uint8_t)> onwrite;
+@@ -40,9 +54,17 @@ public:
+ public:
+     Memory();
+     void control_write(uint8_t w8);
++    void control_write2(uint8_t w8);
++    void enable_kvaz2(bool on) { kvaz2_present = on; }
++    bool has_kvaz2() const { return kvaz2_present; }
++    uint8_t get_last_control2() const { return last_control2; }
+     uint8_t read(uint32_t addr, bool stackrq, const bool _is_opcode = false) const;
+     void write(uint32_t addr, uint8_t w8, bool stackrq);
+     void init_from_vector(const std::vector<uint8_t> & from, uint32_t start_addr);
++    // Выгрузка квазидиска: он живёт в bytes[] сразу за основным ОЗУ, но обратно
++    // в .edd эмулятор его не пишет, поэтому всё, что программа записала на C:,
++    // терялось при выходе. V06X_EDD_SAVE сохраняет его в файл.
++    void save_edd(const char * path, uint32_t start_addr, uint32_t size) const;
+     void attach_boot(std::vector<uint8_t> boot);
+     void detach_boot();
+     uint8_t * buffer();
+diff --git a/src/options.cpp b/src/options.cpp
+index 9349b30..0f71037 100644
+--- a/src/options.cpp
++++ b/src/options.cpp
+@@ -66,7 +66,7 @@ void options(int argc, char ** argv)
+         ("pc", po::value<std::string>(), "initial pc (default 0)")
+         ("wav", po::value<std::string>(), "wav file to load (not implemented)")
+         ("fdd", po::value<std::vector<std::string>>(), "fdd floppy image (multiple up to 4)")
+-        ("edd", po::value<std::vector<std::string>>(), "edd ramdisk image (multiple up to 16)")
++        ("edd", po::value<std::vector<std::string>>(), "edd ramdisk image (up to 2: ports 10h and 11h)")
+         ("log", po::value<std::string>(), "fdc,audio,video print debug info from systems")
+         ("autostart", "autostart based on RUS/LAT blinkage")
+         ("max-frame", po::value<int>(), "run emulation for this many frames then exit")
+@@ -177,10 +177,10 @@ void options(int argc, char ** argv)
+ 
+         if (vm.count("edd")) {
+             Options.eddfile = vm["edd"].as<std::vector<std::string>>();
+-            if (Options.eddfile.size() > 1) {
+-                printf("Warning: only 1 kvaz is currently supported."
+-                        " Stay tuned for more.\n");
+-                Options.eddfile.resize(1);
++            if (Options.eddfile.size() > 2) {
++                printf("Warning: only 2 kvazes are supported (ports 10h, 11h)."
++                        " Truncated.\n");
++                Options.eddfile.resize(2);
+             }
+         }
+ 
+diff --git a/src/server.cpp b/src/server.cpp
+index b3c0e00..2713ca7 100644
+--- a/src/server.cpp
++++ b/src/server.cpp
+@@ -67,7 +67,7 @@ private:
+ class Session : public std::enable_shared_from_this<Session>
+ {
+ public:
+-    Session(boost::asio::io_service& ios, Board & board)
++    Session(boost::asio::io_context& ios, Board & board)
+         : socket(ios), board(board), closing(false) {}
+ 
+     tcp::socket& get_socket()
+@@ -352,7 +352,7 @@ private:
+ 
+ class Server {
+ public:
+-    Server(boost::asio::io_service& ios, short port, Board & board) 
++    Server(boost::asio::io_context& ios, short port, Board & board) 
+         : ios(ios), acceptor(ios, tcp::endpoint(tcp::v4(), port)), board(board)
+     {
+         std::shared_ptr<Session> session = std::make_shared<Session>(ios, board);
+@@ -379,12 +379,12 @@ public:
+     }
+ 
+ private:
+-    boost::asio::io_service& ios;
++    boost::asio::io_context& ios;
+     tcp::acceptor acceptor;
+     Board & board;
+ };
+ 
+-boost::asio::io_service iosrv;
++boost::asio::io_context iosrv;
+ Server * srv;
+ 
+ void start_gdb_server(Board & board)
+diff --git a/src/vio.h b/src/vio.h
+index 0c183fc..91eb88f 100644
+--- a/src/vio.h
++++ b/src/vio.h
+@@ -271,6 +271,10 @@ public:
+                 // kvas 
+                 this->kvaz.control_write(w8);
+                 break;
++            case 0x11:
++                // второй квазидиск; без второго --edd платы нет и порт молчит
++                this->kvaz.control_write2(w8);
++                break;
+             case 0x14:
+             case 0x15:
+                 this->ay.write(port & 1, w8);

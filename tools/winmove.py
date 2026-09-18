@@ -69,6 +69,7 @@ def main():
 
     d += body
     open(a.outfile, 'wb').write(bytes(d))
+    layout.moved(dst, n, src, 'накладки в окно')
     print('перенос накладок в окно: %04X..%04X -> %04X, переносчик %d байт по %04X'
           % (src, src + n - 1, dst, len(body), org))
     layout.note('загрузка', org, len(body), 'переносчик накладок')

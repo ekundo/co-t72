@@ -137,29 +137,48 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('infile')
     p.add_argument('outfile')
+    p.add_argument('--prepare', action='store_true',
+                   help='только снять проверку и добить образ до 4100h')
+    p.add_argument('--at', help='где код будет работать, 16-рично (окно ОЗУ)')
     args = p.parse_args()
 
     d = bytearray(open(args.infile, 'rb').read())
-    if len(d) != 0x4000:
-        sys.exit('ожидался образ CO в 16384 байта, а не %d' % len(d))
-    if bytes(d[0x1A99 - ORG:0x1A9E - ORG]) != bytes([0xFE, 0x80, 0xCA, 0x78, 0x1A]):
-        sys.exit('по 1A99 нет проверки RC=80h -- незнакомый выпуск CO')
-    if bytes(d[0x1AD1 - ORG:0x1AD4 - ORG]) != bytes([0x2A, 0x73, 0xA8]):
-        sys.exit('по 1AD1 нет LHLD A873 -- незнакомый выпуск CO')
+    if args.prepare or args.at is None:
+        if len(d) != 0x4000:
+            sys.exit('ожидался образ CO в 16384 байта, а не %d' % len(d))
+        if bytes(d[0x1A99 - ORG:0x1A9E - ORG]) != bytes([0xFE, 0x80, 0xCA, 0x78, 0x1A]):
+            sys.exit('по 1A99 нет проверки RC=80h -- незнакомый выпуск CO')
+        if bytes(d[0x1AD1 - ORG:0x1AD4 - ORG]) != bytes([0x2A, 0x73, 0xA8]):
+            sys.exit('по 1AD1 нет LHLD A873 -- незнакомый выпуск CO')
+        d[0x1A99 - ORG:0x1A9E - ORG] = bytes([0x00] * 5)     # снять пропуск
+        d[0x1AD1 - ORG:0x1AD4 - ORG] = bytes([0xCD, 0, 0])   # адрес проставим ниже
+        d += bytes([0x1A] * (FILE_AT - ORG - len(d)))        # добить до 4100h
 
-    d[0x1A99 - ORG:0x1A9E - ORG] = bytes([0x00] * 5)     # снять пропуск
-    d[0x1AD1 - ORG:0x1AD4 - ORG] = bytes([0xCD, 0, 0])   # адрес проставим ниже
-    d += bytes([0x1A] * (FILE_AT - ORG - len(d)))        # добить до 4100h
-    at = RUNTIME + (len(d) - 0x4000)
+    if args.prepare:
+        open(args.outfile, 'wb').write(bytes(d))
+        print('склейка экстентов: проверка снята, образ добит до %d байт' % len(d))
+        return
+
+    if bytes(d[0x1AD1 - ORG:0x1AD2 - ORG]) != bytes([0xCD]):
+        sys.exit('по 1AD1 нет CALL -- сперва нужен запуск с --prepare')
+    org = ORG + len(d)                  # где код лежит в образе
+    at = int(args.at, 16) if args.at else RUNTIME + (len(d) - 0x4000)
     code = build(at)
     d[0x1AD1 - ORG + 1] = at & 0xFF
     d[0x1AD1 - ORG + 2] = at >> 8
     d += code
-    d += bytes([0x1A] * (-len(d) % 128))                 # до границы записи
+    if not args.at:
+        # В окно код едет одним куском вместе с соседними накладками, и
+        # выравнивать его нельзя: переносчик считает длину подряд.
+        d += bytes([0x1A] * (-len(d) % 128))             # до границы записи
     open(args.outfile, 'wb').write(bytes(d))
-    print('склейка экстентов: %d байт, работает по %04X, образ вырос до %d байт'
-          % (len(code), at, len(d)))
-    layout.note('стек', at, len(code), 'склейка экстентов')
+    where = ('%04X (в окне, исходник по %04X)' % (at, org)) if args.at \
+        else '%04X' % at
+    print('склейка экстентов: %d байт, работает по %s, образ вырос до %d байт'
+          % (len(code), where, len(d)))
+    layout.note('окно' if args.at else 'стек', at, len(code), 'склейка экстентов')
+    if args.at:
+        print('winnext=%04X' % (at + len(code)))
 
 
 if __name__ == '__main__':

@@ -54,13 +54,19 @@ def main():
     p.add_argument('infile')
     p.add_argument('outfile')
     p.add_argument('--init', help='адрес подпрограммы, которую позвать следом')
+    p.add_argument('--inplace', action='store_true',
+                   help='работать по адресу загрузки, а не под стеком')
     a = p.parse_args()
 
     d = bytearray(open(a.infile, 'rb').read())
     tail = len(d) - (FILE_AT - ORG)
     if tail < 0:
         sys.exit('хвоста нет -- запускать после fix16k.py')
-    org = RUNTIME + tail
+    # Подпрограмма пусковая: отрабатывает один раз и больше не нужна. Значит ей
+    # незачем занимать место под стеком, где тесно и куда достаёт сам стек, --
+    # пусть остаётся по адресу загрузки, как проба оборудования и проверка
+    # CO.ZGR. Перенос хвоста её тогда не касается (relocstub.py --keep).
+    org = ORG + len(d) if a.inplace else RUNTIME + tail
 
     for at, opcodes in SITES:
         if d[at - 1 - ORG] not in opcodes:
@@ -80,7 +86,8 @@ def main():
     d += body
     open(a.outfile, 'wb').write(bytes(d))
     print('дисковый обработчик из E213: %d байт по %04X' % (len(body), org))
-    layout.note('стек', org, len(body), 'дисковый обработчик')
+    layout.note('загрузка' if a.inplace else 'стек', org, len(body),
+                'дисковый обработчик')
     print('init=%04X' % org)
 
 

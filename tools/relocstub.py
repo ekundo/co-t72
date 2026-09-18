@@ -75,6 +75,7 @@ def main():
     d[STUB - ORG:STUB - ORG + len(stub)] = stub
     d[0x0101 - ORG:0x0103 - ORG] = bytes([STUB & 0xFF, STUB >> 8])
     open(args.outfile, 'wb').write(bytes(d))
+    layout.moved(RUNTIME, n, FILE_AT, 'хвост под стек')
     print('перенос хвоста: %d байт с %04X на %04X, стаб %d байт по %04X%s'
           % (n, FILE_AT, RUNTIME, len(stub), STUB,
              '' if end == ORG + len(d) else ', с %04X остаётся на месте' % end))
