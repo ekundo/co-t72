@@ -13,10 +13,7 @@
 <text x="142" y="149" fill="#e8e8f4" font-size="13">строка вверх</text>
 <rect x="40" y="159" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="55" y="174" fill="#14149b" font-size="13" text-anchor="middle">↓</text>
-<text x="75" y="174" fill="#e8e8f4" font-size="13">,</text>
-<rect x="94" y="159" width="36" height="21" rx="4" fill="#f2f2fa"/>
-<text x="112" y="174" fill="#14149b" font-size="13" text-anchor="middle">^X</text>
-<text x="142" y="174" fill="#e8e8f4" font-size="13">строка вниз</text>
+<text x="82" y="174" fill="#e8e8f4" font-size="13">строка вниз</text>
 <rect x="40" y="184" width="30" height="21" rx="4" fill="#f2f2fa"/>
 <text x="55" y="199" fill="#14149b" font-size="13" text-anchor="middle">←</text>
 <text x="75" y="199" fill="#e8e8f4" font-size="13">,</text>
@@ -28,7 +25,10 @@
 <text x="75" y="224" fill="#e8e8f4" font-size="13">,</text>
 <rect x="94" y="209" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="112" y="224" fill="#14149b" font-size="13" text-anchor="middle">^D</text>
-<text x="142" y="224" fill="#e8e8f4" font-size="13">знак вправо</text>
+<text x="135" y="224" fill="#e8e8f4" font-size="13">,</text>
+<rect x="154" y="209" width="36" height="21" rx="4" fill="#f2f2fa"/>
+<text x="172" y="224" fill="#14149b" font-size="13" text-anchor="middle">^X</text>
+<text x="202" y="224" fill="#e8e8f4" font-size="13">знак вправо</text>
 <rect x="40" y="234" width="36" height="21" rx="4" fill="#f2f2fa"/>
 <text x="58" y="249" fill="#14149b" font-size="13" text-anchor="middle">^A</text>
 <text x="88" y="249" fill="#e8e8f4" font-size="13">слово влево</text>
