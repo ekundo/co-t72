@@ -111,6 +111,11 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
     # Архивные сценарии кладут свои файлы на C: и смысла на других дисках не
     # имеют: панель там открыта на B: или D:, а .PK2 лежат на C:.
     [ -n "$arc" ] && [ "${DRIVE:-C}" != C ] && return 0
+    # Распаковке нужно время: ARC2 читает архив, пишет файл, потом панель
+    # перечитывается -- иначе каталог остаётся в буфере ОС и в снятом образе
+    # распакованного файла не видно.
+    frames=$MAXFRAME
+    [ -n "$arc" ] && frames=5400
     # ONLY=имя -- прогнать один сценарий: удобно, когда разбираешься с ним
     # по следу обращений, а не смотришь общую картину.
     [ -n "${ONLY:-}" ] && [ "$ONLY" != "$name" ] && return 0
@@ -134,7 +139,17 @@ EOF
         # Настоящий архив и настоящий ARC2 лежат в work/co/ (их туда кладут
         # руками: ARC2 -- чужая программа, в репозитории ей не место). Есть --
         # берём их, нет -- обходимся пустышками: список архивов CO покажет и по
-        # ним, а вот распаковать сможет только настоящий.
+        # ним.
+        #
+        # Что именно класть. ARC2.COM -- «ARCHIVER V1.3 (C) V.KRUPSKY 1990»,
+        # он есть на v06x/system-disk.fdd; CO рассчитан именно на него и кормит
+        # ему ответы через «<C:CO.TOK». Каталог архива CO читает сам: записи по
+        # 16 байт с начала файла -- признак (бит 7 -- конец), восемь знаков
+        # имени, три расширения, слово длины и слово упакованного размера.
+        # Архив от ARC.COM («Archiver V2.0, Goldsoft 1991») с той же дискеты
+        # не годится: записи у него те же, но перед ними шестибайтная подпись
+        # «ARC2.0», и список в CO съезжает. Отрезать подпись мало -- сжатие
+        # другое, ARC2 отвечает DECODING ERROR.
         if [ -f "$HERE/work/co/TEST.PK2" ] && [ -f "$HERE/work/co/ARC2.COM" ]; then
             python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
                 "$HERE/work/co/TEST.PK2" TEST.PK2 >/dev/null
@@ -142,6 +157,11 @@ EOF
                 "$HERE/work/co/ARC2.COM" ARC2.COM >/dev/null
             python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
                 "$HERE/work/co/TEST.PK2" TEST2.PK2 >/dev/null
+            # SAVEASM.COM лежит и в архиве, и на диске; убираем его с диска,
+            # чтобы распаковке было куда класть и чтобы ARC2 не спрашивал про
+            # замену. Появился обратно -- значит распаковка прошла.
+            python3 "$HERE/tools/kdimg.py" del "$TMP/$name.edd" \
+                SAVEASM.COM >/dev/null 2>&1 || true
         else
             printf 'PK2' > "$TMP/$name.pk2"
             for f in TEST.PK2 TEST2.PK2 ARC2.COM; do
@@ -164,7 +184,7 @@ EOF
         "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
-        --max-frame $MAXFRAME --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
+        --max-frame $frames --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
     # COVDIR -- куда складывать карты исполнения: по ним видно, какой код за
     # весь прогон ни разу не исполнялся (кандидаты в мёртвый).
     # имя с буквой диска: прогоны на C:, B: и D: идут по разным веткам кода,
@@ -270,6 +290,17 @@ print('%s %s %s %s %s %d' % (fired, clean, guard, rows, depth.get('low', '----')
                              sum(1 for b in cov if b)))
 PY
 )
+    # Распаковка проверяется по делу: файл из архива должен появиться на диске.
+    if [ "$name" = распаковка ] && [ -f "$TMP/$name-out.edd" ] \
+       && [ -f "$HERE/work/co/TEST.PK2" ]; then
+        if python3 "$HERE/tools/kdimg.py" list "$TMP/$name-out.edd" 2>/dev/null \
+           | grep -qi "SAVEASM"; then
+            echo "  распаковка: SAVEASM.COM на месте"
+        else
+            echo "  распаковка: файл из архива не появился" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
     set -- $res
     printf '%-14s %-8s %-4s %-10s %-18s %-14s %-6s %s\n' "$name" "$want" "$1" "$2" "$3" "$4" "$5" "$6"
     case "$1:$3:$4" in
@@ -337,7 +368,7 @@ probe размер      1345 '"\001Left Shift", 10, "/", 20, "\002Left Shift", 4
 probe печать      306F '"Down", 30, "Down", 30, "3", 400, "F3", 300, "Return", 250, "1", 40, "Return", 700'
 probe магнитофон  29AC '"Down", 30, "Down", 30, "\001Left Shift", 10, "6", 20, "\002Left Shift", 300, "Return", 600'
 probe архив       2BA6 '";", 150, "T", 250, "3", 500, "F8", 150, "Down", 100, "Up", 100' архив
-probe распаковка  2BE1 '";", 150, "T", 250, "3", 500, "F8", 150, "Return", 400, "Return", 700' архив-чужой
+probe распаковка  2BE1 '";", 150, "T", 250, "3", 500, "Down", 80, "Down", 80, "Down", 80, "F8", 150, "Return", 400, "C", 900, "7", 200, "Return", 500' архив-чужой
 
 # Глубокие сценарии: те же функции, но доведённые до конца. Мелкие пробы выше
 # показывают, что обработчик вызвался; эти -- что он отработал целиком. Из них
