@@ -36,8 +36,10 @@
 # строке, поэтому сценарии, где до этого открывалось приглашение, надо
 # разделять -- иначе ввод уходит в него.
 #
-# Чего тут нет: СС+7 (выбор дискеты НЖМД) -- v06x не эмулирует винчестер, эту
-# функцию можно гонять только в Emu80.
+# Винчестер тоже под проверкой: подлинный v06x его не эмулирует, но в клоне
+# репозитория он дописан (порты 50h..58h, ключ --hdd -- см. tools/v06x-README.md).
+# Образ для сценариев собирает tools/mkhdd.py; помечены они четвёртым словом
+# «винт» и идут только на основном прогоне.
 set -e
 
 OUT=${1:?каталог сборки, например out/}
@@ -58,7 +60,23 @@ mkdir -p "$RUN"
 
 # Куски, куда никто не должен писать: это наш дописанный код. Их адреса
 # сборка записала в layout.txt, а сторож стека сидит в самом эмуляторе.
-GUARD=$(python3 -c 'import sys,os; rows=[l.strip().split(",") for l in open(sys.argv[1])] if os.path.exists(sys.argv[1]) else []; print(",".join("%04X-%04X" % (int(r[1],16), int(r[1],16)+int(r[2])-1) for r in rows if len(r)>2 and r[0] in ("окно","стек")))' "$OUT/layout.txt")
+# Стека это касается и там, где лежат наши буферы («стек-буфер»): стек,
+# доросший до них, так же смертелен, как и доросший до кода.
+GUARD=$(python3 -c 'import sys,os; rows=[l.strip().split(",") for l in open(sys.argv[1])] if os.path.exists(sys.argv[1]) else []; print(",".join("%04X-%04X" % (int(r[1],16), int(r[1],16)+int(r[2])-1) for r in rows if len(r)>2 and r[0].split("-")[0] in ("окно","стек")))' "$OUT/layout.txt")
+
+# Накладка «дискета НЖМД» (tools/hddsel.py) живёт по адресу, который выбирает
+# сборка; её сценарий проверяется по тому же правилу, что и все, -- попал ли
+# адрес обработчика в карту исполнения, -- поэтому адрес берём из layout.txt.
+HDSEL=$(python3 -c 'import sys,os; rows=[l.strip().split(",",3) for l in open(sys.argv[1])] if os.path.exists(sys.argv[1]) else []; print(next((r[1] for r in rows if len(r)>3 and r[3].strip()=="дискета НЖМД"), ""))' "$OUT/layout.txt")
+
+# Образец винчестера: две «дискеты», на первой HDIR.COM, на второй справка.
+# Метка у первой -- её показывает рамка панели (tools/hdinfo.py). Собирается
+# один раз, сценарии работают по копиям.
+HDDIMG=$TMP/винт.hdd
+python3 "$HERE/tools/mkhdd.py" create "$HDDIMG" --disks 2 >/dev/null
+python3 "$HERE/tools/mkhdd.py" put "$HDDIMG" 1 "$OUT/HDIR.COM" >/dev/null
+python3 "$HERE/tools/mkhdd.py" put "$HDDIMG" 2 "$OUT/CO.HLP" >/dev/null
+python3 "$HERE/tools/mkhdd.py" label "$HDDIMG" 1 'ПРОВЕРКА' >/dev/null
 
 ok=0; bad=0
 
@@ -111,7 +129,9 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
         архив) alien=; arc=1; conly=1 ;;
         архив-чужой) alien=чужой; arc=1; conly=1 ;;
         толькоC) alien=; arc=; conly=1 ;;
-        *) arc=; conly= ;;
+        винт) alien=; arc=; conly=1; hdd=1 ;;
+        винт-чужой) alien=чужой; arc=; conly=1; hdd=1 ;;
+        *) arc=; conly=; hdd= ;;
     esac
     [ -n "$conly" ] && [ "${DRIVE:-C}" != C ] && return 0
     # Распаковке нужно время: ARC2 читает архив, пишет файл, потом панель
@@ -119,6 +139,9 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
     # распакованного файла не видно.
     frames=$MAXFRAME
     [ -n "$arc" ] && frames=5400
+    # Винчестеру тоже нужно время: команда «9» перечитывает каталог, а HDIR
+    # обходит дискеты и пишет метку.
+    [ -n "$hdd" ] && frames=5400
     # ONLY=имя -- прогнать один сценарий (или несколько через пробел): удобно,
     # когда разбираешься с ним по следу обращений, а не смотришь общую картину.
     if [ -n "${ONLY:-}" ]; then
@@ -177,6 +200,14 @@ EOF
             done
         fi
     fi
+    # «винт» -- подключить винчестер. Он подключается только тем сценариям,
+    # которым нужен: с ним T-72 отдаёт CO другой состав оборудования, и
+    # остальные сценарии мерили бы уже не то, что раньше.
+    HDD=
+    if [ -n "$hdd" ]; then
+        cp "$HDDIMG" "$TMP/$name.hdd"
+        HDD="--hdd $TMP/$name.hdd"
+    fi
     if [ "$DRIVE" = "D" ]; then
         cp "$OUT/co-t72.edd" "$TMP/$name-d.edd"
         EDD2="--edd $TMP/$name-d.edd"
@@ -188,7 +219,7 @@ EOF
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
         V06X_GUARD="$GUARD" V06X_RAM_SAVE="$TMP/$name.ram" V06X_LPT=1 \
         V06X_EDD_SAVE="$TMP/$name-out.edd" \
-        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 \
+        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 $HDD \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
         --max-frame $frames --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
@@ -271,6 +302,10 @@ elif len(sys.argv) > 5 and os.path.exists(sys.argv[5]):
     mine = []
     for ln in open(sys.argv[5]):
         where, addr, length, _ = ln.strip().split(',', 3)
+        # «стек-буфер» и «окно-буфер» сюда не идут: в наши буферы по нашей же
+        # просьбе пишет ОС (ФУБ, буфер обмена), и её pc здесь неотличим от
+        # чужой записи поверх кода. Сам код этим не прикрыт -- он отмечен как
+        # «стек» и «окно», и за него проверка отвечает по-прежнему.
         if where in ('окно', 'стек'):
             mine.append((int(addr, 16), int(addr, 16) + int(length) - 1))
     for a in sorted(hurt):
@@ -303,6 +338,35 @@ print('%s %s %s %s %s %d' % (fired, clean, guard, rows, depth.get('low', '----')
                              sum(1 for b in cov if b)))
 PY
 )
+    # Выбор дискеты НЖМД проверяется по делу: в панели должен оказаться
+    # каталог той дискеты, а не прежний. На первой дискете образца лежит
+    # только HDIR.COM -- его и ищем в списке.
+    if [ "$name" = ссемь ] && [ -f "$TMP/$name.ram" ]; then
+        if python3 - "$TMP/$name.ram" <<'PY2'
+import sys
+r = open(sys.argv[1], 'rb').read()
+rows = [r[0xA954 + i * 13:0xA954 + i * 13 + 12] for i in range(r[0xB689])]
+names = [b''.join(rows[i][j:j+1] for j in range(12)) for i in range(len(rows))]
+sys.exit(0 if any(n.startswith(b'HDIR') for n in names) else 1)
+PY2
+        then
+            echo "  дискета НЖМД: каталог с винчестера в панели"
+        else
+            echo "  дискета НЖМД: панель не перечиталась с винчестера" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
+    # Метка дискеты НЖМД -- по делу: HDIR должен записать её на сам винчестер.
+    # Это единственная проверка, где стенд пишет на винчестер, а не читает.
+    if [ "$name" = метканжмд ] && [ -f "$TMP/$name.hdd" ]; then
+        if python3 "$HERE/tools/mkhdd.py" list "$TMP/$name.hdd" 2>/dev/null \
+           | grep -q 'метка «TEST»'; then
+            echo "  винчестер: метка записана"
+        else
+            echo "  винчестер: метка на диск не легла" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
     # Распаковка проверяется по делу: файл из архива должен появиться на диске.
     if [ "$name" = распаковка ] && [ -f "$TMP/$name-out.edd" ] \
        && [ -f "$HERE/work/co/TEST.PK2" ]; then
@@ -424,6 +488,17 @@ probe бэки        3770 '"8", 300, "Right", 60, "Return", 600'
 # оставляет панель пустой. Другого способа увидеть этот путь на стенде нет:
 # пустой образ v06x читает как обычный.
 probe дискпусто   1C00 '"7", 250, "Left", 60, "Return", 900' толькоC
+
+# Винчестер. СС+7 назначает «дискету» НЖМД на диск панели -- и только на A:
+# или B:, поэтому сначала ТАБ переводит нас на A:. Номер шестнадцатеричный,
+# как в команде «9» МикроДОС и в HDIR. Адрес обработчика у этой накладки
+# свой у каждой сборки, он берётся из layout.txt.
+probe ссемь    "$HDSEL" '"Tab", 100, "\001Left Shift", 10, "7", 20, "\002Left Shift", 250, "1", 60, "Return", 900' винт
+# HDIR /M пишет метку дискеты -- единственный сценарий, где что-то уходит на
+# винчестер на запись. Текст латиницей: клавиатура стенда русского не шлёт.
+probe метканжмд   200F '"H", 30, "D", 30, "I", 30, "R", 30, "Space", 30, "/", 30, "M", 30, "Space", 30, "2", 30, "Return", 900, "T", 30, "E", 30, "S", 30, "T", 30, "Return", 1200' винт-чужой
+# HDIR /L -- список меток всех дискет: обходит весь винчестер на чтение.
+probe хдир        200F '"H", 30, "D", 30, "I", 30, "R", 30, "Space", 30, "/", 30, "L", 30, "Return", 1500' винт-чужой
 
 echo
 python3 - "$TMP" <<'PY'

@@ -112,6 +112,7 @@ class Asm:
 
 build_init_addr = [0]
 build_keyhook_addr = [0]
+build_data_addr = [0]       # где у накладки кончается код и начинаются буферы
 
 
 def build(at):
@@ -285,6 +286,7 @@ def build(at):
 
     # ---------------- данные ----------------
     a.label('msg')
+    build_data_addr[0] = a.labels['msg']
     a.code += ' Номер дискеты - '.encode('koi8-r') + b'\0'
     a.label('drive'); a.db(1)
     # Диск файла -- постоянный, не «текущий»: см. шапку.
@@ -361,7 +363,13 @@ def main():
     open(args.outfile, 'wb').write(bytes(d))
     print('выбор дискеты НЖМД: %d байт, работает по %04X, СС+7 переставлен с %04X'
           % (len(code), at, OLD))
-    layout.note('стек', at, len(code), 'дискета НЖМД')
+    # Код и буферы отмечаются порознь: в буферы по нашей же просьбе пишет
+    # БДОС (свой ФУБ на CO.HDD, сохранённый ФУБ самого CO), и сторож целости
+    # в check-funcs.sh принял бы это за чужую запись поверх нашего кода.
+    data_off = build_data_addr[0] - at
+    layout.note('стек', at, data_off, 'дискета НЖМД')
+    layout.note('стек-буфер', at + data_off, len(code) - data_off,
+                'дискета НЖМД: буферы')
     print('init=%04X' % init_at)
     # Для hdprobe.py: что именно переставлено, чтобы он мог вернуть как было,
     # если система скажет, что винчестера нет.

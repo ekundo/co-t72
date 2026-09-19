@@ -25,6 +25,11 @@ docs/co-buffers.md.
 **загрузка** -- адрес, по которому хвост образа лёг при запуске. Это место
 живёт только до первого чтения каталога: копия каталога дискеты ложится с 4000
 и накрывает 4000-4FFF целиком. Годится для пускового кода и ни для чего больше.
+
+К месту можно дописать уточнение через дефис -- `стек-буфер`. Проверки от
+этого не меняются (мерка берётся по части до дефиса), а вот сторож целости в
+check-funcs.sh отличает буфер от кода: в буфер по нашей же просьбе пишет ОС,
+и ругаться на такую запись не на что.
 """
 
 import os
@@ -46,6 +51,11 @@ HOLES = [
 # стек, он растёт вниз от BC00, а с BC00 начинается буфер дисковода T-72.
 STACK_LO, STACK_HI = 0xB756, 0xBBFF
 LOAD_LO, LOAD_HI = 0x4100, 0x4FFF     # хвост по адресу загрузки
+
+
+def base(where):
+    """Место без уточнения: «стек-буфер» меряется как «стек»."""
+    return where.split('-', 1)[0]
 
 
 def note(where, addr, length, name):
@@ -103,15 +113,15 @@ def main():
 
     # Перекрытия -- проверяем внутри каждого места отдельно: адреса «загрузки»
     # и «окна» живут в разное время и пересекаться им не запрещено.
-    for place in sorted({x[0] for x in items}):
-        cur = [x for x in items if x[0] == place]
+    for place in sorted({base(x[0]) for x in items}):
+        cur = [x for x in items if base(x[0]) == place]
         for (w1, a1, l1, n1), (w2, a2, l2, n2) in zip(cur, cur[1:]):
             if a1 + l1 > a2:
                 bad.append('%s: «%s» (%04X..%04X) налезает на «%s» (%04X..)'
                            % (place, n1, a1, a1 + l1 - 1, n2, a2))
 
     # Под стеком: всё должно уместиться до BC00.
-    st = [x for x in items if x[0] == 'стек']
+    st = [x for x in items if base(x[0]) == 'стек']
     if st:
         end = max(a + l for _, a, l, _ in st)
         lo = min(a for _, a, _, _ in st)
@@ -123,7 +133,7 @@ def main():
                   'остаётся %d байт' % (lo, end - 1, STACK_HI + 1 - end))
 
     # В окне: каждый кусок целиком внутри одной измеренной дыры.
-    win = [x for x in items if x[0] == 'окно']
+    win = [x for x in items if base(x[0]) == 'окно']
     if win:
         print('\nВ окне:')
         for where, addr, length, name in win:
@@ -139,8 +149,8 @@ def main():
 
     # По адресу загрузки: только пусковое, и только выше 4100.
     for where, addr, length, name in items:
-        if where == 'загрузка' and not (LOAD_LO <= addr and
-                                        addr + length - 1 <= LOAD_HI):
+        if base(where) == 'загрузка' and not (LOAD_LO <= addr and
+                                              addr + length - 1 <= LOAD_HI):
             bad.append('загрузка: «%s» (%04X..%04X) вне %04X..%04X'
                        % (name, addr, addr + length - 1, LOAD_LO, LOAD_HI))
 

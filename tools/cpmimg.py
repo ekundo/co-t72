@@ -57,8 +57,15 @@ FDD_CYL = Geom('fdd-cyl', block=2048, dir_entries=128, data_start=8 * 10240,
                size=164 * 5120)
 EDD = Geom('edd', block=1024, dir_entries=64, data_start=0,
            blocks=236, ptr16=False, size=256 * 1024)
+# «Дискета» НЖМД: тот же блок параметров, что у дискеты, но системных дорожек
+# у неё нет -- они общие на весь винчестер и лежат в его начале. Поэтому
+# данные с нулевого смещения, а места ровно 1568 секторов по 512 байт
+# (392 блока по 2 КБ); последние два сектора «дискеты» под метку, см.
+# tools/hdir-code.inc.
+HDD = Geom('hdd', block=2048, dir_entries=128, data_start=0,
+           blocks=392, ptr16=True, size=1568 * 512)
 
-GEOMS = {'fdd': FDD, 'fdd-cyl': FDD_CYL, 'edd': EDD}
+GEOMS = {'fdd': FDD, 'fdd-cyl': FDD_CYL, 'edd': EDD, 'hdd': HDD}
 
 
 def pick_geom(args):
