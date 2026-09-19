@@ -20,10 +20,12 @@
 
 import argparse
 
-# Чужие программы, на которые ссылаются CO.MNU и CO.EXT.
+# Чужие программы, на которые ссылаются CO.MNU и CO.EXT. ARC2 не ссылка, а
+# нужда: распаковку архива CO отдаёт ему, и без него в .PK2 видно только
+# список.
 OTHER = ['SAVEASM.COM', 'SAVEBAS.COM', 'SAVEDOS.COM', 'SAVEMON.COM',
          'SAVEROM.COM', 'SYSGEN.COM', 'KOD.COM', 'RUND.COM', 'GO.COM',
-         'SID.COM', 'MEDIT.HLP', 'MEDIT.COM']
+         'SID.COM', 'ARC2.COM', 'MEDIT.HLP', 'MEDIT.COM']
 # Редактор на «СС»-«4» и его краткая справка. Руководства (VDE266.DOC) в
 # списке нет нарочно: 51 КБ, а место на квазидиске не бесконечное.
 VDE = ['VDE.COM', 'VDE266.QRF']

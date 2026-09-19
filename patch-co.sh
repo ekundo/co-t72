@@ -374,6 +374,14 @@ python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/HDIR.COM" HDIR.COM
 [ -z "$VDE" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDE" VDE.COM
 [ -z "$VDEQRF" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDEQRF" VDE266.QRF
+# Архиватор и показательный архив. CO каталог .PK2 читает сама, а распаковку
+# отдаёт ARC2 -- без него в архиве видно только список. В репозитории его нет
+# (чужая программа), берём из комплекта, если положили; архив собирает
+# tools/mkdemo.sh -- им же, в эмуляторе, иначе распаковки не выйдет.
+for f in ARC2.COM DEMO.PK2; do
+    [ -f "$CODIR/$f" ] && python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" \
+        "$CODIR/$f" "$f"
+done
 if [ ! -f "$TMPL_EDD" ]; then
     # без шаблона комплект кладём сами
     for f in prm mnu ext zgr; do
@@ -411,6 +419,10 @@ python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.ZGR" C
 [ -z "$VDE" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDE" VDE.COM
 [ -z "$VDEQRF" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEQRF" VDE266.QRF
 [ -z "$VDEDOC" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEDOC" VDE266.DOC
+for f in ARC2.COM DEMO.PK2; do
+    [ -f "$CODIR/$f" ] && python3 "$HERE/tools/cpmimg.py" --geom fdd put \
+        "$OUT/co-t72.fdd" "$CODIR/$f" "$f"
+done
 # OS.COM на дискете -- та же сборка, что и на квазидиске: её туда только что
 # записала сама система. Дискета с чужой OS.COM опасна ровно так же, как
 # квазидиск: тёплый старт поднимет её, а не нашу.
