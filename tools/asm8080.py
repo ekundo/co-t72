@@ -115,11 +115,15 @@ class Asm:
             raise Error('не разобрать "%s": %s' % (expr, ex))
         return int(v) & 0xFFFF
 
-    def data_bytes(self, args, pc):
+    def data_bytes(self, args, pc, resolve=True):
+        """Байты DB. На первом проходе значение может быть ещё не известно --
+           важна только длина, и вместо него кладётся ноль."""
         out = bytearray()
         for a in args:
             if a[:1] in ('"', "'") and len(a) > 2 and a[-1] == a[0]:
                 out += a[1:-1].encode('koi8-r')
+            elif not resolve:
+                out.append(0)
             else:
                 out.append(self.value(a, pc) & 0xFF)
         return out
@@ -166,12 +170,20 @@ class Asm:
             label = m.group(1)
             line = line[m.end(1):].lstrip(': \t')
         rest = line.strip()
-        head, _, tail = rest.partition(' ')
+        # мнемонику от операндов отделяет любой пробел, в том числе табуляция
+        parts = re.split(r'[ \t]+', rest, maxsplit=1)
+        head, tail = parts[0], (parts[1] if len(parts) > 1 else '')
         head_u = head.upper().lstrip('.')
         args = split_commas(tail)
 
         if head_u == 'EQU':
-            self.sym[label] = self.value(tail, self.pc)
+            # на первом проходе имя справа может быть ещё не встречено; байтов
+            # EQU не даёт, поэтому отложить его до второго прохода безопасно
+            try:
+                self.sym[label] = self.value(tail, self.pc)
+            except Error:
+                if resolve:
+                    raise
             return b''
         if label is not None:
             if resolve and self.sym.get(label) != self.pc:
@@ -181,18 +193,24 @@ class Asm:
             return b''
 
         if head_u == 'ORG':
-            self.pc = self.value(tail, self.pc)
+            target = self.value(tail, self.pc)
             if self.org is None:
-                self.org = self.pc
-            return b''
+                self.org = target
+                self.pc = target
+                return b''
+            # ORG вперёд -- это дырка в образе, и её надо заполнить: файл .COM
+            # грузится подряд, и без набивки всё, что дальше, уехало бы вниз
+            if target < self.pc:
+                raise Error('ORG назад: %04X после %04X' % (target, self.pc))
+            return b'\0' * (target - self.pc)
         if head_u == 'END':
             return b''
         if head_u == 'DB':
-            return bytes(self.data_bytes(args, self.pc))
+            return bytes(self.data_bytes(args, self.pc, resolve))
         if head_u == 'DBN':
             # то же, что DB, но каждый байт дополнением: так CO хранит заставку --
             # цикл вывода инвертирует байты перед печатью
-            return bytes((~b) & 0xFF for b in self.data_bytes(args, self.pc))
+            return bytes((~b) & 0xFF for b in self.data_bytes(args, self.pc, resolve))
         if head_u == 'DW':
             out = bytearray()
             for a in args:
@@ -230,7 +248,7 @@ class Asm:
             m = re.match(r"\s*#?INCLUDE\s+['\"]?([^'\"]+)['\"]?\s*$",
                          strip_comment(raw), re.I)
             if m:
-                out += self.read(os.path.join(os.path.dirname(path), m.group(1)),
+                out += self.read(os.path.join(os.path.dirname(path), m.group(1).strip()),
                                  tuple(seen) + (path,))
             else:
                 out.append(('%s:%d' % (os.path.basename(path), n), raw))

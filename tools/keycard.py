@@ -70,7 +70,8 @@ GROUPS = [
         ('СС+2', 'сменить атрибуты файла'),
         ('СС+3', 'открыть файл в просмотрщике со снятым 8-м битом — так'
                  ' читаются тексты WordStar'),
-        ('СС+4', 'открыть файл в WSR (WordStar; под T-72 не работает)'),
+        ('СС+4', 'открыть файл в VDE -- экранном редакторе с клавишами'
+                ' WordStar; клавиши в нём по "^J"'),
         ('СС+5', 'копировать с заменой имени, можно по маске'),
         ('СС+6', 'записать на магнитофон'),
         ('СС+7', 'выбрать дискету НЖМД; без винчестера — напечатать файл'),
@@ -100,6 +101,8 @@ GROUPS = [
 
 FOOT = ('CO 2.0 — Шишатский С.М., Харьков 1993. Сборка под MDOS T-72: '
         'github.com/ekundo/co-t72')
+TITLE = 'КЛАВИШИ CO'
+SUB = 'файловая оболочка CO 2.0 под МикроДОС T-72'
 
 
 def esc(t):
@@ -114,14 +117,15 @@ CONT = 18               # перенос внутри строки
 
 PLUS = 13               # место под знак "+" между клавишами сочетания
 GAP = 24                # просвет между разными клавишами -- заметно больше, чем у "+"
+SEQ = 6                 # просвет внутри последовательности: жать одну за другой
 
 
 def parse_key(key):
     """Разобрать поле клавиш.
 
     Через пробел -- разные клавиши, делающие одно и то же. Через плюс --
-    сочетание: жать вместе. И то и другое рисуется отдельными шапочками, у
-    сочетания между ними ставится "+".
+    сочетание: жать вместе. Клавиша, начинающаяся с ">", -- продолжение
+    последовательности: жать следом, а не вместе и не вместо.
     """
     return [[a] if a == '+' else a.split('+') for a in key.split()]
 
@@ -129,9 +133,11 @@ def parse_key(key):
 def key_width(alts):
     w = 0
     for i, parts in enumerate(alts):
+        seq = parts[0].startswith('>')
         if i:
-            w += GAP
+            w += SEQ if seq else GAP
         for j, k in enumerate(parts):
+            k = k[1:] if j == 0 and seq else k
             if j:
                 w += PLUS
             w += max(30, 11 * len(k) + 14)
@@ -182,9 +188,9 @@ def main():
            f'<rect x="8" y="8" width="{W-16}" height="{height-16}" fill="none" '
            f'stroke="{ACC}" stroke-width="2"/>',
            f'<text x="{W//2}" y="52" fill="{FG}" font-size="30" '
-           f'text-anchor="middle" letter-spacing="2">КЛАВИШИ CO</text>',
+           f'text-anchor="middle" letter-spacing="2">{esc(TITLE)}</text>',
            f'<text x="{W//2}" y="78" fill="{DIM}" font-size="15" '
-           f'text-anchor="middle">файловая оболочка CO 2.0 под МикроДОС T-72</text>']
+           f'text-anchor="middle">{esc(SUB)}</text>']
 
     for c, x in ((0, 40), (1, 654)):
         y = 118
@@ -197,12 +203,17 @@ def main():
             for alts, kw, lines in rows:
                 cx = x
                 for i, parts in enumerate(alts):
-                    if i:
+                    seq = parts[0].startswith('>')
+                    if seq:
+                        parts = [parts[0][1:]] + parts[1:]
+                    if i and not seq:
                         # запятая между разными клавишами: "ТАБ", "↖" -- это
                         # две клавиши, а не одно сочетание
                         out.append(f'<text x="{cx + 5}" y="{y+1}" fill="{FG}" '
                                    f'font-size="13">,</text>')
                         cx += GAP
+                    elif i:
+                        cx += SEQ
                     for j, k in enumerate(parts):
                         if j:
                             out.append(f'<text x="{cx + PLUS//2}" y="{y+1}" '
