@@ -20,7 +20,8 @@ import pathlib
 ROWS = 0xA954           # список первой панели; вторая -- на 680h дальше
 STEP = 0x680
 WIDE = 13               # байт на строку списка
-COUNT = 0xB689          # сколько строк в списке активной панели
+COUNT = 0xB689          # сколько строк в списке; у второй панели -- B68B
+COUNT2 = 0xB68B         # переменные панелей лежат парами (см. 0E47 в co.asm)
 CURSOR = 0xB69B         # номер строки под курсором
 WHICH = 0xB69D          # какая панель активна: 1 или 2
 LETTERS = 0x3E91        # буквы дисков обеих панелей
@@ -37,14 +38,15 @@ def main():
     r = pathlib.Path(a.ram).read_bytes()
     word = lambda x: r[x] | r[x + 1] << 8
     which = r[WHICH]
-    print('панели: 1=%s: 2=%s:, активна %d, строк %d, курсор на %d'
-          % (chr(r[LETTERS]), chr(r[LETTERS + 1]), which, r[COUNT], r[CURSOR]))
+    print('панели: 1=%s: (%d строк) 2=%s: (%d строк), активна %d, курсор на %d'
+          % (chr(r[LETTERS]), r[COUNT], chr(r[LETTERS + 1]), r[COUNT2],
+             which, r[CURSOR]))
     print('просмотр: ' + ', '.join('%s=%04X (%s)' % (k, word(int(k, 16)), v)
                                    for k, v in VIEW.items()))
     for n in (1, 2):
         print('--- панель %d%s' % (n, ' (активная)' if n == which else ''))
         base = ROWS + (n - 1) * STEP
-        for i in range(min(a.rows, r[COUNT] if n == which else a.rows)):
+        for i in range(min(a.rows, r[COUNT if n == 1 else COUNT2])):
             e = base + i * WIDE
             name = r[e:e + 8].decode('koi8-r', 'replace')
             ext = r[e + 9:e + 12].decode('koi8-r', 'replace')

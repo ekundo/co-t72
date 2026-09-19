@@ -360,6 +360,65 @@ index 1431046..6342fbb 100644
      int wait_event(SDL_Event * event, threadevent & ev, int timeout);
  
      void refresh_joysticks();
+diff --git a/src/fd1793.h b/src/fd1793.h
+index 77e3b00..4fe0902 100644
+--- a/src/fd1793.h
++++ b/src/fd1793.h
+@@ -48,15 +48,21 @@ public:
+ 
+     uint8_t get(int index) override
+     {
+-        if (index < 0 || index >= (int)size()) 
+-            throw std::out_of_range("boundary error");
++        if (index < 0 || index >= (int)size()) {
++            fprintf(stderr, "FD1793: read outside image: %d of %d\n",
++                    index, (int)size());
++            return 0xE5;
++        }
+         return _data[index]; 
+     }
+ 
+     void set(int index, uint8_t value) override
+     {
+-        if (index < 0 || index >= (int)size()) 
+-            throw std::out_of_range("boundary error");
++        if (index < 0 || index >= (int)size()) {
++            fprintf(stderr, "FD1793: write outside image: %d of %d\n",
++                    index, (int)size());
++            return;
++        }
+         _data[index] = value;
+     }
+ 
+@@ -84,15 +90,24 @@ public:
+ 
+     uint8_t get(int index) override
+     {
+-        if (index < 0 || index >= (int)size()) 
+-            throw std::out_of_range("boundary error");
++        // За краем образа настоящий дисковод отвечает ошибкой, а не падением.
++        // Брошенное отсюда исключение никто не ловит, и прогон обрывался
++        // целиком -- вместе со всем, что он успел намерить.
++        if (index < 0 || index >= (int)size()) {
++            fprintf(stderr, "FD1793: read outside image: %d of %d (%s)\n",
++                    index, (int)size(), filename.c_str());
++            return 0xE5;
++        }
+         return _data[index]; 
+     }
+ 
+     void set(int index, uint8_t value) override
+     {
+-        if (index < 0 || index >= (int)size()) 
+-            throw std::out_of_range("boundary error");
++        if (index < 0 || index >= (int)size()) {
++            fprintf(stderr, "FD1793: write outside image: %d of %d (%s)\n",
++                    index, (int)size(), filename.c_str());
++            return;
++        }
+         bool changed = _data[index] != value;
+         if (changed) {
+             _data[index] = value;
 diff --git a/src/hal.cpp b/src/hal.cpp
 index b6b3651..17f96f4 100644
 --- a/src/hal.cpp
@@ -545,10 +604,10 @@ index b6b3651..17f96f4 100644
  
 diff --git a/src/hdd.h b/src/hdd.h
 new file mode 100644
-index 0000000..e5d00a4
+index 0000000..026ebc9
 --- /dev/null
 +++ b/src/hdd.h
-@@ -0,0 +1,178 @@
+@@ -0,0 +1,186 @@
 +// hdd.h -- НЖМД Вектора-06Ц для стенда: регистры ATA на портах 50h..58h.
 +//
 +// Винчестер в Векторе подключён как обычный IDE, только шина данных разобрана
@@ -584,6 +643,7 @@ index 0000000..e5d00a4
 +{
 +    FILE* file = nullptr;
 +    std::string path;
++    long sectors = 0;           // сколько секторов в образе
 +    uint8_t buf[512];
 +    unsigned ptr = 512;         // сколько байт буфера уже отдано или принято
 +    uint8_t hi = 0;             // защёлка старшего байта слова
@@ -609,16 +669,19 @@ index 0000000..e5d00a4
 +        }
 +    }
 +
++    // За концом образа настоящий винчестер отвечает ошибкой, и так же отвечаем
++    // мы: иначе обрезанный образ читался бы как заполненный нулями, и путь
++    // обработки дисковой ошибки на стенде не показать вовсе.
 +    bool seek()
 +    {
-+        return file && fseek(file, (long)sector() * 512, SEEK_SET) == 0;
++        return file && (long)sector() < sectors &&
++               fseek(file, (long)sector() * 512, SEEK_SET) == 0;
 +    }
 +
 +    void start_read()
 +    {
 +        if (!seek()) { status = ST_ERR; return; }
 +        size_t got = fread(buf, 1, sizeof(buf), file);
-+        // за концом образа отдаём нули: так ведёт себя и недописанный образ
 +        for (size_t i = got; i < sizeof(buf); ++i) buf[i] = 0;
 +        ptr = 0;
 +        writing = false;
@@ -666,6 +729,10 @@ index 0000000..e5d00a4
 +        path = p;
 +        file = fopen(p.c_str(), "r+b");
 +        if (!file) file = fopen(p.c_str(), "rb");   // только чтение -- тоже годится
++        if (file) {
++            fseek(file, 0, SEEK_END);
++            sectors = ftell(file) / 512;
++        }
 +        return file != nullptr;
 +    }
 +
@@ -1075,7 +1142,7 @@ index b3c0e00..2713ca7 100644
  
  void start_gdb_server(Board & board)
 diff --git a/src/vio.h b/src/vio.h
-index 0c183fc..f295cc5 100644
+index 0c183fc..abefc0f 100644
 --- a/src/vio.h
 +++ b/src/vio.h
 @@ -1,4 +1,5 @@
@@ -1103,18 +1170,20 @@ index 0c183fc..f295cc5 100644
  public:
      IO(Memory & _memory, Keyboard & _keyboard, I8253 & _timer, FD1793 & _fdc, 
              AY & _ay, WavPlayer & _tape_player) 
-@@ -107,6 +113,10 @@ public:
+@@ -107,6 +113,12 @@ public:
                  break;
              case 0x05:
                  result = this->PC2;
-+                // V06X_LPT=1 -- сказать программе, что принтер готов. Без
-+                // этого печать в CO ждёт готовности вечно (3099: IN 05h /
-+                // ANI 01h), и весь путь печати из прогона выпадает.
-+                if (getenv("V06X_LPT")) result |= 1;
++                // V06X_LPT=1 -- сказать программе, что принтер готов. Разряд 0
++                // порта 05 -- это «занят»: CO крутится в 30B4, пока он взведён
++                // (IN 05h / ANI 01h / JNZ -- ждать), и печатает, когда снят.
++                // Готовность -- это СНЯТЫЙ разряд, а не взведённый; пока было
++                // наоборот, печать не доходила до конца ни в одном сценарии.
++                if (getenv("V06X_LPT")) result &= ~1;
                  break;
              case 0x06:
                  result = this->PB2;
-@@ -148,6 +158,12 @@ public:
+@@ -148,6 +160,12 @@ public:
              case 0x1c: // fdc control - readonly
                  //result = this->fdc.read(4);
                  break;
@@ -1127,7 +1196,7 @@ index 0c183fc..f295cc5 100644
              default:
                  break;
          }
-@@ -271,6 +287,10 @@ public:
+@@ -271,6 +289,10 @@ public:
                  // kvas 
                  this->kvaz.control_write(w8);
                  break;
@@ -1138,7 +1207,7 @@ index 0c183fc..f295cc5 100644
              case 0x14:
              case 0x15:
                  this->ay.write(port & 1, w8);
-@@ -291,6 +311,12 @@ public:
+@@ -291,6 +313,12 @@ public:
              case 0x1c: // fdc control
                  this->fdc.write(4, w8);
                  break;
