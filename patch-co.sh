@@ -288,6 +288,12 @@ echo "HDIR.COM: $(wc -c < "$OUT/HDIR.COM") байт"
 #      просмотрщике, символы в CO.EXT) живут там, а не заплаткой поверх файла.
 python3 "$HERE/tools/mkhlp.py" "$HERE/docs/co-help.md" -o "$OUT/CO.HLP"
 
+# 3bi3. Список переноса CO.ZGR. Раньше он брался готовым: на дискете лежал
+#       список рабочего диска на два десятка имён, а в архиве выпуска --
+#       авторский на восемь, где половины файлов в выпуске нет (FORMATM.COM),
+#       зато нет HDIR. Собираем сам, одним списком на оба -- tools/mkzgr.py.
+python3 "$HERE/tools/mkzgr.py" -o "$OUT/CO.ZGR" ${VDE:+--vde}
+
 # 3c. Весь дописанный хвост исполняется не там, где лежит: по 4100 у CO буфер
 #     каталога, он его затирает. Копируем хвост под стек при старте.
 # Тело накладки остаётся на месте загрузки, под стек едет только то, что ниже.
@@ -393,6 +399,8 @@ fi
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/HDIR.COM" HDIR.COM
+# CO.ZGR -- только на дискете: список нужен CO, когда её подняли не с C:.
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.ZGR" CO.ZGR
 [ -z "$VDE" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDE" VDE.COM
 [ -z "$VDEQRF" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEQRF" VDE266.QRF
 [ -z "$VDEDOC" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEDOC" VDE266.DOC

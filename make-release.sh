@@ -64,9 +64,12 @@ for v in f h hx k; do
     mkdir -p "$kit"
     cp "$WORK/$v/CO.COM" "$kit/"
     for f in co.prm co.mnu co.ext co.hlp co.zgr; do
-        # CO.HLP берём собранный сборкой -- см. tools/mkhlp.py
+        # CO.HLP и CO.ZGR берём собранные сборкой -- см. tools/mkhlp.py и
+        # tools/mkzgr.py; в комплекте должен лежать тот же список, что и на
+        # готовой дискете, а раньше это были два разных файла.
         src=$CODIR/$f
         [ "$f" = co.hlp ] && [ -f "$WORK/$v/CO.HLP" ] && src=$WORK/$v/CO.HLP
+        [ "$f" = co.zgr ] && [ -f "$WORK/$v/CO.ZGR" ] && src=$WORK/$v/CO.ZGR
         cp "$src" "$kit/$(echo "$f" | tr a-z A-Z)"
     done
     cp "$WORK/HDIR.COM" "$WORK/HDIREN.COM" "$kit/"
