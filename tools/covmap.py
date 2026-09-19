@@ -4,26 +4,34 @@
     COVDIR=/tmp/карты ./check-funcs.sh out/     # снять карты исполнения
     ./tools/covmap.py /tmp/карты                # свести и показать
 
-Карты исполнения (по байту на адрес, ненулевой -- исполнялся) снимает v06x, по
-одной на сценарий. Здесь они складываются, а границы подпрограмм и их описания
-берутся из листинга co-src/co.asm: каждая подпрограмма, к которой кто-то
-обращается, там снабжена пояснением, и в отчёт идёт его первая строка.
+Карты исполнения снимает v06x, по одной на сценарий: в них отмечен каждый
+адрес, с которого была взята команда. Отмечается только первый байт команды,
+операнды остаются нулями, поэтому считать проценты по байтам нельзя -- в
+знаменателе будет вдвое больше, чем вообще может быть отмечено. Считаем по
+командам: сколько строк листинга исполнялось хоть раз.
 
-Данные (строки .db) в счёт не идут: они и не должны исполняться.
+Границы подпрограмм и их описания берутся из листинга co-src/co.asm: каждая
+подпрограмма, к которой кто-то обращается, там снабжена пояснением, и в отчёт
+идёт его первая строка.
+
+Данные (строки .db) в счёт не идут: они и не должны исполняться. Не идут и
+дыры образа -- нули, которые дизассемблер показал как NOP.
 """
 
 import argparse
+import glob
 import pathlib
 import re
 import sys
 
 ORG = 0x100
 ADDR = re.compile(r';\s*([0-9A-F]{4})\s')
-ASM = pathlib.Path(__file__).resolve().parent.parent / 'co-src' / 'co.asm'
+HERE = pathlib.Path(__file__).resolve().parent
+ASM = HERE.parent / 'co-src' / 'co.asm'
 
 
-def listing():
-    """Строки листинга: адрес -> (это команда?, метка?, пояснение над ней)."""
+def listing(com):
+    """Строки листинга: (адрес, это команда?, метка?, пояснение над ней)."""
     rows = []
     note = None
     for ln in ASM.read_text().split('\n'):
@@ -34,9 +42,10 @@ def listing():
             continue
         m = ADDR.search(ln)
         if m:
-            is_data = '.db' in ln or '.dw' in ln
-            label = ln.startswith('L_')
-            rows.append((int(m.group(1), 16), is_data, label, note))
+            a = int(m.group(1), 16)
+            code = ('.db' not in ln and '.dw' not in ln
+                    and a - ORG < len(com) and com[a - ORG] != 0)
+            rows.append((a, code, ln.startswith('L_'), note))
         note = None
     return rows
 
@@ -44,6 +53,8 @@ def listing():
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('dir', help='каталог с картами *.cov от check-funcs.sh')
+    p.add_argument('com', nargs='?', default=str(HERE.parent / 'work' / 'co' / 'co.com'),
+                   help='оригинальный co.com -- по нему видно, где в образе дыры')
     p.add_argument('--top', type=int, default=25,
                    help='сколько самых крупных непокрытых кусков показать')
     a = p.parse_args()
@@ -51,46 +62,40 @@ def main():
     files = sorted(pathlib.Path(a.dir).glob('*.cov'))
     if not files:
         sys.exit('карт нет: %s/*.cov' % a.dir)
-    cov = bytearray(len(files[0].read_bytes()))
+    hot = bytearray(0x10000)
     for f in files:
-        d = f.read_bytes()
-        for i, b in enumerate(d):
+        for i, b in enumerate(f.read_bytes()):
             if b:
-                cov[i] = 1
+                hot[i + ORG] = 1
 
-    rows = listing()
+    rows = listing(pathlib.Path(a.com).read_bytes())
     # подпрограммы: от метки до следующей метки, только команды
     parts = []
     cur = None
-    for i, (addr, is_data, label, note) in enumerate(rows):
-        nxt = rows[i + 1][0] if i + 1 < len(rows) else 0x4100
+    for i, (addr, code, label, note) in enumerate(rows):
         if label:
-            cur = [addr, addr, note]
+            cur = [addr, [], note]
             parts.append(cur)
-        if cur is None:
-            continue
-        if is_data:
-            continue
-        cur[1] = nxt
+        if cur is not None and code:
+            cur[1].append(addr)
 
-    code = hit = 0
+    total = done = 0
     cold = []
-    for beg, end, note in parts:
-        n = end - beg
-        if n <= 0:
+    for beg, addrs, note in parts:
+        if not addrs:
             continue
-        done = sum(1 for x in range(beg, end) if cov[x - ORG])
-        code += n
-        hit += done
-        if done == 0:
-            cold.append((n, beg, end, note))
+        hits = sum(1 for x in addrs if hot[x])
+        total += len(addrs)
+        done += hits
+        if hits == 0:
+            cold.append((len(addrs), beg, addrs[-1], note))
 
-    print('карт: %d, кода в листинге %d байт, исполнялось %d (%d%%)'
-          % (len(files), code, hit, 100 * hit // max(code, 1)))
-    print('подпрограмм без единого исполненного байта: %d' % len(cold))
+    print('карт: %d, команд в листинге %d, исполнялось %d (%d%%)'
+          % (len(files), total, done, 100 * done // max(total, 1)))
+    print('подпрограмм без единой исполненной команды: %d' % len(cold))
     print()
     for n, beg, end, note in sorted(cold, reverse=True)[:a.top]:
-        print('  %04X-%04X %5d  %s' % (beg, end - 1, n, (note or '')[:70]))
+        print('  %04X-%04X %4d  %s' % (beg, end, n, (note or '')[:70]))
 
 
 if __name__ == '__main__':
