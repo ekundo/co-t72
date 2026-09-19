@@ -13,25 +13,26 @@ WordStar (WSR.COM) заточен под КОИ-7 и под T-72 толком н
 MEDIT, WSR, SID. Поле имени там девять знаков, а не восемь, как в каталоге
 CP/M, -- на это легко попасться. Длина у VDE та же, ничего не съезжает.
 
-Подпись в нижней строке. Строка подсказки ровно 79 знаков, и укоротить её нельзя
--- уедет весь остаток. "4-WordStar" на пять знаков длиннее "4-VDE", поэтому пять
-освободившихся возвращаются пробелами в ближайшие промежутки между подписями:
-длина та же, а дыры в середине не видно. Соседей по строке при этом не называем
-по именам -- на этом шаге там ещё "7-Печать", которую на "7-Hdd" меняет более
-поздняя правка. Строка лежит в образе в двух копиях, правятся обе.
+Подпись в нижней строке. Строка сплошная, до нуля, и её длина -- ширина полосы
+на экране; «4-VDE» на пять знаков короче «4-WordStar», и освободившееся место
+надо вернуть в строку, иначе полоса не дойдёт до края. Раскладывает её
+tools/barline.py: разбирает на подписи и расставляет просветы поровну.
+Соседей по строке при этом не называем по именам -- на этом шаге там ещё
+«7-Печать», которую на «7-Hdd» меняет более поздняя правка. Строка может
+лежать в образе в двух копиях (вторую кладёт hdprobe.py для Вектора без
+НЖМД) -- правятся все, какие нашлись.
 """
 
 import argparse
-import re
 import sys
+
+import barline
 
 OLD = b'WSR' + b' ' * 6 + b'COM'
 NEW = b'VDE' + b' ' * 6 + b'COM'
 
-BAR_OLD = b'4-WordStar'
-BAR_NEW = b'4-VDE'
-SPARE = len(BAR_OLD) - len(BAR_NEW)
-GAP = re.compile(rb' (\d-)')            # промежуток перед следующей подписью
+BAR_OLD = '4-WordStar'
+BAR_NEW = '4-VDE'
 
 
 def fix_bar(d, i):
@@ -39,13 +40,10 @@ def fix_bar(d, i):
     start = d.rfind(b'\0', 0, i) + 1
     end = d.find(b'\0', i)
     line = bytes(d[start:end])
-    k = line.index(BAR_OLD)
-    tail, n = GAP.subn(rb'  \1', line[k + len(BAR_OLD):], count=SPARE)
-    fixed = line[:k] + BAR_NEW + tail
-    if n != SPARE or len(fixed) != len(line):
-        sys.exit('строка подсказки по %04X: не вышло вернуть пробелы '
-                 '(%d из %d, длина %d вместо %d)'
-                 % (0x100 + start, n, SPARE, len(fixed), len(line)))
+    fixed, missing = barline.relabel(line, [(BAR_OLD, BAR_NEW)], len(line))
+    if missing:
+        sys.exit('в строке подсказки по %04X нет подписи «%s»'
+                 % (0x100 + start, missing[0]))
     d[start:end] = fixed
 
 
@@ -64,15 +62,16 @@ def main():
 
     bars = []
     j = 0
+    old = BAR_OLD.encode('koi8-r')
     while True:
-        j = d.find(BAR_OLD, j)
+        j = d.find(old, j)
         if j < 0:
             break
         fix_bar(d, j)
         bars.append(0x100 + j)
         j += 1
     if not bars:
-        sys.exit('подписи "4-WordStar" в нижней строке не нашлось')
+        sys.exit('подписи «%s» в нижней строке не нашлось' % BAR_OLD)
 
     open(a.out or a.image, 'wb').write(bytes(d))
     print('редактор на "СС"-"4": WSR -> VDE (%04X), подпись в строке подсказки '
