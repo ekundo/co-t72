@@ -101,6 +101,25 @@ d += b'\x1a' * (-len(d) % 128)
 open(sys.argv[1], 'wb').write(d)
 PY2
 
+# CO.MNU с тремя десятками пунктов. Таблицу меню по B728 CO чистит на 2Eh
+# байт, перебирает на 1Ah записей, а ЗАПОЛНЯЕТ без всякого предела (3A1C):
+# два байта на пункт. Двадцать четвёртый пункт ложится уже за таблицу -- в
+# наш код под стеком. Файл при этом короткий, меньше килобайта: длину списка
+# проверяет «длинноеменю», а это про другое.
+MANYMNU=$TMP/много.mnu
+python3 - "$MANYMNU" <<'PY3'
+import sys
+keys = '123456789ABCDEFGHIJKLMNOPQRSTU'          # ни одного «0»: он кончает список
+out = []
+for k in keys:
+    out.append('%s)  пункт %s' % (k, k))
+    out.append('C:DIR')
+out.append('0) Возврат к панелям.')
+d = ''.join(l + '\r\n' for l in out).encode('koi8-r')
+d += b'\x1a' * (-len(d) % 128)
+open(sys.argv[1], 'wb').write(d)
+PY3
+
 HDDBAD=$TMP/винт-обрез.hdd
 python3 "$HERE/tools/mkhdd.py" create "$HDDBAD" --disks 1 >/dev/null
 python3 "$HERE/tools/mkhdd.py" put "$HDDBAD" 1 "$OUT/CO.HLP" >/dev/null
@@ -172,6 +191,7 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
         винт-чужой) alien=чужой; arc=; conly=1; hdd=1 ;;
         винт-битый) alien=; arc=; conly=1; hdd=2 ;;
         длинное) alien=; arc=; conly=; bigmnu=1 ;;
+        многопунктов) alien=; arc=; conly=; bigmnu=2 ;;
         *) ;;
     esac
     [ -n "$conly" ] && [ "${DRIVE:-C}" != C ] && return 0
@@ -217,7 +237,8 @@ EOF
     fi
     # «длинное» -- положить вместо CO.MNU файл на три килобайта.
     if [ -n "$bigmnu" ]; then
-        python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" "$BIGMNU" CO.MNU \
+        [ "$bigmnu" = 2 ] && SRC=$MANYMNU || SRC=$BIGMNU
+        python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" "$SRC" CO.MNU \
             >/dev/null
     fi
     if [ -n "$arc" ]; then
@@ -487,6 +508,11 @@ probe поиск       0315 '";", 200, "C", 200'
 # панель перечитывается («7» и ВК): обмен с диском идёт через накладку, и
 # если её затёрли, это видно сразу.
 probe длинноеменю 061C '"2", 400, "Escape", 250, "7", 250, "Return", 600' длинное
+
+# Меню из трёх десятков пунктов: таблица по B728 рассчитана на два десятка,
+# а предела у заполнения нет. После меню панель перечитывается -- если
+# таблица легла на код под стеком, обмен с диском это сразу покажет.
+probe многопунктов 061C '"2", 400, "Escape", 250, "7", 250, "Return", 600' многопунктов
 
 probe перезапуск  06AC '"Return", 1500'
 probe запуск      06AC '"Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 30, "Down", 60, "Return", 600' чужой
