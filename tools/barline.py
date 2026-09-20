@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """Нижняя строка подсказки: подписи и просветы между ними.
 
+    ./barline.py '1-40/60 2-Атриб. ... 0-Выйти' -r 2-Атриб.=2-Атрибуты
+
+Строки лежат готовыми в листинге (co-src/co.asm, с 1135), а этот инструмент --
+для того мига, когда подпись надо переименовать или добавить: он разбирает
+строку на подписи и раскладывает их заново на ширину экрана. Готовое вставляется
+в листинг.
+
 Внизу экрана CO держит строку с назначением цифровых клавиш -- по строке на
 каждый набор: обычный («1-Помощь 2-Меню ...») и второй, по «СС»
 («1-40/60 2-Атриб. ...»). В образе это сплошная строка до нуля, и её длина --
@@ -68,3 +75,23 @@ def relabel(line, pairs, width=WIDTH):
         else:
             missing.append(old)
     return join(labels, width), missing
+
+
+def main():
+    import argparse
+    p = argparse.ArgumentParser(description='разложить строку подсказки на ширину экрана')
+    p.add_argument('line', help='строка подсказки как есть, по-русски')
+    p.add_argument('-w', '--width', type=int, default=WIDTH)
+    p.add_argument('-r', '--rename', action='append', default=[],
+                   metavar='БЫЛО=СТАЛО', help='переименовать подпись')
+    a = p.parse_args()
+    pairs = [tuple(r.split('=', 1)) for r in a.rename]
+    out, missing = relabel(a.line.encode('koi8-r'), pairs, a.width)
+    for m in missing:
+        print('в строке нет подписи «%s»' % m)
+    print(out.decode('koi8-r'))
+    print('знаков: %d' % len(out))
+
+
+if __name__ == '__main__':
+    main()
