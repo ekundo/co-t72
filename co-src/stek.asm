@@ -26,7 +26,6 @@ ORIGIN  EQU $
 DSEL    EQU $
 #include "../tools/dsel.asm"
 DSELEND EQU $
-        .ds  5                  ; ВРЕМЕННО: добивка, пока сверяемся байт в байт
 
 ; --------------------------------------------------------------------------
 ; Две строки экрана, которым не хватило места в своей области образа:
@@ -39,16 +38,6 @@ SCRSTR  EQU $
 CMDLINE: .db 1Bh,'[7h',0Ch,0Ah,' >',0
 GOTO7:  .db  1Bh,'Y7-',0        ; подвод курсора к строке 23
 SCREND  EQU $
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah                  ; ВРЕМЕННО: добивка
 
 ; --------------------------------------------------------------------------
 ; «СС»-«7» -- выбор дискеты НЖМД.
@@ -56,8 +45,6 @@ SCREND  EQU $
 ORIGIN  EQU $
 HDDSEL  EQU $
 #include "../tools/hddsel.asm"
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah
-        .db  01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah,01Ah ; ВРЕМЕННО
 
 STKEND  EQU $
         DEPHASE
