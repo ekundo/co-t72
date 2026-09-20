@@ -25,10 +25,10 @@ NEXT    EQU  039F0h             ; CO: взять из CO.MNU следующую 
 DONE    EQU  03A2Ah             ; CO: список кончился, меню собрано
 KEY     EQU  0B6A8h             ; первый знак строки -- он же клавиша пункта
                                 ; TABHI и TABLO -- половинки первого байта
-                                ; за таблицей, их задаёт tools/mnutab.py
+                                ; за таблицей, их задаёт co-src/okno.asm
                                 ; по layout.STACK_LO
 
-put:    POP  H                  ; указатель в таблице
+mput:    POP  H                  ; указатель в таблице
         INX  H                  ; сюда ляжет знак клавиши
         MOV  A,H
         CPI  TABHI              ; за краем таблицы?

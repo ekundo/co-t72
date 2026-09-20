@@ -208,16 +208,19 @@ class Asm:
             return b''
 
         if head_u == 'ORG':
-            target = self.value(tail, self.pc)
+            # Внутри PHASE адрес рабочий, а не файловый: `ORG ORIGIN` в начале
+            # накладки при этом ничего не сдвигает -- она уже там, где надо.
+            here = self.pc + self.shift
+            target = self.value(tail, here)
             if self.org is None:
                 self.org = target
                 self.pc = target
                 return b''
             # ORG вперёд -- это дырка в образе, и её надо заполнить: файл .COM
             # грузится подряд, и без набивки всё, что дальше, уехало бы вниз
-            if target < self.pc:
-                raise Error('ORG назад: %04X после %04X' % (target, self.pc))
-            return b'\0' * (target - self.pc)
+            if target < here:
+                raise Error('ORG назад: %04X после %04X' % (target, here))
+            return b'\0' * (target - here)
         if head_u == 'PHASE':
             self.shift = self.value(tail, self.pc + self.shift) - self.pc
             return b''

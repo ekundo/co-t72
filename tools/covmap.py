@@ -30,22 +30,41 @@ HERE = pathlib.Path(__file__).resolve().parent
 ASM = HERE.parent / 'co-src' / 'co.asm'
 
 
+LST = re.compile(r'^([0-9A-F]{4}) ([0-9A-F]*)\s{2,}(.*)$')
+TAIL = 0x4100           # дальше идут накладки сборки, они не код самой CO
+
+
 def listing(com):
-    """Строки листинга: (адрес, это команда?, метка?, пояснение над ней)."""
+    """Строки листинга: (адрес, это команда?, метка?, пояснение над ней).
+
+    Берём не комментарии исходника, а листинг сборки: у правок, переехавших в
+    co.asm, прежних комментариев с адресом нет, и по ним счёт выходил бы
+    меньше, чем есть на самом деле."""
+    sys.path.insert(0, str(HERE))
+    import asm8080
+    asm = asm8080.Asm()
+    asm.assemble(str(ASM))
     rows = []
     note = None
-    for ln in ASM.read_text().split('\n'):
-        if ln.startswith(';'):
-            txt = ln.lstrip('; ').rstrip()
+    for ln in asm.listing:
+        m = LST.match(ln)
+        if not m:
+            continue
+        a, code_bytes, src = int(m.group(1), 16), m.group(2), m.group(3)
+        if a >= TAIL:
+            break
+        if src.lstrip().startswith(';'):
+            txt = src.lstrip('; ').rstrip()
             if txt and not set(txt) <= set('=-'):
                 note = txt if note is None else note
             continue
-        m = ADDR.search(ln)
-        if m:
-            a = int(m.group(1), 16)
-            code = ('.db' not in ln and '.dw' not in ln
-                    and a - ORG < len(com) and com[a - ORG] != 0)
-            rows.append((a, code, ln.startswith('L_'), note))
+        if not code_bytes:
+            note = None
+            continue
+        low = src.lower()
+        code = ('.db' not in low and '.dw' not in low and '.ds' not in low
+                and a - ORG < len(com) and com[a - ORG] != 0)
+        rows.append((a, code, src.startswith('L_'), note))
         note = None
     return rows
 

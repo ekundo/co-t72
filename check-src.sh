@@ -28,8 +28,10 @@ import sys
 
 a = open(sys.argv[1], 'rb').read()
 b = open(sys.argv[2], 'rb').read()
-if len(a) != len(b):
-    sys.exit('размер разошёлся: собрано %d, образец %d' % (len(a), len(b)))
+if len(a) < len(b):
+    sys.exit('собрано меньше образца: %d против %d' % (len(a), len(b)))
+tail = len(a) - len(b)          # хвост -- накладки, их в образце нет вовсе
+a = a[:len(b)]
 
 # Объявленные правки: строки листинга со словом «ПРАВКА», у которых есть байты.
 # Докуда строка тянется, считаем по следующей: в столбце байтов у asm8080 их не
@@ -50,7 +52,8 @@ for i, (at, marked) in enumerate(rows):
 bad = [0x100 + i for i in range(len(a)) if a[i] != b[i] and 0x100 + i not in declared]
 changed = sum(1 for i in range(len(a)) if a[i] != b[i])
 print('объявлено правок: %d строк, %d байт; расходится с подлинным образом '
-      '%d байт' % (len(places), len(declared), changed))
+      '%d байт; хвост накладок %d байт'
+      % (len(places), len(declared), changed, tail))
 if not bad:
     print('все расхождения объявлены')
 else:

@@ -455,6 +455,8 @@ def build(at, image, ports_labels, flag_addr=None):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('infile')
+    p.add_argument('--base', help='откуда в хвосте начинается '
+                   'часть, которая едет под стек (16-рично)')
     p.add_argument('outfile')
     p.add_argument('--flag', help='адрес байта «диск D доступен» (Y/N); по умолчанию свой')
     p.add_argument('--only', help='включить только эту проверку (адрес), для разбора по одной')
@@ -483,7 +485,11 @@ def main():
         sys.exit('по 0188 ожидался JZ, а лежит %02X' % d[0x0188 - ORG])
     d[0x0188 - ORG] = 0xD2
 
-    at = RUNTIME + (len(d) - 0x4000)
+    # Под стек едет не весь хвост: сперва в нём лежат накладки окна,
+    # они остаются в окне. Откуда начинается наша часть -- говорит
+    # сборка ключом --base (по умолчанию сразу за образом).
+    base = int(args.base, 16) if getattr(args, 'base', None) else 0x4100
+    at = RUNTIME + (len(d) - (base - 0x100))
     ports_code, ports_labels = build_ports(MENU_ENTRY + 3)   # первые три байта -- переход в меню
     code, tramp, menu, labels = build(at, d, ports_labels,
                                       int(args.flag, 16) if args.flag else None)

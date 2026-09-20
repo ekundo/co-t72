@@ -324,6 +324,8 @@ PLAIN = [('2-Атриб.', '2-Атрибуты'), ('0-Выйти', '0-Выход
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('infile')
+    p.add_argument('--base', help='откуда в хвосте начинается '
+                   'часть, которая едет под стек (16-рично)')
     p.add_argument('outfile')
     args = p.parse_args()
 
@@ -345,7 +347,11 @@ def main():
     # чтении чужого диска.
     if len(d) % 128:
         sys.exit('образ не выровнен по записи: %d байт' % len(d))
-    at = layout.STACK_LO + (len(d) - 0x4000)
+    # Под стек едет не весь хвост: сперва в нём лежат накладки окна,
+    # они остаются в окне. Откуда начинается наша часть -- говорит
+    # сборка ключом --base (по умолчанию сразу за образом).
+    base = int(args.base, 16) if getattr(args, 'base', None) else 0x4100
+    at = layout.STACK_LO + (len(d) - (base - 0x100))
     globals()['_at'] = at
     code = build(at)
     init_at = build_init_addr[0]

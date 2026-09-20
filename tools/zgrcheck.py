@@ -46,7 +46,7 @@ def main():
     d = bytearray(open(a.infile, 'rb').read())
     tail = len(d) - (FILE_AT - ORG)
     if tail < 0:
-        sys.exit('хвоста нет -- запускать после fix16k.py')
+        sys.exit('хвоста нет -- накладки листинга должны идти первыми')
     org = ORG + len(d) if a.inplace else RUNTIME + tail
 
     asm = asm8080.Asm()

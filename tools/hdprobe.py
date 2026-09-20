@@ -53,7 +53,7 @@ def main():
 
     d = bytearray(open(a.infile, 'rb').read())
     if len(d) < FILE_AT - ORG:
-        sys.exit('хвоста нет -- запускать после fix16k.py')
+        sys.exit('хвоста нет -- накладки листинга должны идти первыми')
     org = ORG + len(d)          # работаем там, куда положила загрузка
 
     slot = int(a.slot, 16)
