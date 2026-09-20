@@ -58,7 +58,7 @@ for v in f h hx k; do
     echo "=== $name ==="
     "$HERE/patch-co.sh" "$CO" "$EDD" "$WORK/$v" "$rom" "$VDECOM" >"$WORK/$v.log" 2>&1 || {
         tail -20 "$WORK/$v.log" >&2; echo "сборка $v не удалась" >&2; exit 1; }
-    grep -E 'обработчик БСВВ на|таблица дискет НЖМД на|перенос хвоста|WSR -> VDE' "$WORK/$v.log" || true
+    grep -E '^CO.COM:|^Под стеком занято' "$WORK/$v.log" || true
 
     kit=$WORK/kit-$v/$name
     mkdir -p "$kit"
