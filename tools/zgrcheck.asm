@@ -41,28 +41,28 @@ SRCDRV  EQU 0A84Ah              ; буква диска, С КОТОРОГО CO 
 BDOS    EQU 00005h
 OPEN    EQU 00Fh                ; БДОС: открыть файл
 
-start:  PUSH H
+zstart:  PUSH H
         PUSH D
         PUSH B
         LDA  LINE
         CPI  '.'                ; точка -- конец списка, проверять нечего
-        JZ   out
-        CALL build
+        JZ   zout
+        CALL zbuild
         LXI  D,fcb
         MVI  C,OPEN
         CALL BDOS
         INR  A                  ; 0FFh -- не найден
-        JNZ  out
+        JNZ  zout
         LXI  H,COUNT
         DCR  M                  ; строку в список не берём
-out:    POP  B
+zout:    POP  B
         POP  D
         POP  H
         LDA  LINE               ; ради чего перехват и стоял
         RET
 
 ; Строка "ИМЯ.РАС" -> ФУБ.
-build:  LXI  H,fcb
+zbuild:  LXI  H,fcb
         LDA  SRCDRV             ; искать надо на диске-источнике, не на текущем
         SUI  040h               ; буква -> номер ФУБ: A: -- 1, B: -- 2 и так далее
         CPI  005h
