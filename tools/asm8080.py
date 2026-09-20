@@ -3,6 +3,16 @@
 
     ./asm8080.py hdir.asm -o HDIR.COM [-l hdir.lst]
 
+Директивы сверх обычных: PHASE/DEPHASE -- «собирать здесь, а работать там».
+Накладки сборки лежат в хвосте образа, а исполняются по другому адресу: при
+старте CO переносит их под стек или в окно ОЗУ. Между PHASE и DEPHASE метки и
+«$» считаются от рабочего адреса, а байты продолжают ложиться подряд:
+
+        ORG   4100h
+        PHASE 0B75Ch
+start:  LXI   H,start       ; соберётся как LXI H,B75Ch
+        DEPHASE
+
 Синтаксис как в исходниках T-72 (TASM): метка в начале строки, точка с запятой
 -- комментарий, числа `1234h` / `0FFh` / десятичные / `'A'`. Директивы:
 
@@ -95,6 +105,11 @@ class Asm:
         self.out = bytearray()
         self.org = None
         self.listing = []
+        # Накладки сборки лежат в хвосте образа, а работают по другому адресу:
+        # при старте CO переносит их под стек или в окно ОЗУ. PHASE задаёт этот
+        # рабочий адрес -- метки и «$» считаются от него, а байты продолжают
+        # ложиться подряд. DEPHASE возвращает всё как было.
+        self.shift = 0
 
     # ---------------- выражения ----------------
 
@@ -180,15 +195,15 @@ class Asm:
             # на первом проходе имя справа может быть ещё не встречено; байтов
             # EQU не даёт, поэтому отложить его до второго прохода безопасно
             try:
-                self.sym[label] = self.value(tail, self.pc)
+                self.sym[label] = self.value(tail, self.pc + self.shift)
             except Error:
                 if resolve:
                     raise
             return b''
         if label is not None:
-            if resolve and self.sym.get(label) != self.pc:
+            if resolve and self.sym.get(label) != self.pc + self.shift:
                 raise Error('метка %s разъехалась между проходами' % label)
-            self.sym[label] = self.pc
+            self.sym[label] = self.pc + self.shift
         if not rest:
             return b''
 
@@ -203,24 +218,31 @@ class Asm:
             if target < self.pc:
                 raise Error('ORG назад: %04X после %04X' % (target, self.pc))
             return b'\0' * (target - self.pc)
+        if head_u == 'PHASE':
+            self.shift = self.value(tail, self.pc + self.shift) - self.pc
+            return b''
+        if head_u == 'DEPHASE':
+            self.shift = 0
+            return b''
         if head_u == 'END':
             return b''
         if head_u == 'DB':
-            return bytes(self.data_bytes(args, self.pc, resolve))
+            return bytes(self.data_bytes(args, self.pc + self.shift, resolve))
         if head_u == 'DBN':
             # то же, что DB, но каждый байт дополнением: так CO хранит заставку --
             # цикл вывода инвертирует байты перед печатью
-            return bytes((~b) & 0xFF for b in self.data_bytes(args, self.pc, resolve))
+            return bytes((~b) & 0xFF for b in self.data_bytes(args, self.pc + self.shift,
+                                                                resolve))
         if head_u == 'DW':
             out = bytearray()
             for a in args:
-                v = self.value(a, self.pc) if resolve else 0
+                v = self.value(a, self.pc + self.shift) if resolve else 0
                 out += bytes([v & 0xFF, v >> 8])
             return bytes(out)
         if head_u == 'DS':
-            return b'\0' * self.value(tail, self.pc)
+            return b'\0' * self.value(tail, self.pc + self.shift)
         if head_u in MNEMONICS:
-            return bytes(self.encode(head_u, args, self.pc, resolve))
+            return bytes(self.encode(head_u, args, self.pc + self.shift, resolve))
         raise Error('не понял строку: %s' % raw.strip())
 
     def pass_over(self, lines, resolve):
