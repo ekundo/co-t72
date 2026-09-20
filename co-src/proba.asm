@@ -9,5 +9,5 @@
 ; --------------------------------------------------------------------------
 ORIGIN  EQU $
 PROBA   EQU $
-#include "../tools/hdprobe.asm"
+#include "hdprobe.asm"
 PROBAEND EQU $

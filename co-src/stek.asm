@@ -24,7 +24,7 @@ STKFILE EQU $                   ; где блок лежит в файле -- о
 ; --------------------------------------------------------------------------
 ORIGIN  EQU $
 DSEL    EQU $
-#include "../tools/dsel.asm"
+#include "dsel.asm"
 DSELEND EQU $
 
 ; --------------------------------------------------------------------------
@@ -44,7 +44,7 @@ SCREND  EQU $
 ; --------------------------------------------------------------------------
 ORIGIN  EQU $
 HDDSEL  EQU $
-#include "../tools/hddsel.asm"
+#include "hddsel.asm"
 
 STKEND  EQU $
         DEPHASE

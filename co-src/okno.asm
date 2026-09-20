@@ -26,31 +26,31 @@ TABLO   EQU TABEND & 255
 
 ORIGIN  EQU $
 FIX16K  EQU $                   ; склейка экстентов, зовётся по 1AD1
-#include "../tools/fix16k.asm"
+#include "fix16k.asm"
 
 ORIGIN  EQU $
 DMAWIN  EQU $                   ; обмен с диском через буфер вне окна
-#include "../tools/dmawin.asm"
+#include "dmawin.asm"
 
 ORIGIN  EQU $
 XDRIVE  EQU $                   ; поиск программы по дискам -- с диском D:
-#include "../tools/xdrive.asm"
+#include "xdrive.asm"
 
 ORIGIN  EQU $
 KOI     EQU $                   ; кодировки в просмотрщике
-#include "../tools/koi.asm"
+#include "koi.asm"
 
 ORIGIN  EQU $
 VIEWTOP EQU $                   ; шаг назад в тексте не уезжает за начало
-#include "../tools/viewtop.asm"
+#include "viewtop.asm"
 
 ORIGIN  EQU $
 EXTBUF  EQU $                   ; CO.EXT и CO.MNU читаются в буфер копирования
-#include "../tools/extbuf.asm"
+#include "extbuf.asm"
 
 ORIGIN  EQU $
 MNUTAB  EQU $                   ; таблица меню пользователя не растёт за край
-#include "../tools/mnutab.asm"
+#include "mnutab.asm"
 
 OKNOEND EQU $
         DEPHASE

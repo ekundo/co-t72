@@ -19,7 +19,7 @@
 ; --------------------------------------------------------------------------
 ORIGIN  EQU $
 ZGRCHK  EQU $
-#include "../tools/zgrcheck.asm"
+#include "zgrcheck.asm"
 
 ; --------------------------------------------------------------------------
 ; Переносчик накладок в окно ОЗУ: один раз копирует их с адреса загрузки на
@@ -94,6 +94,6 @@ HDFILE  EQU  $                          ; исходник тела -- отсю�
 DISK    EQU  0189h                      ; операнд с адресом дискового обработчика
 ORIGIN  EQU  HDBODY
         PHASE HDBODY
-#include "../tools/hdinfo.asm"
+#include "hdinfo.asm"
 HDEND   EQU  $
         DEPHASE
