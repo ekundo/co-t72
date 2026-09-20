@@ -72,7 +72,7 @@ GUARD=$(python3 -c 'import sys,os; rows=[l.strip().split(",") for l in open(sys.
 HDSEL=$(python3 -c 'import sys,os; rows=[l.strip().split(",",3) for l in open(sys.argv[1])] if os.path.exists(sys.argv[1]) else []; print(next((r[1] for r in rows if len(r)>3 and r[3].strip()=="дискета НЖМД"), ""))' "$OUT/layout.txt")
 
 # Образец винчестера: две «дискеты», на первой HDIR.COM, на второй справка.
-# Метка у первой -- её показывает рамка панели (tools/hdinfo.py). Собирается
+# Метка у первой -- её показывает рамка панели (tools/hdinfo.asm). Собирается
 # один раз, сценарии работают по копиям.
 HDDIMG=$TMP/винт.hdd
 python3 "$HERE/tools/mkhdd.py" create "$HDDIMG" --disks 2 >/dev/null
