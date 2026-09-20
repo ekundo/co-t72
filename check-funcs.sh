@@ -307,7 +307,12 @@ EOF
         "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 $HDD \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
-        --max-frame $frames --novideo --nosound >/dev/null 2>&1 ) || true; } 2>/dev/null
+        --max-frame $frames --save-frame $((frames - 1)) --novideo --nosound \
+        >/dev/null 2>&1 ) || true; } 2>/dev/null
+    # Последний кадр -- на нём сторож экрана и смотрит, не осталось ли мусора.
+    # Имя кадру даёт эмулятор: <ром>_<кадр>.png в run/out.
+    mv "$RUN/out/$(basename "${ROM%.rom}")_$((frames - 1)).png" "$TMP/$name.png" \
+        2>/dev/null || true
     # COVDIR -- куда складывать карты исполнения: по ним видно, какой код за
     # весь прогон ни разу не исполнялся (кандидаты в мёртвый).
     # имя с буквой диска: прогоны на C:, B: и D: идут по разным веткам кода,
@@ -473,6 +478,42 @@ PY2
             bad=$((bad+1)); ok=$((ok-1))
         fi
     fi
+    # Выход из списка архива обязан вернуть панель в точности такой, какой она
+    # была. Сравниваем кадр после выхода с кадром того же сценария, оборванного
+    # до открытия архива: это единственная проверка стенда, которая смотрит на
+    # экран, -- испорченная картинка панели в памяти никак не видна.
+    if [ "$name" = архивдругая ] && [ -f "$TMP/$name.png" ]; then
+        cat > "$TMP/$name-до.chai" <<EOF
+$KDPATCH
+def framefunc(frameno) {
+    $KDCALL
+    $SWITCH
+    if (frameno == $PROBEAT) { keytyper.types([60, "Tab", 150, ";", 150, "D", 250, "Escape", 600]) }
+    keytyper.onframe()
+}
+add_callback("frame", framefunc)
+EOF
+        cp "$OUT/co-t72.edd" "$TMP/$name-до.edd"
+        [ -f "$OUT/CO.PRM" ] && python3 "$HERE/tools/kdimg.py" put \
+            "$TMP/$name-до.edd" "$OUT/CO.PRM" CO.PRM >/dev/null
+        { ( cd "$RUN" && "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 \
+            --edd "$TMP/$name-до.edd" $EDD2 \
+            --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
+            --script "$TMP/$name-до.chai" \
+            --max-frame $frames --save-frame $((frames - 1)) --novideo --nosound \
+            >/dev/null 2>&1 ) || true; } 2>/dev/null
+        mv "$RUN/out/$(basename "${ROM%.rom}")_$((frames - 1)).png" \
+            "$TMP/$name-до.png" 2>/dev/null || true
+        # Сравниваем только панели: нижние строки (командная строка и
+        # подсказка) живут своей жизнью, и АР2 их меняет по делу.
+        if [ -f "$TMP/$name-до.png" ] && python3 "$HERE/tools/pngsame.py" \
+            "$TMP/$name-до.png" "$TMP/$name.png" --rows 250 >/dev/null; then
+            echo "  архив: панель вернулась такой же"
+        else
+            echo "  архив: после выхода на экране не то, что было" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
     # Распаковка проверяется по делу: файл из архива должен появиться на диске.
     if [ "$name" = распаковка ] && [ -f "$TMP/$name-out.edd" ] \
        && [ -f "$HERE/work/co/TEST.PK2" ]; then
@@ -572,6 +613,11 @@ probe размер      1345 '"\001Left Shift", 10, "/", 20, "\002Left Shift", 4
 probe печать      306F '"Down", 30, "Down", 30, "3", 400, "F3", 300, "Return", 250, "1", 40, "Return", 700'
 probe магнитофон  29AC '"Down", 30, "Down", 30, "\001Left Shift", 10, "6", 20, "\002Left Shift", 300, "Return", 600'
 probe архив       2BA6 '";", 150, "T", 250, "3", 500, "F8", 150, "Down", 100, "Up", 100, "Right", 100, "Left", 100' архив
+# Архив в левой панели -- отдельно от «архива»: выход из списка возвращал
+# туда мусор, потому что каталог архива читается в тот же буфер, где CO
+# держит картинку панелей (tools/arcexit.py). В памяти этого не видно, и
+# ловится оно сравнением кадров -- проверка ниже по имени сценария.
+probe архивдругая 2BA6 '"Tab", 150, ";", 150, "D", 250, "3", 700, "Escape", 600'
 probe распаковка  2BE1 '";", 150, "T", 250, "3", 500, "Down", 80, "Down", 80, "Down", 80, "F8", 150, "Return", 400, "C", 900, "7", 200, "Return", 500' архив-чужой
 
 # Глубокие сценарии: те же функции, но доведённые до конца. Мелкие пробы выше
