@@ -26,9 +26,10 @@ import argparse
 OTHER = ['SAVEASM.COM', 'SAVEBAS.COM', 'SAVEDOS.COM', 'SAVEMON.COM',
          'SAVEROM.COM', 'SYSGEN.COM', 'KOD.COM', 'RUND.COM', 'GO.COM',
          'SID.COM', 'ARC2.COM', 'MEDIT.HLP', 'MEDIT.COM']
-# Редактор на «СС»-«4» и его краткая справка. Руководства (VDE266.DOC) в
-# списке нет нарочно: 51 КБ, а место на квазидиске не бесконечное.
-VDE = ['VDE.COM', 'VDE266.QRF']
+# Редактор на «СС»-«4» и его краткая справка -- русская, та же, что лежит на
+# готовом квазидиске. Руководств в списке нет нарочно: наше на 28 КБ, авторское
+# VDE266.DOC на 51 КБ, а место на квазидиске не бесконечное.
+VDE = ['VDE.COM', 'VDE.QRF']
 # Своё: HDIR -- наш, остальное -- обиход CO и система.
 OURS = ['HDIR.COM', 'CO.HLP', 'CO.PRM', 'CO.MNU', 'CO.EXT', 'CO.COM',
         'INITIALC.SUB', 'OS.COM']

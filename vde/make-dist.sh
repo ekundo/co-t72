@@ -5,7 +5,8 @@
 #   vde/make-dist.sh    # -> release/vde-t72.zip
 #
 # Комплекта у VDE нет: вся настройка лежит внутри самой программы, отдельных
-# файлов рядом ей не нужно. Поэтому в архиве только VDE.COM, заметка и карточка.
+# файлов рядом ей не нужно. Поэтому в архиве только VDE.COM, заметка, карточка
+# клавиш и документация -- наша русская из vde/doc и авторская английская.
 set -e
 
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -24,6 +25,11 @@ mkdir -p "$WORK/vde-t72"
 cp "$COM" "$WORK/vde-t72/VDE.COM"
 cp "$ROOT/docs/vde-keys.svg" "$WORK/vde-t72/VDE-KEYS.svg"
 sh "$HERE/relnote.sh" "$COM" > "$WORK/vde-t72/README.txt"
+# Наша документация: руководство и краткая справка по-русски, про эту самую
+# сборку. В репозитории это тексты UTF-8, на диск и в архив они идут в КОИ-8
+# с CRLF -- читаются и просмотрщиком CO, и самой МикроДОС.
+python3 "$ROOT/tools/mktxt.py" "$HERE/doc/vde.doc.txt" -o "$WORK/vde-t72/VDE.DOC"
+python3 "$ROOT/tools/mktxt.py" "$HERE/doc/vde.qrf.txt" -o "$WORK/vde-t72/VDE.QRF"
 # Авторская документация из выпуска VDE: руководство и краткая справка.
 for doc in vde266.doc vde266.qrf vinst266.doc; do
     [ -f "$ROOT/work/vde/dist/$doc" ] && cp "$ROOT/work/vde/dist/$doc" \

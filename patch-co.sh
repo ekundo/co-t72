@@ -106,6 +106,13 @@ echo "HDIR.COM: $(wc -c < "$OUT/HDIR.COM") байт"
 #     просмотрщике, символы в CO.EXT) живут там, а не заплаткой поверх файла.
 python3 "$HERE/tools/mkhlp.py" "$HERE/docs/co-help.md" -o "$OUT/CO.HLP"
 
+# 3ba. Руководство и краткая справка по VDE по-русски. В репозитории они лежат
+#      обычными текстами UTF-8, на диск идут в КОИ-8 с CRLF -- так их читает и
+#      просмотрщик CO, и система. Авторские английские (VDE266.DOC, VDE266.QRF)
+#      остаются на дискете, как лежали.
+python3 "$HERE/tools/mktxt.py" "$HERE/vde/doc/vde.qrf.txt" -o "$OUT/VDE.QRF"
+python3 "$HERE/tools/mktxt.py" "$HERE/vde/doc/vde.doc.txt" -o "$OUT/VDE.DOC"
+
 # 3b. Список переноса CO.ZGR. Раньше он брался готовым: на дискете лежал
 #     список рабочего диска на два десятка имён, а в архиве выпуска --
 #     авторский на восемь, где половины файлов в выпуске нет (FORMATM.COM),
@@ -166,7 +173,11 @@ python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/HDIR.COM" HDIR.COM
 [ -z "$VDE" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDE" VDE.COM
-[ -z "$VDEQRF" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDEQRF" VDE266.QRF
+# На квазидиске только краткая справка: руководство на 28 КБ съедало больше
+# половины свободного места (оставалось 49 КБ, и уже первый же сценарий с
+# распаковкой упирался в «not enough space»). Руководство и авторские
+# английские -- на дискете, там места вдоволь.
+python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/VDE.QRF" VDE.QRF
 # Архиватор и показательный архив. CO каталог .PK2 читает сама, а распаковку
 # отдаёт ARC2 -- без него в архиве видно только список. В репозитории его нет
 # (чужая программа), берём из комплекта, если положили; архив собирает
@@ -210,6 +221,8 @@ python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/HDIR.COM"
 # CO.ZGR -- только на дискете: список нужен CO, когда её подняли не с C:.
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.ZGR" CO.ZGR
 [ -z "$VDE" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDE" VDE.COM
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/VDE.QRF" VDE.QRF
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/VDE.DOC" VDE.DOC
 [ -z "$VDEQRF" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEQRF" VDE266.QRF
 [ -z "$VDEDOC" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEDOC" VDE266.DOC
 for f in ARC2.COM DEMO.PK2; do

@@ -78,6 +78,10 @@ for v in f h hx k; do
         [ -f "$HERE/work/vde/dist/$doc" ] && cp "$HERE/work/vde/dist/$doc" \
             "$kit/$(echo "$doc" | tr a-z A-Z)"
     done
+    # Русские руководство и справка -- их собирает patch-co.sh из vde/doc.
+    for doc in VDE.DOC VDE.QRF; do
+        [ -f "$WORK/$v/$doc" ] && cp "$WORK/$v/$doc" "$kit/"
+    done
     cp "$rom" "$kit/"
     sh "$HERE/tools/relnote.sh" "$v" "$VERSION" > "$kit/README.txt"
 
