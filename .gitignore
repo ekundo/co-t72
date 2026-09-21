@@ -13,3 +13,6 @@ archives/
 __pycache__/
 release/
 stand/
+# готовые выпуски и симлинк на основной клон
+release*/
+/work
