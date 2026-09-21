@@ -38,8 +38,18 @@ NDISKS  EQU 084h                ; в заголовке винчестера: с
 ROWS    EQU 20                  ; строк в поле панели
 TOPROW  EQU 022h                ; первая строка списка в кодировке «ЭСК Y»
 HDRROW  EQU 020h                ; строка шапки панели
+FRMROW  EQU 021h                ; верхняя рамка панели
+FRMCOL  EQU 3                   ; ... с четвёртой её колонки идёт надпись
+FRMLEN  EQU 34                  ; ... и занимает 34 знака (co-src/hdinfo.asm)
+FRMCH   EQU 08Dh                ; горизонталь рамки -- ею же и затираем
 WIDTH   EQU 37                  ; знаков в строке списка
-LABW    EQU 22                  ; ... из них под метку
+LABW    EQU 23                  ; ... из них под метку
+; Раскладка строки: номер(4) пробел метка(LABW) пробел файлов(3) пробел
+; занято(3) и «K» -- объём пишем так же, как CO пишет размер файла в режиме
+; «60 файлов»: три знака с ведущими пробелами и латинская K впритык (шаблон по
+; 10C8, печатает 0E1B).
+COLFILE EQU 5+LABW+1            ; где в строке число файлов
+COLSIZE EQU COLFILE+3+1         ; ... и занятое место
 
 ; ---------------- что берём у CO -------------------------------------------
 PANEL   EQU 0B69Dh              ; номер активной панели, 1 или 2
@@ -51,6 +61,7 @@ PANCLR  EQU 0347Dh              ; очистить поле панели -- пр
 HPANEL  EQU 03E91h              ; буквы дисков панелей
 HSELPAN EQU 00E4Dh              ; HL += 1, если активна вторая панель
 HREREAD EQU 028AEh              ; хвост «7-Диск»: буква из B и перечитать
+INSTR   EQU 028D2h              ; ввод строки: DE -> предел, длина, текст
 
 ; ---------------- буферы в буфере копирования ------------------------------
 SECBUF  EQU 06800h              ; один сектор винчестера, 512 байт
@@ -87,6 +98,30 @@ lrs1:   IN   050h
 lrderr: MVI  A,0FFh
         ORA  A
         RET
+
+; Запись сектора llba из памяти по адресу HL. Байты уходят так же, как их
+; посылает БСВВ: сначала старший в 58h, потом младший в 50h -- запись в 50h и
+; отправляет слово.
+lwrsec: SHLD lrdbuf
+        MVI  A,030h             ; запись
+        CALL lrwcmd
+        JZ   lrderr
+        LHLD lrdbuf
+        MVI  D,0
+lws1:   MOV  E,M
+        INX  H
+        MOV  A,M
+        OUT  058h
+        MOV  A,E
+        OUT  050h
+        INX  H
+        DCR  D
+        JNZ  lws1
+        CALL lready
+        ANI  0D5h
+        SUI  050h
+        RZ
+        JMP  lrderr
 
 ; Выставить адрес и отдать команду из A. Z=1 -- диск не открыл буфер данных.
 lrwcmd: PUSH PSW
@@ -326,7 +361,18 @@ lhx1:   STAX D
 
 ; Три десятичных знака числа HL по адресу DE, ведущие нули -- пробелами.
 ; DE -> за числом.
-ldec3:  PUSH D
+ldec3:  MOV  A,H                ; больше трёх знаков в поле не влезет
+        CPI  4
+        JC   ld0
+        LXI  H,999
+ld0:    MOV  A,H
+        CPI  3
+        JC   ld00
+        MOV  A,L
+        CPI  0E8h
+        JC   ld00
+        LXI  H,999
+ld00:   PUSH D
         MVI  A,'0'-1
         LXI  B,0FF9Ch           ; -100
 ld1:    INR  A
@@ -394,7 +440,7 @@ lpl3:   DCX  D                  ; не влезла -- три точки в ко
 
 ; Файлы и занятое место в строку.
 lputnum: CALL lraddr
-        LXI  B,28
+        LXI  B,COLFILE
         DAD  B
         XCHG                    ; DE -> место под число файлов
         LDA  lnfile
@@ -405,15 +451,9 @@ lputnum: CALL lraddr
         LHLD lnused             ; блоки по два килобайта
         DAD  H
         CALL ldec3
-        LXI  H,lkb
-        MOV  A,M
-        STAX D
-        INX  H
-        INX  D
-        MOV  A,M
+        MVI  A,'K'              ; как у размера файла в панели: латинская K
         STAX D
         RET
-lkb:    .db  'Кб'
 
 ; Одна строка: номер, метка, файлы, занято.
 lonerow: CALL lraddr
@@ -493,6 +533,30 @@ lpos:   .db  01Bh,'Y',TOPROW,020h,0
 linv:   .db  01Bh,'b',0         ; выворотка
 lnorm:  .db  01Bh,'a',0
 
+; Затереть надпись в верхней рамке панели. Там висят номер и метка ТОЙ
+; дискеты, что назначена сейчас, -- пока открыт список, они только сбивают с
+; толку. Затираем самой рамкой, как это делает и накладка надписи, когда метка
+; стала короче. Обратно надпись вернёт отрисовка панели на выходе: через 097E
+; проходят все три её входа.
+lframe: MVI  A,FRMROW
+        STA  lpos+2
+        LDA  lpos+3
+        ADI  FRMCOL
+        STA  lpos+3
+        LXI  H,lpos
+        RST  3
+        LDA  lpos+3             ; колонку вернуть на место
+        SUI  FRMCOL
+        STA  lpos+3
+        MVI  B,FRMLEN
+        MVI  C,FRMCH
+lfr1:   PUSH B
+        RST  4
+        POP  B
+        DCR  B
+        JNZ  lfr1
+        RET
+
 ; Вся страница. Поле сперва чистим тем же способом, что и просмотр архива:
 ; вертикальные разделители колонок CO чертит прямо в видеопамяти, и печатью
 ; пробелов их не стереть. Номер активной панели вокруг чистки переставляется --
@@ -500,6 +564,7 @@ lnorm:  .db  01Bh,'a',0
 ldraw:  CALL PANFLIP
         CALL PANCLR
         CALL PANFLIP
+        CALL lframe
         XRA  A
         STA  lrow
 ldr1:   LDA  lrow
@@ -659,13 +724,91 @@ lsel:   CALL lsetno
         POP  H                  ; снять возврат в цикл клавиш
         JMP  HREREAD
 
-lkeys:  .db  4
+; «6» -- метка дискеты под курсором; в панели на «6» переименование файла, так
+; что рука помнит. Спрашиваем строку штатным вводом CO (28D2) и кладём её в тот
+; же сектор и в том же виде, что пишет HDIR /M: подпись 'HDLB' и 32 знака.
+;
+; Пустой ответ -- АР2 или ВК, ничего не набрав -- ничего не меняет: отличить их
+; друг от друга нечем (28D2 в обоих случаях отдаёт нулевую длину), а терять
+; метку по случайному АР2 обидно. Чтобы метку СНЯТЬ, набирается пробел: метку
+; из одних пробелов и рамка, и список считают за отсутствующую.
+llabel: CALL lnrows
+        MOV  B,A
+        LDA  lcur
+        CMP  B
+        JZ   llb1
+        RNC                     ; курсор за последней дискетой -- нечего метить
+llb1:   LDA  lcur
+        DCR  A
+        STA  lrow
+        CALL lsetno             ; ldcur -- дискета под курсором
+        MVI  A,HDRROW           ; приглашение вместо шапки
+        CALL lgoto
+        LXI  H,lask
+        RST  3
+        MVI  A,LABLEN
+        STA  linbuf
+        LXI  D,linbuf
+        CALL INSTR
+        LDA  linbuf+1
+        ORA  A
+        JZ   llb9               ; ничего не набрали -- оставляем как было
+; Сектор метки собираем с нуля: свободный сектор -- это E5 по всей длине,
+; ровно так же его чистит HDIR перед записью.
+        LXI  H,SECBUF
+        MVI  A,0E5h
+        MVI  B,0
+llb2:   MOV  M,A
+        INX  H
+        DCR  B
+        JNZ  llb2
+        MVI  B,0
+llb3:   MOV  M,A
+        INX  H
+        DCR  B
+        JNZ  llb3
+        LXI  H,llabsg           ; подпись
+        LXI  D,SECBUF
+        MVI  B,SIGNLEN
+llb4:   MOV  A,M
+        STAX D
+        INX  H
+        INX  D
+        DCR  B
+        JNZ  llb4
+        LXI  H,linbuf+2         ; текст, добитый пробелами до LABLEN
+        LDA  linbuf+1
+        MOV  C,A
+        MVI  B,LABLEN
+llb5:   MOV  A,C
+        ORA  A
+        MVI  A,' '
+        JZ   llb6
+        MOV  A,M
+        INX  H
+        DCR  C
+llb6:   STAX D
+        INX  D
+        DCR  B
+        JNZ  llb5
+        CALL lseek              ; и на диск
+        LXI  D,LABSEC
+        CALL llbadd
+        LXI  H,SECBUF
+        CALL lwrsec
+        CALL lonerow            ; строку собрать заново -- уже с новой меткой
+llb9:   JMP  lhi                ; шапку вернуть на место в любом случае
+lask:   .db  'Метка: ',0
+
+lkeys:  .db  5
         .db  019h
         .dw  lup                ; стрелка вверх
         .db  01Ah
         .dw  ldn                ; стрелка вниз
         .db  00Dh
         .dw  lsel               ; ВК -- выбрать
+        .db  '6'
+        .dw  llabel             ; «6» -- метка
         .db  01Bh
         .dw  ARCOUT             ; АР2 -- назад в панель
         .dw  lnone              ; прочее
@@ -715,3 +858,6 @@ lrow:   .ds  1                  ; строка страницы, 0..19
 lcur:   .ds  1                  ; строка под курсором, 1..20
 lnfile: .ds  1                  ; файлов на дискете
 lnused: .ds  2                  ; занятых блоков
+linbuf: .ds  1                  ; ввод метки: предел длины
+        .ds  1                  ; ... сколько набрали
+        .ds  LABLEN+1           ; ... и сам текст
