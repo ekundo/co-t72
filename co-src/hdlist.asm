@@ -496,13 +496,40 @@ lor3:   CALL lputlab
         CALL lcount
         JMP  lputnum
 
+; Первая строка списка -- не дискета, а сам НГМД: набор «0000» вешает на диск
+; панели физический дисковод, как это делает команда ОС «9 A:0». Файлов и
+; объёма не считаем -- их посчитает сама CO, перечитав панель.
+; Слово в полную метку -- ровно LABLEN знаков, остальное пробелы.
+ldrvtx: .db  'Дисковод                        '
+ldrvrow: CALL lraddr
+        XCHG                    ; HL -> метка, DE -> строка
+        PUSH H
+        LHLD ldcur
+        CALL lhex4              ; «0000» в начало строки
+        POP  D                  ; DE -> метка
+        LXI  H,ldrvtx
+        MVI  B,LABLEN
+ldv1:   MOV  A,M
+        STAX D
+        INX  H
+        INX  D
+        DCR  B
+        JNZ  ldv1
+        JMP  lputlab
+
 ; Собрать страницу: двадцать строк с lpgbase.
 lloadpg: XRA A
         STA  lrow
 llp1:   CALL lraddr
         CALL lblank
         CALL lsetno             ; номер дискеты этой строки -> ldcur
-        LHLD ltotal
+        LHLD ldcur
+        MOV  A,H
+        ORA  L
+        JNZ  llp0               ; нулевая строка -- не дискета, а дисковод
+        CALL ldrvrow
+        JMP  llp2
+llp0:   LHLD ltotal
         XCHG
         LHLD ldcur
         MOV  A,E
@@ -627,7 +654,7 @@ lhint:  LXI  H,BAR0
         LXI  H,lhtxt
         RST  3
         RET
-lhtxt:  .db  01Bh,'b','                                         6-Метка                                ',01Bh,'a',0
+lhtxt:  .db  01Bh,'b','                                         6-Метка                                ',01Bh,'a',01Bh,'[7h',0
 
 ; ===========================================================================
 ; КЛАВИШИ
@@ -666,7 +693,7 @@ lupg:   LHLD lpgbase            ; есть ли предыдущая стран�
         ORA  A
         JNZ  lupg1
         MOV  A,L
-        CPI  ROWS+1
+        CPI  ROWS
         RC                      ; первая страница -- ничего не делаем
 lupg1:  LXI  D,-ROWS
         DAD  D
@@ -740,6 +767,10 @@ llb1:   LDA  lcur
         DCR  A
         STA  lrow
         CALL lsetno             ; ldcur -- дискета под курсором
+        LHLD ldcur
+        MOV  A,H
+        ORA  L
+        RZ                      ; на дисководе метить нечего
         CALL PARK               ; спрашиваем в командной строке, как везде в CO
         LXI  H,lask
         RST  3
@@ -884,9 +915,8 @@ lst1:   MOV  E,M
         MOV  A,H
         SBB  D
         JC   lst9               ; номер больше, чем дискет на диске
-        XCHG                    ; HL -- номер
-        DCX  H                  ; считаем от нуля
-        LXI  B,1                ; база страницы
+        XCHG                    ; HL -- номер, он же номер строки: нулевая
+        LXI  B,0                ; строка -- дисковод, дальше дискеты подряд
 lst2:   MOV  A,L                ; пока остаток не меньше страницы -- отнимаем
         SUI  ROWS
         MOV  E,A
@@ -909,7 +939,7 @@ lst3:   MOV  A,L                ; остаток -- позиция курсор�
         MOV  L,C
         SHLD lpgbase
         RET
-lst9:   LXI  H,1
+lst9:   LXI  H,0
         SHLD lpgbase
         MVI  A,1
         STA  lcur
