@@ -29,3 +29,9 @@ cp "$HERE/runtime.asm" "$GEN/runtime.a80"
 
 python3 "$ROOT/tools/asm8080.py" "$GEN/vde-t72.asm" -o "$WORK/VDE.COM" -l "$WORK/vde.lst" >/dev/null
 echo "VDE.COM: $(stat -f%z "$WORK/VDE.COM") байт"
+
+# Руководство и краткая справка -- наши, не перевод авторских: в КОИ-8 и с
+# оглядкой на эту сборку. Кладутся рядом с VDE.COM, оттуда их берут выпуск
+# редактора (vde/make-dist.sh) и выпуск CO (patch-co.sh).
+python3 "$HERE/mkdoc.py" "$HERE/doc/vde.doc.txt" -o "$WORK/VDE.DOC"
+python3 "$HERE/mkdoc.py" "$HERE/doc/vde.qrf.txt" -o "$WORK/VDE.QRF"

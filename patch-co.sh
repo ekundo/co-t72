@@ -23,14 +23,19 @@ ROM=${4:-$HERE/tools/MDOS_T-72/BIN/os-t72f.rom}
 VDE=${5:-}
 [ -z "$VDE" ] || VDE=$(cd "$(dirname "$VDE")" && pwd)/$(basename "$VDE")
 [ -z "$VDE" ] || [ -f "$VDE" ] || { echo "нет редактора: $VDE" >&2; exit 1; }
-# Авторская документация лежит рядом с редактором, в dist/ (её добывает
-# vde/fetch-src.sh). Руководство большое: на дискету кладём и его, и краткую
-# справку, а на квазидиск -- только справку, там 256 КБ на всё.
+# Документация к редактору. Наши руководство и справка (VDE.DOC, VDE.QRF)
+# лежат рядом с VDE.COM -- их собирает vde/build.sh; авторские английские
+# (VDE266.*) лежат в dist/, их добывает vde/fetch-src.sh. На дискету идёт
+# всё, на квазидиск -- только наша справка: там 256 КБ на всё.
 VDEDOC=
 VDEQRF=
+VDEDOCEN=
+VDEQRFEN=
 if [ -n "$VDE" ]; then
-    [ -f "$(dirname "$VDE")/dist/vde266.doc" ] && VDEDOC=$(dirname "$VDE")/dist/vde266.doc
-    [ -f "$(dirname "$VDE")/dist/vde266.qrf" ] && VDEQRF=$(dirname "$VDE")/dist/vde266.qrf
+    [ -f "$(dirname "$VDE")/VDE.DOC" ] && VDEDOC=$(dirname "$VDE")/VDE.DOC
+    [ -f "$(dirname "$VDE")/VDE.QRF" ] && VDEQRF=$(dirname "$VDE")/VDE.QRF
+    [ -f "$(dirname "$VDE")/dist/vde266.doc" ] && VDEDOCEN=$(dirname "$VDE")/dist/vde266.doc
+    [ -f "$(dirname "$VDE")/dist/vde266.qrf" ] && VDEQRFEN=$(dirname "$VDE")/dist/vde266.qrf
 fi
 [ -f "$ROM" ] || { echo "нет МикроДОС: $ROM" >&2; exit 1; }
 ROM=$(cd "$(dirname "$ROM")" && pwd)/$(basename "$ROM")
@@ -301,7 +306,7 @@ python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/HDIR.COM" HDIR.COM
 [ -z "$VDE" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDE" VDE.COM
-[ -z "$VDEQRF" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDEQRF" VDE266.QRF
+[ -z "$VDEQRF" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDEQRF" VDE.QRF
 if [ ! -f "$TMPL_EDD" ]; then
     # без шаблона комплект кладём сами
     for f in prm mnu ext zgr; do
@@ -335,8 +340,10 @@ python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" C
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/HDIR.COM" HDIR.COM
 [ -z "$VDE" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDE" VDE.COM
-[ -z "$VDEQRF" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEQRF" VDE266.QRF
-[ -z "$VDEDOC" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEDOC" VDE266.DOC
+[ -z "$VDEQRF" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEQRF" VDE.QRF
+[ -z "$VDEDOC" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEDOC" VDE.DOC
+[ -z "$VDEQRFEN" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEQRFEN" VDE266.QRF
+[ -z "$VDEDOCEN" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDEDOCEN" VDE266.DOC
 # OS.COM на дискете -- та же сборка, что и на квазидиске: её туда только что
 # записала сама система. Дискета с чужой OS.COM опасна ровно так же, как
 # квазидиск: тёплый старт поднимет её, а не нашу.
