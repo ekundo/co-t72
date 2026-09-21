@@ -688,21 +688,10 @@ lup:    LDA  lcur
         DCR  A
         STA  lcur
         JMP  lhi
-lupg:   LHLD lpgbase            ; есть ли предыдущая страница
-        MOV  A,H
-        ORA  A
-        JNZ  lupg1
-        MOV  A,L
-        CPI  ROWS
-        RC                      ; первая страница -- ничего не делаем
-lupg1:  LXI  D,-ROWS
-        DAD  D
-        SHLD lpgbase
-        CALL lloadpg
-        CALL ldraw
-        MVI  A,ROWS
-        STA  lcur
-        JMP  lhi
+lupg:   CALL lpgbck             ; страница назад; перенос -- её нет
+        RC
+        MVI  A,ROWS             ; пришли снизу -- курсор на последнюю строку
+        JMP  lpage
 
 ldn:    LDA  lcur
         MOV  B,A
@@ -714,7 +703,35 @@ ldn:    LDA  lcur
         INR  A
         STA  lcur
         JMP  lhi
-ldng:   LHLD lpgbase            ; есть ли следующая страница
+ldng:   CALL lpgfwd             ; страница вперёд; перенос -- дальше дискет нет
+        RC
+        MVI  A,1
+        JMP  lpage
+
+; «влево» -- страница назад. «Вправо» -- вперёд, и это ровно то же, что уход
+; стрелкой за нижнюю строку, так что таблица клавиш ведёт прямо на ldng.
+; Курсор в обоих случаях встаёт на первую строку новой страницы: перебирать
+; двадцать строк по одной до дальних дискет долго.
+lleft:  CALL lpgbck
+        RC
+        MVI  A,1
+        JMP  lpage
+
+; Сдвинуть базу страницы на двадцать назад или вперёд. HL -- новая база;
+; перенос -- идти некуда, база остаётся прежней.
+lpgbck: LHLD lpgbase
+        MOV  A,H
+        ORA  A
+        JNZ  lpb1
+        MOV  A,L
+        CPI  ROWS
+        RC                      ; первая страница -- назад некуда
+lpb1:   LXI  D,-ROWS
+        DAD  D
+        ORA  A                  ; DAD мог взвести перенос -- гасим
+        RET
+
+lpgfwd: LHLD lpgbase
         LXI  D,ROWS
         DAD  D
         XCHG
@@ -725,10 +742,14 @@ ldng:   LHLD lpgbase            ; есть ли следующая страни�
         SBB  D
         RC                      ; дальше дискет нет
         XCHG
+        RET
+
+; Показать страницу с базой в HL, курсор -- на строку A.
+lpage:  PUSH PSW
         SHLD lpgbase
         CALL lloadpg
         CALL ldraw
-        MVI  A,1
+        POP  PSW
         STA  lcur
         JMP  lhi
 
@@ -840,11 +861,15 @@ lcl1:   PUSH B
         RET
 lask:   .db  ' Метка дискеты - ',0
 
-lkeys:  .db  5
+lkeys:  .db  7
         .db  019h
         .dw  lup                ; стрелка вверх
         .db  01Ah
         .dw  ldn                ; стрелка вниз
+        .db  008h
+        .dw  lleft              ; стрелка влево -- страница назад
+        .db  018h
+        .dw  ldng               ; стрелка вправо -- страница вперёд
         .db  00Dh
         .dw  lsel               ; ВК -- выбрать
         .db  '6'
