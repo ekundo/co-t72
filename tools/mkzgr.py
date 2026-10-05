@@ -30,8 +30,10 @@ OTHER = ['SAVEASM.COM', 'SAVEBAS.COM', 'SAVEDOS.COM', 'SAVEMON.COM',
 # готовом квазидиске. Руководств в списке нет нарочно: наше на 28 КБ, авторское
 # VDE266.DOC на 51 КБ, а место на квазидиске не бесконечное.
 VDE = ['VDE.COM', 'VDE.QRF']
-# Своё: HDIR -- наш, остальное -- обиход CO и система.
-OURS = ['HDIR.COM', 'CO.HLP', 'CO.PRM', 'CO.MNU', 'CO.EXT', 'CO.COM',
+# Своё: HDIR -- наш, остальное -- обиход CO и система. CO.SCR -- заставка,
+# которую CO запускает вместо гашения монитора; ищет она её только на C:,
+# поэтому без переноса заставка с дискеты не заработала бы.
+OURS = ['HDIR.COM', 'CO.HLP', 'CO.PRM', 'CO.MNU', 'CO.EXT', 'CO.SCR', 'CO.COM',
         'INITIALC.SUB', 'OS.COM']
 
 RECORD = 128

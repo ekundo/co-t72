@@ -73,6 +73,8 @@ for v in f h hx k; do
         cp "$src" "$kit/$(echo "$f" | tr a-z A-Z)"
     done
     cp "$WORK/HDIR.COM" "$WORK/HDIREN.COM" "$kit/"
+    cp "$WORK/$v/STARS.SCR" "$WORK/$v/LOGO.SCR" "$kit/"
+    cp "$WORK/$v/STARS.SCR" "$kit/CO.SCR"
     cp "$VDECOM" "$kit/VDE.COM"
     for doc in vde266.doc vde266.qrf; do
         [ -f "$HERE/work/vde/dist/$doc" ] && cp "$HERE/work/vde/dist/$doc" \

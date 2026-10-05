@@ -69,5 +69,11 @@ DISK    EQU 0189h               ; операнд с адресом дисков�
 #include "hdinfo.asm"
 HDEND   EQU $
 
+; Загрузчик заставки C:CO.SCR: дочитывает файл поверх самой CO.
+ORIGIN  EQU $
+SCRLDA  EQU $                   ; зовётся из SCRSV2 (co.asm, 3A89)
+#include "scrld.asm"
+SCRLDE  EQU $
+
 OKNOEND EQU $
         DEPHASE

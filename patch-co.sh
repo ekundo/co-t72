@@ -101,6 +101,17 @@ python3 "$HERE/tools/layout.py" "$HERE/co-src/co.asm" "$CO_LAYOUT"
 python3 "$HERE/tools/asm8080.py" "$HERE/tools/hdir.asm" -o "$OUT/HDIR.COM" >/dev/null
 echo "HDIR.COM: $(wc -c < "$OUT/HDIR.COM") байт"
 
+# 3aa. Заставки вместо гашения монитора: CO запускает C:CO.SCR, если такой
+#      файл есть (см. SCRSAV в co-src/co.asm). Включено звёздное небо: оно
+#      лежит на обоих дисках под именем CO.SCR. На дискете рядом ещё обе под
+#      своими именами -- чтобы было из чего выбрать; на квазидиске места мало,
+#      там только CO.SCR. С дискеты на C: её переносит CO.ZGR.
+for s in stars logo; do
+    python3 "$HERE/tools/asm8080.py" "$HERE/scr/$s.asm" \
+        -o "$OUT/$(echo $s | tr a-z A-Z).SCR" >/dev/null
+done
+echo "STARS.SCR: $(wc -c < "$OUT/STARS.SCR") байт, LOGO.SCR: $(wc -c < "$OUT/LOGO.SCR") байт"
+
 # 3a. Справка. Источник -- docs/co-help.md, оригинальный co.hlp больше не
 #     берётся: в маркдауне тот же текст, и правки под T-72 (клавиша "F2" в
 #     просмотрщике, символы в CO.EXT) живут там, а не заплаткой поверх файла.
@@ -172,6 +183,7 @@ fi
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.COM" CO.COM
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/HDIR.COM" HDIR.COM
+python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$OUT/STARS.SCR" CO.SCR
 [ -z "$VDE" ] || python3 "$HERE/tools/kdimg.py" put "$OUT/co-t72.edd" "$VDE" VDE.COM
 # На квазидиске только краткая справка: руководство на 28 КБ съедало больше
 # половины свободного места (оставалось 49 КБ, и уже первый же сценарий с
@@ -218,6 +230,9 @@ fi
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.COM" CO.COM
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.HLP" CO.HLP
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/HDIR.COM" HDIR.COM
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/STARS.SCR" STARS.SCR
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/LOGO.SCR" LOGO.SCR
+python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/STARS.SCR" CO.SCR
 # CO.ZGR -- только на дискете: список нужен CO, когда её подняли не с C:.
 python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$OUT/CO.ZGR" CO.ZGR
 [ -z "$VDE" ] || python3 "$HERE/tools/cpmimg.py" --geom fdd put "$OUT/co-t72.fdd" "$VDE" VDE.COM
