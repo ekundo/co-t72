@@ -13,6 +13,9 @@
 #   без-заставки    -- CO.SCR нет: монитор гаснет, как раньше, -- кадр чёрный
 #                      целиком, а загрузчик не исполнялся вовсе.
 #
+# И ещё два -- клавишей «0» в панели вместо срока: с заставкой и без неё. Без
+# неё монитор гаснет, а по клавише должны вернуться те же панели.
+#
 # Кадры: до заставки -- 600, заставка -- 1100, клавиша -- 1150, после -- 1700.
 set -e
 
@@ -35,15 +38,28 @@ def framefunc(frameno) {
 }
 add_callback("frame", framefunc)
 CHAI
+# То же, но заставку зовут сами -- клавишей «0» в панели, без всякого срока.
+cat > "$TMP/zero.chai" <<'CHAI'
+def framefunc(frameno) {
+    if (frameno == 800) { keytyper.types([60, "0", 60]) }
+    if (frameno == 1150) { keytyper.types([60, "Space", 60]) }
+    keytyper.onframe()
+}
+add_callback("frame", framefunc)
+CHAI
 
 ok=0; bad=0
-run() {   # имя, что положить в CO.SCR (пусто -- ничего)
-    name=$1; scr=$2
+run() {   # имя, что положить в CO.SCR (пусто -- ничего), [ноль]
+    name=$1; scr=$2; mode=${3:-срок}
+    chai=$TMP/key.chai
+    [ "$mode" = ноль ] && chai=$TMP/zero.chai
     dir=$TMP/$name
     mkdir -p "$dir/out"
     cp "$OUT/co-t72.edd" "$dir/e.edd"
     python3 "$HERE/tools/kdimg.py" get "$dir/e.edd" CO.PRM "$dir/prm" >/dev/null
-    python3 -c 'import sys; p=sys.argv[1]; b=bytearray(open(p,"rb").read()); b[14]=1; open(p,"wb").write(b)' "$dir/prm"
+    # По «0» срок не нужен, и он остаётся сборочным -- полминуты, до конца
+    # прогона не истечёт.
+    [ "$mode" = ноль ] || python3 -c 'import sys; p=sys.argv[1]; b=bytearray(open(p,"rb").read()); b[14]=1; open(p,"wb").write(b)' "$dir/prm"
     python3 "$HERE/tools/kdimg.py" put "$dir/e.edd" "$dir/prm" CO.PRM >/dev/null
     # Сборка кладёт на квазидиск звёздное небо под именем CO.SCR -- его либо
     # подменяем проверяемой заставкой, либо убираем вовсе.
@@ -51,13 +67,13 @@ run() {   # имя, что положить в CO.SCR (пусто -- ничег�
     [ -z "$scr" ] || python3 "$HERE/tools/kdimg.py" put "$dir/e.edd" "$scr" CO.SCR >/dev/null
     ( cd "$dir" && V06X_COV_LO=0x0100 V06X_COV_HI=0xBFFF V06X_COV_FILE="$dir/cov" \
         "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" --edd e.edd --novideo --nosound \
-        --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" --script "$TMP/key.chai" \
+        --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" --script "$chai" \
         --max-frame 1710 --save-frame 600 --save-frame 1100 --save-frame 1700 \
         >"$dir/log" 2>&1 ) || true
     [ -s "$dir/cov" ] || { echo "$name: карта не снята"; bad=$((bad+1)); return; }
-    if python3 - "$dir" "$SCRLD" "$scr" <<'PY'
+    if python3 - "$dir" "$SCRLD" "$scr" "$mode" <<'PY'
 import sys, subprocess, os
-d, scrld, scr = sys.argv[1], int(sys.argv[2], 16), sys.argv[3]
+d, scrld, scr, mode = sys.argv[1], int(sys.argv[2], 16), sys.argv[3], sys.argv[4]
 cov = open(d + '/cov', 'rb').read()
 hit = lambda a: bool(cov[a - 0x100])
 sys.path.insert(0, os.environ['TOOLS'])
@@ -80,6 +96,13 @@ if scr:
 else:
     if hit(scrld): why.append('загрузчик исполнялся без CO.SCR')
     if lit(1100): why.append('кадр 1100 не чёрный: монитор не погас')
+    # По сроку монитор снова погаснет раньше 1700-го кадра, а по «0» -- нет:
+    # там проверяем и то, что клавиша вернула прежние цвета.
+    if mode == 'ноль':
+        back = subprocess.run([sys.executable, os.environ['TOOLS'] + '/pngsame.py',
+                               '%s/out/os-t72f_600.png' % d, '%s/out/os-t72f_1700.png' % d,
+                               '--rows', '250'], capture_output=True)
+        if back.returncode: why.append('после клавиши панели не те: ' + back.stdout.decode().strip())
 if why:
     print('; '.join(why)); sys.exit(1)
 PY
@@ -91,5 +114,7 @@ export TOOLS=$HERE/tools
 run звёзды "$OUT/STARS.SCR"
 run логотип "$OUT/LOGO.SCR"
 run без-заставки ""
+run ноль-звёзды "$OUT/STARS.SCR" ноль
+run ноль-без-заставки "" ноль
 echo "прошло $ok, не прошло $bad"
 [ "$bad" -eq 0 ]
