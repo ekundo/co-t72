@@ -355,7 +355,8 @@ python3 tools/asm8080.py tools/hdir-en.asm -o out/HDIR.COM   # english
 из [`t72/`](t72/) и три клона в `tools/` — [MDOS_T-72](https://github.com/ImproverX/MDOS_T-72)
 (за исходниками; собранные образы для выпуска берутся не оттуда),
 [v06x](https://github.com/svofski/vector06sdl) (`./build-v06x.sh`) и
-[Emu80](https://github.com/vpyk/emu80v4) (`./build-emu80.sh`).
+[Emu80](https://github.com/ekundo/emu80v4) (форк, ветка `patches`: сборка под мак и стенд
+для прогонов без окна; `./build-emu80.sh`).
 
 Винчестер подлинный v06x не эмулирует, поэтому в клон дописан: регистры ATA на
 портах `50h..58h`, образ ключом `--hdd` (`tools/v06x-instrumentation.patch`,
