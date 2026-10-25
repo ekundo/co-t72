@@ -178,6 +178,78 @@ elif [ "$DRIVE" = "B" ]; then
     MAXFRAME=4200
 fi
 
+prep_edd() {   # куда: копия выпускного диска с правками, какие просит сценарий
+    # Флаги (arc, froma, bigmnu) выставляет probe. Отдельной функцией -- потому
+    # что контрольный прогон «архивдругой» обязан стартовать с того же диска,
+    # что и основной: иначе кадры разойдутся на лишнем файле в панели.
+    cp "$OUT/co-t72.edd" "$1"
+    # Заставку убираем: сценарий, простоявший срок гашения, ушёл бы в неё, и
+    # дальше памятью распоряжалась бы она. Её проверяет check-scr.sh.
+    python3 "$HERE/tools/kdimg.py" del "$1" CO.SCR >/dev/null 2>&1 || true
+    # Панели в образе -- какими их оставил хозяин рабочего диска, а сценариям
+    # нужна известная пара: меню дисков закольцовано, и "вправо" от разных букв
+    # ведёт в разные места. Поэтому в копию кладём эталонный CO.PRM сборки.
+    [ -f "$OUT/CO.PRM" ] && python3 "$HERE/tools/kdimg.py" put \
+        "$1" "$OUT/CO.PRM" CO.PRM >/dev/null
+    # «сА» -- поднять CO не с квазидиска, а с дискеты. Без C:INITIALC.SUB
+    # система ищет автозапуск на A:, а там INITIAL.SUB с «A:CO». Этот путь у
+    # CO свой: заставка и перенос файлов из CO.ZGR на C: (3EA0).
+    if [ -n "$froma" ]; then
+        python3 "$HERE/tools/kdimg.py" del "$1" INITIALC.SUB \
+            >/dev/null 2>&1 || true
+    fi
+    # «длинное» -- положить вместо CO.MNU файл на три килобайта.
+    if [ -n "$bigmnu" ]; then
+        [ "$bigmnu" = 2 ] && SRC=$MANYMNU || SRC=$BIGMNU
+        python3 "$HERE/tools/kdimg.py" put "$1" "$SRC" CO.MNU \
+            >/dev/null
+    fi
+    if [ -n "$arc" ]; then
+        # Архивы большие: два по 49 КБ плюс сам ARC2 -- больше сотни килобайт
+        # свободного места. С тех пор как на квазидиск легли редактор и
+        # показательный архив, столько там не набирается. В распаковке они не
+        # участвуют -- убираем их из копии, а не с самого образа: остальные
+        # сценарии гоняются по тому же диску, какой уезжает в выпуск.
+        for f in VDE.COM VDE266.QRF DEMO.PK2; do
+            python3 "$HERE/tools/kdimg.py" del "$1" "$f" \
+                >/dev/null 2>&1 || true
+        done
+        # Настоящий архив и настоящий ARC2 лежат в work/co/ (их туда кладут
+        # руками: ARC2 -- чужая программа, в репозитории ей не место). Есть --
+        # берём их, нет -- обходимся пустышками: список архивов CO покажет и по
+        # ним.
+        #
+        # Что именно класть. ARC2.COM -- «ARCHIVER V1.3 (C) V.KRUPSKY 1990»,
+        # он есть на v06x/system-disk.fdd; CO рассчитан именно на него и кормит
+        # ему ответы через «<C:CO.TOK». Каталог архива CO читает сам: записи по
+        # 16 байт с начала файла -- признак (бит 7 -- конец), восемь знаков
+        # имени, три расширения, слово длины и слово упакованного размера.
+        # Архив от ARC.COM («Archiver V2.0, Goldsoft 1991») с той же дискеты
+        # не годится: записи у него те же, но перед ними шестибайтная подпись
+        # «ARC2.0», и список в CO съезжает. Отрезать подпись мало -- сжатие
+        # другое, ARC2 отвечает DECODING ERROR.
+        if [ -f "$HERE/work/co/TEST.PK2" ] && [ -f "$HERE/work/co/ARC2.COM" ]; then
+            python3 "$HERE/tools/kdimg.py" put "$1" \
+                "$HERE/work/co/TEST.PK2" TEST.PK2 >/dev/null
+            python3 "$HERE/tools/kdimg.py" put "$1" \
+                "$HERE/work/co/ARC2.COM" ARC2.COM >/dev/null
+            python3 "$HERE/tools/kdimg.py" put "$1" \
+                "$HERE/work/co/TEST.PK2" TEST2.PK2 >/dev/null
+            # SAVEASM.COM лежит и в архиве, и на диске; убираем его с диска,
+            # чтобы распаковке было куда класть и чтобы ARC2 не спрашивал про
+            # замену. Появился обратно -- значит распаковка прошла.
+            python3 "$HERE/tools/kdimg.py" del "$1" \
+                SAVEASM.COM >/dev/null 2>&1 || true
+        else
+            printf 'PK2' > "$TMP/$name.pk2"
+            for f in TEST.PK2 TEST2.PK2 ARC2.COM; do
+                python3 "$HERE/tools/kdimg.py" put "$1" \
+                    "$TMP/$name.pk2" "$f" >/dev/null
+            done
+        fi
+    fi
+}
+
 probe() {   # имя, обработчик, клавиши для keytyper, [чужой]
     # Четвёртым словом «чужой» помечаются сценарии, которые доводят дело до
     # запуска программы с диска: дальше памятью распоряжается она, и сторож
@@ -238,72 +310,7 @@ def framefunc(frameno) {
 }
 add_callback("frame", framefunc)
 EOF
-    cp "$OUT/co-t72.edd" "$TMP/$name.edd"
-    # Заставку убираем: сценарий, простоявший срок гашения, ушёл бы в неё, и
-    # дальше памятью распоряжалась бы она. Её проверяет check-scr.sh.
-    python3 "$HERE/tools/kdimg.py" del "$TMP/$name.edd" CO.SCR >/dev/null 2>&1 || true
-    # Панели в образе -- какими их оставил хозяин рабочего диска, а сценариям
-    # нужна известная пара: меню дисков закольцовано, и "вправо" от разных букв
-    # ведёт в разные места. Поэтому в копию кладём эталонный CO.PRM сборки.
-    [ -f "$OUT/CO.PRM" ] && python3 "$HERE/tools/kdimg.py" put \
-        "$TMP/$name.edd" "$OUT/CO.PRM" CO.PRM >/dev/null
-    # «сА» -- поднять CO не с квазидиска, а с дискеты. Без C:INITIALC.SUB
-    # система ищет автозапуск на A:, а там INITIAL.SUB с «A:CO». Этот путь у
-    # CO свой: заставка и перенос файлов из CO.ZGR на C: (3EA0).
-    if [ -n "$froma" ]; then
-        python3 "$HERE/tools/kdimg.py" del "$TMP/$name.edd" INITIALC.SUB \
-            >/dev/null 2>&1 || true
-    fi
-    # «длинное» -- положить вместо CO.MNU файл на три килобайта.
-    if [ -n "$bigmnu" ]; then
-        [ "$bigmnu" = 2 ] && SRC=$MANYMNU || SRC=$BIGMNU
-        python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" "$SRC" CO.MNU \
-            >/dev/null
-    fi
-    if [ -n "$arc" ]; then
-        # Архивы большие: два по 49 КБ плюс сам ARC2 -- больше сотни килобайт
-        # свободного места. С тех пор как на квазидиск легли редактор и
-        # показательный архив, столько там не набирается. В распаковке они не
-        # участвуют -- убираем их из копии, а не с самого образа: остальные
-        # сценарии гоняются по тому же диску, какой уезжает в выпуск.
-        for f in VDE.COM VDE266.QRF DEMO.PK2; do
-            python3 "$HERE/tools/kdimg.py" del "$TMP/$name.edd" "$f" \
-                >/dev/null 2>&1 || true
-        done
-        # Настоящий архив и настоящий ARC2 лежат в work/co/ (их туда кладут
-        # руками: ARC2 -- чужая программа, в репозитории ей не место). Есть --
-        # берём их, нет -- обходимся пустышками: список архивов CO покажет и по
-        # ним.
-        #
-        # Что именно класть. ARC2.COM -- «ARCHIVER V1.3 (C) V.KRUPSKY 1990»,
-        # он есть на v06x/system-disk.fdd; CO рассчитан именно на него и кормит
-        # ему ответы через «<C:CO.TOK». Каталог архива CO читает сам: записи по
-        # 16 байт с начала файла -- признак (бит 7 -- конец), восемь знаков
-        # имени, три расширения, слово длины и слово упакованного размера.
-        # Архив от ARC.COM («Archiver V2.0, Goldsoft 1991») с той же дискеты
-        # не годится: записи у него те же, но перед ними шестибайтная подпись
-        # «ARC2.0», и список в CO съезжает. Отрезать подпись мало -- сжатие
-        # другое, ARC2 отвечает DECODING ERROR.
-        if [ -f "$HERE/work/co/TEST.PK2" ] && [ -f "$HERE/work/co/ARC2.COM" ]; then
-            python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
-                "$HERE/work/co/TEST.PK2" TEST.PK2 >/dev/null
-            python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
-                "$HERE/work/co/ARC2.COM" ARC2.COM >/dev/null
-            python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
-                "$HERE/work/co/TEST.PK2" TEST2.PK2 >/dev/null
-            # SAVEASM.COM лежит и в архиве, и на диске; убираем его с диска,
-            # чтобы распаковке было куда класть и чтобы ARC2 не спрашивал про
-            # замену. Появился обратно -- значит распаковка прошла.
-            python3 "$HERE/tools/kdimg.py" del "$TMP/$name.edd" \
-                SAVEASM.COM >/dev/null 2>&1 || true
-        else
-            printf 'PK2' > "$TMP/$name.pk2"
-            for f in TEST.PK2 TEST2.PK2 ARC2.COM; do
-                python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" \
-                    "$TMP/$name.pk2" "$f" >/dev/null
-            done
-        fi
-    fi
+    prep_edd "$TMP/$name.edd"
     # «винт» -- подключить винчестер. Он подключается только тем сценариям,
     # которым нужен: с ним T-72 отдаёт CO другой состав оборудования, и
     # остальные сценарии мерили бы уже не то, что раньше.
@@ -579,9 +586,7 @@ def framefunc(frameno) {
 }
 add_callback("frame", framefunc)
 EOF
-        cp "$OUT/co-t72.edd" "$TMP/$name-до.edd"
-        [ -f "$OUT/CO.PRM" ] && python3 "$HERE/tools/kdimg.py" put \
-            "$TMP/$name-до.edd" "$OUT/CO.PRM" CO.PRM >/dev/null
+        prep_edd "$TMP/$name-до.edd"
         { ( cd "$RUN" && "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 \
             --edd "$TMP/$name-до.edd" $EDD2 \
             --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
