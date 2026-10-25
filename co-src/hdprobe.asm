@@ -123,7 +123,8 @@ pnoab:  LDA  DFLAG
         JNZ  pnod
         MVI  A,'D'
         STA  PDTAB
-pnod:   JMP  HDDINIT            ; дальше по пусковой цепочке
+pnod:   CALL MINIT              ; мышь (co-src/mousini.asm)
+        JMP  HDDINIT            ; дальше по пусковой цепочке
 
 ; Прежняя нижняя строка второго набора -- та, где на «7» печать. Её проба
 ; кладёт обратно, когда система говорит, что винчестера нет.

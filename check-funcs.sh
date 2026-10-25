@@ -71,6 +71,12 @@ GUARD=$(python3 -c 'import sys,os; rows=[l.strip().split(",") for l in open(sys.
 # адрес обработчика в карту исполнения, -- поэтому адрес берём из layout.txt.
 HDSEL=$(python3 -c 'import sys,os; rows=[l.strip().split(",",3) for l in open(sys.argv[1])] if os.path.exists(sys.argv[1]) else []; print(next((r[1] for r in rows if len(r)>3 and r[3].strip()=="дискета НЖМД"), ""))' "$OUT/layout.txt")
 
+# Пусковое восстановление дискет и ввод номера живут в накладке списка (её
+# рабочий адрес -- в буфере копирования), адреса берём из листинга.
+HDSYM=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import asm8080; a = asm8080.Asm(); a.assemble(sys.argv[2]); print("%04X %04X" % (a.sym["hdinit0"], a.sym["hdask"]))' "$HERE/tools" "$HERE/co-src/co.asm")
+HDINIT0=${HDSYM% *}
+HDASK=${HDSYM#* }
+
 # Образец винчестера: две «дискеты», на первой HDIR.COM, на второй справка.
 # Метка у первой -- её показывает рамка панели (co-src/hdinfo.asm). Собирается
 # один раз, сценарии работают по копиям.
@@ -196,7 +202,7 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
     # помечен, и прошлый признак утёк бы в следующий сценарий. На этом уже
     # обожглись: «сА» снимал C:INITIALC.SUB, и все винчестерные сценарии после
     # него оставались без автозапуска.
-    arc=; conly=; hdd=; froma=; bigmnu=
+    arc=; conly=; hdd=; froma=; bigmnu=; hdsaved=
     case "$alien" in
         архив) alien=; arc=1; conly=1 ;;
         архив-чужой) alien=чужой; arc=1; conly=1 ;;
@@ -206,6 +212,7 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
         винт-чужой) alien=чужой; arc=; conly=1; hdd=1 ;;
         винт-битый) alien=; arc=; conly=1; hdd=2 ;;
         винт-много) alien=; arc=; conly=1; hdd=3 ;;
+        винт-сохр) alien=; arc=; conly=1; hdd=1; hdsaved=1 ;;
         длинное) alien=; arc=; conly=; bigmnu=1 ;;
         многопунктов) alien=; arc=; conly=; bigmnu=2 ;;
         *) ;;
@@ -254,6 +261,19 @@ EOF
         python3 "$HERE/tools/kdimg.py" del "$TMP/$name.edd" INITIALC.SUB \
             >/dev/null 2>&1 || true
     fi
+    # «винт-сохр» -- на C: уже лежит CO.HDD с дискетой 2 для A:, как после
+    # прошлого сеанса: при старте CO должна сама назначить её командой «9».
+    if [ -n "$hdsaved" ]; then
+        python3 - "$TMP/$name.hdd0" <<'PYH'
+import sys
+r = bytearray(128)
+r[0:2] = b'HD'
+r[2:7] = b'\x040002'           # слот A: длина и четыре знака
+open(sys.argv[1], 'wb').write(r)
+PYH
+        python3 "$HERE/tools/kdimg.py" put "$TMP/$name.edd" "$TMP/$name.hdd0" \
+            CO.HDD >/dev/null
+    fi
     # «длинное» -- положить вместо CO.MNU файл на три килобайта.
     if [ -n "$bigmnu" ]; then
         [ "$bigmnu" = 2 ] && SRC=$MANYMNU || SRC=$BIGMNU
@@ -266,7 +286,7 @@ EOF
         # показательный архив, столько там не набирается. В распаковке они не
         # участвуют -- убираем их из копии, а не с самого образа: остальные
         # сценарии гоняются по тому же диску, какой уезжает в выпуск.
-        for f in VDE.COM VDE266.QRF DEMO.PK2; do
+        for f in VDE.COM VDE.QRF VDE266.QRF DEMO.PK2; do
             python3 "$HERE/tools/kdimg.py" del "$TMP/$name.edd" "$f" \
                 >/dev/null 2>&1 || true
         done
@@ -499,6 +519,39 @@ PY3
             echo "  список дискет: листание довело до второй страницы"
         else
             echo "  список дискет: листание до второй страницы не довело" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
+    # Ввод номера по «УС»-«СС»-«7»: набранное ложится в C:CO.HDD как есть.
+    if [ "$name" = вводномера ] && [ -f "$TMP/$name-out.edd" ]; then
+        if python3 "$HERE/tools/kdimg.py" get "$TMP/$name-out.edd" CO.HDD \
+               "$TMP/$name.prm" >/dev/null 2>&1 &&
+           grep -qa '0002' "$TMP/$name.prm"; then
+            echo "  ввод номера: дискета 2 назначена и запомнена"
+        else
+            echo "  ввод номера: в CO.HDD нет набранного номера" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
+    # Восстановление при старте: панель A: должна показать дискету 2, а на ней
+    # один файл -- CO.HLP (на дисководе их два десятка).
+    if [ "$name" = восстановление ] && [ -f "$TMP/$name.ram" ]; then
+        if python3 - "$TMP/$name.ram" <<'PY5'
+import sys
+r = open(sys.argv[1], 'rb').read()
+ok = False
+for p in (0, 1):
+    if r[0x3E91 + p] != ord('A'):
+        continue
+    n = r[0xB689 + 2 * p]
+    e = 0xA954 + 0x680 * p
+    ok = n == 1 and r[e:e + 2] == b'CO' and r[e + 9:e + 12] == b'HLP'
+sys.exit(0 if ok else 1)
+PY5
+        then
+            echo "  восстановление: на A: дискета 2 из CO.HDD"
+        else
+            echo "  восстановление: дискета из CO.HDD при старте не назначена" >&2
             bad=$((bad+1)); ok=$((ok-1))
         fi
     fi
@@ -795,6 +848,12 @@ probe вначало "$HDSEL" '"Tab", 100, "\001Left Shift", 10, "7", 20, "\002L
 # делу: в панели должен оказаться каталог дискеты, а на ней есть VDE266.DOC,
 # которого на винчестере нет.
 probe дисковод "$HDSEL" '"Tab", 100, "\001Left Shift", 10, "7", 20, "\002Left Shift", 400, "Return", 900' винт
+# «УС»-«СС»-«7» -- прежний ввод номера, теперь он в накладке списка.
+# Набираем 0002 и ВК: команда «9» вешает дискету 2 на диск панели, номер
+# ложится в C:CO.HDD.
+probe вводномера "$HDASK" '"Tab", 100, "\001Left Ctrl", 10, "\001Left Shift", 10, "7", 20, "\002Left Shift", 10, "\002Left Ctrl", 300, "0", 30, "0", 30, "0", 30, "2", 30, "Return", 900' винт
+# Пусковое восстановление: CO.HDD уже лежит на C:, клавиш нет вовсе.
+probe восстановление "$HDINIT0" '' винт-сохр
 # Метка прямо из списка, по «6». Вторая дискета образца метки не имеет -- ей и
 # ставим. Это второй сценарий, где стенд пишет на винчестер (первый -- HDIR /M).
 probe меткасписком "$HDSEL" '"Tab", 100, "\001Left Shift", 10, "7", 20, "\002Left Shift", 400, "Down", 100, "Down", 250, "6", 250, "L", 40, "S", 40, "T", 40, "Return", 700' винт

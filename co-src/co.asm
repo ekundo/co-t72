@@ -8476,6 +8476,7 @@ HDLREC  EQU  (HDLFILE - 100h) >> 7      ; номер её первой запи�
 ORIGIN  EQU  OVL
         PHASE OVL
 #include "hdlist.asm"
+#include "hdcmd.asm"
 HDLEND  EQU  $
         DEPHASE
 HDLRECS EQU  (HDLEND - OVL + 127) >> 7   ; сколько записей читать

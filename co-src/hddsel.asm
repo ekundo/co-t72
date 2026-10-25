@@ -66,12 +66,18 @@ HBUF    EQU 00080h
 HSIGN   EQU HBUF                ; в нём подпись 'HD', за ней два слота
 HSLOTL  EQU 5                   ; слот: длина номера и четыре знака
 HHOME   EQU 3                   ; диск файла -- C:, квазидиск с системой
+; Сюда прячется ФУБ самого CO на время команды 9 -- в хвост буфера копирования.
+; Команду зовут при старте, когда CO ещё не трогала буфер, и из накладки списка,
+; которая сама лежит в этом буфере и до 9F80 не доходит.
+hdsave  EQU 09F80h
 
 ; ---------------- «СС»-«7» -------------------------------------------------
 ; Обычное нажатие открывает список дискет -- накладку, которая лежит в конце
 ; самой CO.COM (co-src/hdlist.asm). С «УС» остаётся прежний ввод номера: он
-; нужен, когда список не построить -- нет файла, не та сборка, винчестер
-; отвечает ошибкой.
+; нужен, когда список не построить -- не та сборка, винчестер отвечает
+; ошибкой. Ввод номера, работа с CO.HDD и команда «9» тоже живут в накладке
+; (co-src/hdcmd.asm): место под стеком отдано мыши. Поэтому без C:CO.COM
+; клавиша теперь не делает ничего.
 ; Слово управляющих клавиш CO читает портом 01 (04D2) и кладёт в A801.
 ; Биты там ОБРАТНЫЕ: нажатой клавише соответствует ноль. Видно это по
 ; обработчику кода 20h (036D): «ANI 20h / JZ» уводит на выход в ДОС, то есть
@@ -90,58 +96,12 @@ HDDKEY: LXI  H,HPANEL
         JNZ  hdback             ; не дисковод -- молча назад
 hdok:   SUI  040h               ; номер диска 1 или 2
         STA  hdrive
+        CALL ovload
+        JZ   hdback             ; накладки нет -- ни списка, ни ввода номера
         LDA  KEYWORD
         ANI  K_US
-        JZ   hdask              ; «УС» нажата -- сразу к вводу номера
-        CALL ovload
-        JNZ  HDLRUN             ; накладка на месте -- ей и работать
-hdask:  CALL clrpnd
-        LXI  H,hdmsg
-        RST  3                  ; приглашение
-        LXI  H,pend
-        INX  H
-        MVI  B,0                ; сколько набрано
-hdinp:  PUSH B
-        PUSH H
-        CALL HGETKEY
-        POP  H
-        POP  B
-        CPI  00Dh               ; ВК
-        JZ   hddone
-        CPI  01Bh               ; АР2
-        JZ   hdback
-        MOV  C,A
-        CPI  '0'
-        JC   hdinp
-        CPI  03Ah
-        JC   hdtake
-        CPI  'A'
-        JC   hdinp
-        CPI  'G'
-        JNC  hdinp
-hdtake: MOV  A,B
-        CPI  4                  ; больше четырёх не берём
-        JZ   hdinp
-        MOV  M,C
-        INX  H
-        INR  B
-        PUSH B
-        PUSH H
-        RST  4                  ; эхо
-        POP  H
-        POP  B
-        JMP  hdinp
-hddone: MOV  A,B
-        ORA  A
-        JZ   hdback             ; ничего не набрано
-        MOV  A,B
-        STA  pend               ; длина в набор
-        CALL docmd
-        CALL prmsave
-        LXI  H,HPANEL
-        CALL HSELPAN
-        MOV  B,M
-        JMP  HREREAD            ; перечитать панель
+        JZ   HDLASK             ; «УС» нажата -- ввод номера, он тоже в накладке
+        JMP  HDLRUN
 hdback: CALL HREDRAW
         JMP  HLOOP
 
@@ -159,145 +119,6 @@ HDHOOK: LDA  HKEYCOD
 hdtab:  LDA  HKEYCOD
         LXI  H,HKEYTAB
         JMP  HKEYGO
-
-; ---------------- при старте: применить сохранённое ------------------------
-; Первый байт -- переход; проба оборудования кладёт на его место RET, когда
-; система говорит, что дискет НЖМД нет: обращение к C:CO.HDD при пустом
-; дисководе кончается ошибкой диска ещё до панелей.
-HDDINIT: CALL prmload
-        ORA  A
-        RZ                      ; ничего не сохранено
-        MVI  A,1                ; диск A:
-        CALL hdrest
-        MVI  A,2                ; диск B:
-hdrest: STA  hdrive
-        CALL slotptr
-        MOV  A,M
-        ORA  A
-        RZ                      ; длина 0 -- нечего
-        LXI  D,pend             ; слот -> набор
-        MVI  C,HSLOTL
-hdcps:  MOV  A,M
-        STAX D
-        INX  H
-        INX  D
-        DCR  C
-        JNZ  hdcps
-        JMP  docmd
-
-; ---------------- команда 9 по набранному номеру ---------------------------
-docmd:  LXI  H,HFCB             ; сохранить ФУБ самого CO
-        LXI  D,hdsave
-        MVI  C,025h
-hdsav:  MOV  A,M
-        STAX D
-        INX  H
-        INX  D
-        DCR  C
-        JNZ  hdsav
-        LDA  hdrive             ; диск в ФУБ
-        STA  HFCB
-        LXI  H,HFCB+1           ; имя и тип -- пробелами
-        MVI  B,00Bh
-        MVI  A,' '
-hdclr:  MOV  M,A
-        INX  H
-        DCR  B
-        JNZ  hdclr
-        LDA  pend
-        MOV  C,A                ; длина набора
-        LXI  H,pend
-        INX  H
-        LXI  D,HFCB+1
-hdcp:   MOV  A,M                ; знаки в ФУБ
-        STAX D
-        INX  H
-        INX  D
-        DCR  C
-        JNZ  hdcp
-        LDA  pend
-        STA  HBUF               ; длина хвоста командной строки
-        MVI  B,0                ; разбор делает DAD B
-        MVI  A,9
-        CALL HBIOS              ; команда 9
-        LXI  H,hdsave           ; вернуть ФУБ CO
-        LXI  D,HFCB
-        MVI  C,025h
-hdrst:  MOV  A,M
-        STAX D
-        INX  H
-        INX  D
-        DCR  C
-        JNZ  hdrst
-        RET
-
-; ---------------- мелочи ---------------------------------------------------
-clrpnd: LXI  H,pend             ; длина 0, четыре пробела
-        MVI  M,0
-        INX  H
-        MVI  B,4
-        MVI  A,' '
-hdcl3:  MOV  M,A
-        INX  H
-        DCR  B
-        JNZ  hdcl3
-        RET
-
-slotptr: LXI H,HSIGN            ; HL -> слот текущего диска
-        INX  H
-        INX  H                  ; за подписью -- слот A:
-        LDA  hdrive
-        DCR  A
-        RZ
-        LXI  D,HSLOTL
-        DAD  D                  ; иначе слот B:
-        RET
-
-; ---------------- работа с CO.HDD ------------------------------------------
-prmopnw: CALL prmopn0           ; открыть или создать
-        ORA  A
-        JNZ  prmread
-        MVI  C,016h
-        LXI  D,hdfcb
-        CALL HBDOS
-        INR  A
-        RZ                      ; не вышло -- A=0
-        JMP  prmread
-
-prmopen: CALL prmopn0           ; только открыть
-        ORA  A
-        RZ
-
-prmread: LXI  H,HBUF            ; обнулить буфер
-        MVI  B,080h
-        XRA  A
-hdzap:  MOV  M,A
-        INX  H
-        DCR  B
-        JNZ  hdzap
-        MVI  C,01Ah             ; адрес обмена
-        LXI  D,HBUF
-        CALL HBDOS
-        MVI  A,0                ; единственная запись файла
-        STA  hdfcbr
-        XRA  A
-        STA  hdfcbr+1
-        STA  hdfcbr+2
-        MVI  C,021h             ; чтение по номеру
-        LXI  D,hdfcb
-        CALL HBDOS
-        MVI  A,0FFh             ; ошибку не смотрим: у свежего файла буфер нулевой
-        RET
-
-prmopn0: LDA  hdhome            ; A=0, если файла нет
-        STA  hdfcb
-        MVI  C,00Fh
-        LXI  D,hdfcb
-        CALL HBDOS
-        INR  A
-        RZ
-        MVI  A,0FFh
-        RET
 
 ; CO.HDD всегда под нулевым пользователем -- см. шапку. Обе точки входа
 ; обёрнуты: запомнить номер, встать на нулевого, вернуть как было. A и флаги
@@ -317,66 +138,6 @@ usrback: MVI C,020h             ; вернуть прежний
         CALL HBDOS
         RET
 
-prmload: CALL usr0
-        CALL prmload0
-        PUSH PSW
-        CALL usrback
-        POP  PSW
-        RET
-
-prmsave: CALL usr0
-        CALL prmsave0
-        PUSH PSW
-        CALL usrback
-        POP  PSW
-        RET
-
-prmload0: CALL prmopen          ; A=0, если нечего брать
-        ORA  A                  ; RZ смотрит флаг, а не A
-        RZ
-        LDA  HSIGN              ; подпись 'H'
-        CPI  'H'
-        RNZ
-        LXI  H,HSIGN            ; и 'D'
-        INX  H
-        MOV  A,M
-        CPI  'D'
-        RNZ
-        MVI  A,0FFh
-        RET
-
-prmsave0: CALL prmopnw
-        ORA  A
-        RZ
-; Защита от записи -- это свойство, а не помеха: закрыл файл, и выбранные
-; дискеты зафиксированы. Признак «только чтение» -- старший бит ПЕРВОГО знака
-; типа (fcb+9). Не третьего: туда БДОС ставит «архивный» после каждой записи, и
-; проверка по нему запрещала сохранение сразу после первого же раза.
-        LDA  hdfcbt
-        ANI  080h
-        RNZ
-        MVI  A,'H'              ; проставить подпись
-        STA  HSIGN
-        LXI  H,HSIGN
-        INX  H
-        MVI  M,'D'
-        CALL slotptr
-        XCHG                    ; DE -> слот
-        LXI  H,pend
-        MVI  C,HSLOTL
-hdcpp:  MOV  A,M                ; набор в слот
-        STAX D
-        INX  H
-        INX  D
-        DCR  C
-        JNZ  hdcpp
-        MVI  C,022h             ; запись по номеру
-        LXI  D,hdfcb
-        CALL HBDOS
-        MVI  C,010h             ; закрыть
-        LXI  D,hdfcb
-        CALL HBDOS
-        RET
 
 ; ---------------- накладка списка дискет -----------------------------------
 ; Читает её из C:CO.COM в буфер копирования и сверяет подпись. Диск тот же,
@@ -449,16 +210,9 @@ ovbad:  XRA  A
 ; иначе сторож целости в check-funcs.sh принял бы это за чужую запись поверх
 ; нашего кода.
 HDDATA  EQU  $
-hdmsg:  .db  ' Номер дискеты - ',0
 hdrive: .db  1
 hdhome: .db  HHOME              ; диск файла -- постоянный, не «текущий»
 usrsav: .db  0
-pend:   .ds  5                  ; набранный номер: длина и четыре знака
-hdsave: .ds  37                 ; сюда прячется ФУБ самого CO
-hdfcb:  .db  0,'CO      '       ; ФУБ на C:CO.HDD
-hdfcbt: .db  'HDD'              ; тип: в старшем бите первого знака -- «только чтение»
-        .ds  21
-hdfcbr: .ds  3                  ; номер записи для чтения и записи по номеру
 ovsign: .db  'HDL1'             ; подпись накладки -- такая же в её первых байтах
 ovfcb:  .db  HHOME,'CO      COM'    ; ФУБ на C:CO.COM
         .ds  24                 ; остальное БДОС заполнит сам
