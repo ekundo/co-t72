@@ -336,6 +336,10 @@ PYH
         esac
         HDD="--hdd $TMP/$name.hdd"
     fi
+    # Дискета A: -- своя копия на каждый сценарий. Сам $OUT/co-t72.fdd уезжает
+    # в выпуск, а v06x пишет в образ всё, что пишет Вектор: однажды прогон
+    # переписал загрузочный сектор, и с дискеты перестала грузиться система.
+    cp "$OUT/co-t72.fdd" "$TMP/$name-a.fdd"
     if [ "$DRIVE" = "D" ]; then
         cp "$OUT/co-t72.edd" "$TMP/$name-d.edd"
         EDD2="--edd $TMP/$name-d.edd"
@@ -347,11 +351,17 @@ PYH
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
         V06X_GUARD="$GUARD" V06X_RAM_SAVE="$TMP/$name.ram" V06X_LPT=1 \
         V06X_EDD_SAVE="$TMP/$name-out.edd" \
-        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 $HDD \
+        "$V06X" --rom "$ROM" --fdd "$TMP/$name-a.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 $HDD \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
         --max-frame $frames --save-frame $((frames - 1)) --novideo --nosound \
         >/dev/null 2>&1 ) || true; } 2>/dev/null
+    # Кто трогает системные дорожки дискеты -- видно здесь: первые 8 дорожек
+    # (40 Кб) под файлы не отданы, в них описатель и образ системы.
+    if ! cmp -s -n 40960 "$OUT/co-t72.fdd" "$TMP/$name-a.fdd"; then
+        echo "  $name: сценарий переписал системные дорожки дискеты A:" \
+            "($(cmp -l -n 40960 "$OUT/co-t72.fdd" "$TMP/$name-a.fdd" | wc -l | tr -d ' ') байт)"
+    fi
     # Последний кадр -- на нём сторож экрана и смотрит, не осталось ли мусора.
     # Имя кадру даёт эмулятор: <ром>_<кадр>.png в run/out.
     mv "$RUN/out/$(basename "${ROM%.rom}")_$((frames - 1)).png" "$TMP/$name.png" \
@@ -635,7 +645,8 @@ EOF
         cp "$OUT/co-t72.edd" "$TMP/$name-до.edd"
         [ -f "$OUT/CO.PRM" ] && python3 "$HERE/tools/kdimg.py" put \
             "$TMP/$name-до.edd" "$OUT/CO.PRM" CO.PRM >/dev/null
-        { ( cd "$RUN" && "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 \
+        cp "$OUT/co-t72.fdd" "$TMP/$name-до-a.fdd"
+        { ( cd "$RUN" && "$V06X" --rom "$ROM" --fdd "$TMP/$name-до-a.fdd" $FDD2 \
             --edd "$TMP/$name-до.edd" $EDD2 \
             --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
             --script "$TMP/$name-до.chai" \
@@ -738,6 +749,10 @@ probe сс8         213D '"\001Left Shift", 10, "8", 20, "\002Left Shift", 300'
 # дело: меню выбирается, файл создаётся, текст ищется и печатается. Без них
 # карта исполнения показывала 28% кода: почти всё, что за первым нажатием,
 # оставалось непройденным.
+# Пункт «G» в CO.MNU рабочего диска -- «Генерация программы на диск B:»,
+# то есть SYSGEN: он пишет на системные дорожки дискеты систему из памяти,
+# 9 Кб, со своим описателем. Пока сценарии гонялись по самой выпускной
+# дискете, после прогона с неё переставала грузиться T-72.
 probe менюпункт   3D24 '"2", 300, "G", 600' чужой
 probe новыйфайл   198F '"\001Left Shift", 10, "8", 20, "\002Left Shift", 200, "T", 20, "S", 20, "T", 20, "1", 200, "Return", 500'
 probe переимен    21CD '"6", 250, "X", 30, "Return", 500'
@@ -879,4 +894,12 @@ for f in glob.glob(os.path.join(sys.argv[1], '*.cov')):
             union[i] = 1
 print('вместе исполнено адресов CO: %d' % sum(union))
 PY
+# Сама выпускная дискета после прогона должна остаться какой была: сценарии
+# гоняются по копиям, и сюда никто писать не вправе.
+SYSBASE=$HERE/work/os-t72/os-t72.fdd
+if [ -f "$SYSBASE" ] && ! python3 "$HERE/tools/sysfdd.py" "$OUT/co-t72.fdd" \
+        "$ROM" --base "$SYSBASE" --check >/dev/null; then
+    echo "  выпускная дискета: системные дорожки испорчены" >&2
+    bad=$((bad+1))
+fi
 echo "отработало $ok, не отработало $bad"
