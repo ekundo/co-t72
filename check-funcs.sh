@@ -71,6 +71,12 @@ GUARD=$(python3 -c 'import sys,os; rows=[l.strip().split(",") for l in open(sys.
 # адрес обработчика в карту исполнения, -- поэтому адрес берём из layout.txt.
 HDSEL=$(python3 -c 'import sys,os; rows=[l.strip().split(",",3) for l in open(sys.argv[1])] if os.path.exists(sys.argv[1]) else []; print(next((r[1] for r in rows if len(r)>3 and r[3].strip()=="дискета НЖМД"), ""))' "$OUT/layout.txt")
 
+# Пусковое восстановление дискет и ввод номера живут в накладке списка (её
+# рабочий адрес -- в буфере копирования), адреса берём из листинга.
+HDSYM=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import asm8080; a = asm8080.Asm(); a.assemble(sys.argv[2]); print("%04X %04X" % (a.sym["hdinit0"], a.sym["hdask"]))' "$HERE/tools" "$HERE/co-src/co.asm")
+HDINIT0=${HDSYM% *}
+HDASK=${HDSYM#* }
+
 # Образец винчестера: две «дискеты», на первой HDIR.COM, на второй справка.
 # Метка у первой -- её показывает рамка панели (co-src/hdinfo.asm). Собирается
 # один раз, сценарии работают по копиям.
@@ -179,9 +185,10 @@ elif [ "$DRIVE" = "B" ]; then
 fi
 
 prep_edd() {   # куда: копия выпускного диска с правками, какие просит сценарий
-    # Флаги (arc, froma, bigmnu) выставляет probe. Отдельной функцией -- потому
-    # что контрольный прогон «архивдругой» обязан стартовать с того же диска,
-    # что и основной: иначе кадры разойдутся на лишнем файле в панели.
+    # Флаги (arc, froma, bigmnu, hdsaved) выставляет probe. Отдельной
+    # функцией -- потому что контрольный прогон «архивдругой» обязан стартовать
+    # с того же диска, что и основной: иначе кадры разойдутся на лишнем файле в
+    # панели.
     cp "$OUT/co-t72.edd" "$1"
     # Заставку убираем: сценарий, простоявший срок гашения, ушёл бы в неё, и
     # дальше памятью распоряжалась бы она. Её проверяет check-scr.sh.
@@ -198,6 +205,19 @@ prep_edd() {   # куда: копия выпускного диска с пра�
         python3 "$HERE/tools/kdimg.py" del "$1" INITIALC.SUB \
             >/dev/null 2>&1 || true
     fi
+    # «винт-сохр» -- на C: уже лежит CO.HDD с дискетой 2 для A:, как после
+    # прошлого сеанса: при старте CO должна сама назначить её командой «9».
+    if [ -n "$hdsaved" ]; then
+        python3 - "$TMP/$name.hdd0" <<'PYH'
+import sys
+r = bytearray(128)
+r[0:2] = b'HD'
+r[2:7] = b'\x040002'           # слот A: длина и четыре знака
+open(sys.argv[1], 'wb').write(r)
+PYH
+        python3 "$HERE/tools/kdimg.py" put "$1" "$TMP/$name.hdd0" \
+            CO.HDD >/dev/null
+    fi
     # «длинное» -- положить вместо CO.MNU файл на три килобайта.
     if [ -n "$bigmnu" ]; then
         [ "$bigmnu" = 2 ] && SRC=$MANYMNU || SRC=$BIGMNU
@@ -210,7 +230,7 @@ prep_edd() {   # куда: копия выпускного диска с пра�
         # показательный архив, столько там не набирается. В распаковке они не
         # участвуют -- убираем их из копии, а не с самого образа: остальные
         # сценарии гоняются по тому же диску, какой уезжает в выпуск.
-        for f in VDE.COM VDE266.QRF DEMO.PK2; do
+        for f in VDE.COM VDE.QRF VDE266.QRF DEMO.PK2; do
             python3 "$HERE/tools/kdimg.py" del "$1" "$f" \
                 >/dev/null 2>&1 || true
         done
@@ -268,7 +288,7 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
     # помечен, и прошлый признак утёк бы в следующий сценарий. На этом уже
     # обожглись: «сА» снимал C:INITIALC.SUB, и все винчестерные сценарии после
     # него оставались без автозапуска.
-    arc=; conly=; hdd=; froma=; bigmnu=
+    arc=; conly=; hdd=; froma=; bigmnu=; hdsaved=
     case "$alien" in
         архив) alien=; arc=1; conly=1 ;;
         архив-чужой) alien=чужой; arc=1; conly=1 ;;
@@ -278,6 +298,7 @@ probe() {   # имя, обработчик, клавиши для keytyper, [ч�
         винт-чужой) alien=чужой; arc=; conly=1; hdd=1 ;;
         винт-битый) alien=; arc=; conly=1; hdd=2 ;;
         винт-много) alien=; arc=; conly=1; hdd=3 ;;
+        винт-сохр) alien=; arc=; conly=1; hdd=1; hdsaved=1 ;;
         длинное) alien=; arc=; conly=; bigmnu=1 ;;
         многопунктов) alien=; arc=; conly=; bigmnu=2 ;;
         *) ;;
@@ -323,6 +344,10 @@ EOF
         esac
         HDD="--hdd $TMP/$name.hdd"
     fi
+    # Дискета A: -- своя копия на каждый сценарий. Сам $OUT/co-t72.fdd уезжает
+    # в выпуск, а v06x пишет в образ всё, что пишет Вектор: однажды прогон
+    # переписал загрузочный сектор, и с дискеты перестала грузиться система.
+    cp "$OUT/co-t72.fdd" "$TMP/$name-a.fdd"
     if [ "$DRIVE" = "D" ]; then
         cp "$OUT/co-t72.edd" "$TMP/$name-d.edd"
         EDD2="--edd $TMP/$name-d.edd"
@@ -334,11 +359,17 @@ EOF
         V06X_DATA_LO=0xA000 V06X_DATA_HI=0xDFFF V06X_DATA_FILE="$TMP/$name.dat" \
         V06X_GUARD="$GUARD" V06X_RAM_SAVE="$TMP/$name.ram" V06X_LPT=1 \
         V06X_EDD_SAVE="$TMP/$name-out.edd" \
-        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 $HDD \
+        "$V06X" --rom "$ROM" --fdd "$TMP/$name-a.fdd" $FDD2 --edd "$TMP/$name.edd" $EDD2 $HDD \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
         --script "$TMP/$name.chai" \
         --max-frame $frames --save-frame $((frames - 1)) --novideo --nosound \
         >/dev/null 2>&1 ) || true; } 2>/dev/null
+    # Кто трогает системные дорожки дискеты -- видно здесь: первые 8 дорожек
+    # (40 Кб) под файлы не отданы, в них описатель и образ системы.
+    if ! cmp -s -n 40960 "$OUT/co-t72.fdd" "$TMP/$name-a.fdd"; then
+        echo "  $name: сценарий переписал системные дорожки дискеты A:" \
+            "($(cmp -l -n 40960 "$OUT/co-t72.fdd" "$TMP/$name-a.fdd" | wc -l | tr -d ' ') байт)"
+    fi
     # Последний кадр -- на нём сторож экрана и смотрит, не осталось ли мусора.
     # Имя кадру даёт эмулятор: <ром>_<кадр>.png в run/out.
     mv "$RUN/out/$(basename "${ROM%.rom}")_$((frames - 1)).png" "$TMP/$name.png" \
@@ -509,6 +540,39 @@ PY3
             bad=$((bad+1)); ok=$((ok-1))
         fi
     fi
+    # Ввод номера по «УС»-«СС»-«7»: набранное ложится в C:CO.HDD как есть.
+    if [ "$name" = вводномера ] && [ -f "$TMP/$name-out.edd" ]; then
+        if python3 "$HERE/tools/kdimg.py" get "$TMP/$name-out.edd" CO.HDD \
+               "$TMP/$name.prm" >/dev/null 2>&1 &&
+           grep -qa '0002' "$TMP/$name.prm"; then
+            echo "  ввод номера: дискета 2 назначена и запомнена"
+        else
+            echo "  ввод номера: в CO.HDD нет набранного номера" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
+    # Восстановление при старте: панель A: должна показать дискету 2, а на ней
+    # один файл -- CO.HLP (на дисководе их два десятка).
+    if [ "$name" = восстановление ] && [ -f "$TMP/$name.ram" ]; then
+        if python3 - "$TMP/$name.ram" <<'PY5'
+import sys
+r = open(sys.argv[1], 'rb').read()
+ok = False
+for p in (0, 1):
+    if r[0x3E91 + p] != ord('A'):
+        continue
+    n = r[0xB689 + 2 * p]
+    e = 0xA954 + 0x680 * p
+    ok = n == 1 and r[e:e + 2] == b'CO' and r[e + 9:e + 12] == b'HLP'
+sys.exit(0 if ok else 1)
+PY5
+        then
+            echo "  восстановление: на A: дискета 2 из CO.HDD"
+        else
+            echo "  восстановление: дискета из CO.HDD при старте не назначена" >&2
+            bad=$((bad+1)); ok=$((ok-1))
+        fi
+    fi
     # В начало списка: ВК на второй строке первой страницы -- дискета 1.
     if [ "$name" = вначало ] && [ -f "$TMP/$name-out.edd" ]; then
         if python3 "$HERE/tools/kdimg.py" get "$TMP/$name-out.edd" CO.HDD \
@@ -587,7 +651,8 @@ def framefunc(frameno) {
 add_callback("frame", framefunc)
 EOF
         prep_edd "$TMP/$name-до.edd"
-        { ( cd "$RUN" && "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" $FDD2 \
+        cp "$OUT/co-t72.fdd" "$TMP/$name-до-a.fdd"
+        { ( cd "$RUN" && "$V06X" --rom "$ROM" --fdd "$TMP/$name-до-a.fdd" $FDD2 \
             --edd "$TMP/$name-до.edd" $EDD2 \
             --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" \
             --script "$TMP/$name-до.chai" \
@@ -690,6 +755,10 @@ probe сс8         213D '"\001Left Shift", 10, "8", 20, "\002Left Shift", 300'
 # дело: меню выбирается, файл создаётся, текст ищется и печатается. Без них
 # карта исполнения показывала 28% кода: почти всё, что за первым нажатием,
 # оставалось непройденным.
+# Пункт «G» в CO.MNU рабочего диска -- «Генерация программы на диск B:»,
+# то есть SYSGEN: он пишет на системные дорожки дискеты систему из памяти,
+# 9 Кб, со своим описателем. Пока сценарии гонялись по самой выпускной
+# дискете, после прогона с неё переставала грузиться T-72.
 probe менюпункт   3D24 '"2", 300, "G", 600' чужой
 probe новыйфайл   198F '"\001Left Shift", 10, "8", 20, "\002Left Shift", 200, "T", 20, "S", 20, "T", 20, "1", 200, "Return", 500'
 probe переимен    21CD '"6", 250, "X", 30, "Return", 500'
@@ -800,6 +869,12 @@ probe вначало "$HDSEL" '"Tab", 100, "\001Left Shift", 10, "7", 20, "\002L
 # делу: в панели должен оказаться каталог дискеты, а на ней есть VDE266.DOC,
 # которого на винчестере нет.
 probe дисковод "$HDSEL" '"Tab", 100, "\001Left Shift", 10, "7", 20, "\002Left Shift", 400, "Return", 900' винт
+# «УС»-«СС»-«7» -- прежний ввод номера, теперь он в накладке списка.
+# Набираем 0002 и ВК: команда «9» вешает дискету 2 на диск панели, номер
+# ложится в C:CO.HDD.
+probe вводномера "$HDASK" '"Tab", 100, "\001Left Ctrl", 10, "\001Left Shift", 10, "7", 20, "\002Left Shift", 10, "\002Left Ctrl", 300, "0", 30, "0", 30, "0", 30, "2", 30, "Return", 900' винт
+# Пусковое восстановление: CO.HDD уже лежит на C:, клавиш нет вовсе.
+probe восстановление "$HDINIT0" '' винт-сохр
 # Метка прямо из списка, по «6». Вторая дискета образца метки не имеет -- ей и
 # ставим. Это второй сценарий, где стенд пишет на винчестер (первый -- HDIR /M).
 probe меткасписком "$HDSEL" '"Tab", 100, "\001Left Shift", 10, "7", 20, "\002Left Shift", 400, "Down", 100, "Down", 250, "6", 250, "L", 40, "S", 40, "T", 40, "Return", 700' винт
@@ -825,4 +900,12 @@ for f in glob.glob(os.path.join(sys.argv[1], '*.cov')):
             union[i] = 1
 print('вместе исполнено адресов CO: %d' % sum(union))
 PY
+# Сама выпускная дискета после прогона должна остаться какой была: сценарии
+# гоняются по копиям, и сюда никто писать не вправе.
+SYSBASE=$HERE/work/os-t72/os-t72.fdd
+if [ -f "$SYSBASE" ] && ! python3 "$HERE/tools/sysfdd.py" "$OUT/co-t72.fdd" \
+        "$ROM" --base "$SYSBASE" --check >/dev/null; then
+    echo "  выпускная дискета: системные дорожки испорчены" >&2
+    bad=$((bad+1))
+fi
 echo "отработало $ok, не отработало $bad"

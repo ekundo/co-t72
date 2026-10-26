@@ -74,6 +74,8 @@ PIECES = [
     ('стек', 'SCRSTR', 'SCREND', 'строки экрана'),
     ('стек', 'HDDSEL', 'HDDATA', 'дискета НЖМД'),
     ('стек-буфер', 'HDDATA', 'HDDEND', 'дискета НЖМД: буферы'),
+    ('стек', 'MOUSE', 'MDATA', 'мышь'),
+    ('стек-буфер', 'MDATA', 'MEND', 'мышь: переменные'),
     ('загрузка', 'PROBA', 'PROBAEND', 'проба оборудования'),
 ]
 
@@ -109,7 +111,8 @@ def main():
     # Перекрытия -- проверяем внутри каждого места отдельно: адреса «загрузки»
     # и «окна» живут в разное время и пересекаться им не запрещено.
     for place in sorted({x[0].split('-', 1)[0] for x in items}):
-        cur = [x for x in items if x[0].split('-', 1)[0] == place]
+        cur = sorted((x for x in items if x[0].split('-', 1)[0] == place),
+                     key=lambda x: x[1])
         for (w1, a1, l1, n1), (w2, a2, l2, n2) in zip(cur, cur[1:]):
             if a1 + l1 > a2:
                 bad.append('%s: «%s» (%04X..%04X) налезает на «%s» (%04X..)'
@@ -140,6 +143,12 @@ def main():
             print('  %04X-%04X  %-28s дыра %04X-%04X, свободно ещё %d байт'
                   % (addr, addr + length - 1, name, h[0], h[1],
                      h[1] - (addr + length - 1)))
+
+    # Накладка списка дискет со своими буферами живёт в буфере копирования, а
+    # в хвосте того же буфера (hdsave) команда 9 прячет ФУБ самого CO.
+    if sym['LSTEND'] > sym['hdsave']:
+        bad.append('накладка: буферы списка дискет (до %04X) налезают на hdsave (%04X)'
+                   % (sym['LSTEND'], sym['hdsave']))
 
     # По адресу загрузки: только пусковое, и только выше 4100.
     for where, addr, length, name in items:

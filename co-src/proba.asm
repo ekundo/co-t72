@@ -10,4 +10,8 @@
 ORIGIN  EQU $
 PROBA   EQU $
 #include "hdprobe.asm"
+ORIGIN  EQU $
+#include "hdinit.asm"
+ORIGIN  EQU $
+#include "mousini.asm"
 PROBAEND EQU $

@@ -34,27 +34,49 @@ CKS0 = 0x66             # с чего загрузчик начинает её �
 DATA = 8 * 5120         # с этого места каталог и файлы -- их не трогаем
 
 
+def build(img, base, sysimg):
+    """Системные дорожки: описатель и хвост с подлинной дискеты, образ свой."""
+    img[0:DATA] = base[0:DATA]
+    img[SYS:SYS + len(sysimg)] = sysimg
+    img[0:2] = bytes([ORG & 0xFF, ORG >> 8])            # адрес загрузки
+    img[2:4] = bytes([ORG & 0xFF, ORG >> 8])            # адрес запуска
+    img[CKS] = (CKS0 + sum(img[:CKS])) & 0xFF           # контрольная сумма
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('image', help='дискета, которую делаем загрузочной')
     p.add_argument('system', help='образ системы (os-t72X.rom)')
     p.add_argument('--base', required=True, help='подлинная системная дискета T-72')
+    p.add_argument('--check', action='store_true',
+                   help='ничего не писать, а сверить: системные дорожки дискеты -- '
+                        'ровно те, что сюда положила бы сборка')
     a = p.parse_args()
 
     img = bytearray(open(a.image, 'rb').read())
     base = open(a.base, 'rb').read()
     sysimg = open(a.system, 'rb').read()
+    if a.check:
+        # Дискета, которую подключали к эмулятору, может вернуться с чужими
+        # системными дорожками: Вектор пишет в образ, а v06x и Emu80 сохраняют
+        # записанное. Так уже было -- загрузочный сектор пришёл с другой длиной
+        # системы, и загрузчик Вектора недочитывал T-72.
+        want = bytearray(img)
+        build(want, base, sysimg)
+        if want[:DATA] != img[:DATA]:
+            bad = [i for i in range(DATA) if want[i] != img[i]]
+            raise SystemExit('%s: системные дорожки не те, что кладёт сборка: '
+                             '%d байт, первый по %04X (%02X вместо %02X)'
+                             % (a.image, len(bad), bad[0], img[bad[0]], want[bad[0]]))
+        print('%s: системные дорожки в порядке' % a.image)
+        return
 
     if len(base) < DATA:
         raise SystemExit('подлинная дискета короче системных дорожек')
     if SYS + len(sysimg) > DATA:
         raise SystemExit('образ системы не влезает в системные дорожки')
 
-    img[0:DATA] = base[0:DATA]
-    img[SYS:SYS + len(sysimg)] = sysimg
-    img[0:2] = bytes([ORG & 0xFF, ORG >> 8])            # адрес загрузки
-    img[2:4] = bytes([ORG & 0xFF, ORG >> 8])            # адрес запуска
-    img[CKS] = (CKS0 + sum(img[:CKS])) & 0xFF           # контрольная сумма
+    build(img, base, sysimg)
     open(a.image, 'wb').write(bytes(img))
     print('системные дорожки: система %d байт с %04X, загрузка и запуск с %04X, '
           'контрольная сумма %02X' % (len(sysimg), SYS, ORG, img[CKS]))

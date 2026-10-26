@@ -88,6 +88,10 @@ for v in f h hx k; do
     sh "$HERE/tools/relnote.sh" "$v" "$VERSION" > "$kit/README.txt"
 
     ( cd "$WORK/kit-$v" && rm -f "$OUT/$name.zip" && zip -qr "$OUT/$name.zip" "$name" )
+    # Системные дорожки дискеты -- ровно те, что положила сборка: с чужим
+    # загрузочным сектором загрузчик Вектора недочитывает систему.
+    python3 "$HERE/tools/sysfdd.py" "$WORK/$v/co-t72.fdd" "$rom" \
+        --base "$(dirname "$EDD")/os-t72.fdd" --check >/dev/null || exit 1
     cp "$WORK/$v/co-t72.fdd" "$OUT/$name.fdd"
     cp "$WORK/$v/co-t72.edd" "$OUT/$name.edd"
     echo "  $name: zip $(stat -f%z "$OUT/$name.zip") байт, fdd $(stat -f%z "$OUT/$name.fdd") байт, edd $(stat -f%z "$OUT/$name.edd") байт"

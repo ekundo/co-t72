@@ -65,8 +65,11 @@ run() {   # имя, что положить в CO.SCR (пусто -- ничег�
     # подменяем проверяемой заставкой, либо убираем вовсе.
     python3 "$HERE/tools/kdimg.py" del "$dir/e.edd" CO.SCR >/dev/null 2>&1 || true
     [ -z "$scr" ] || python3 "$HERE/tools/kdimg.py" put "$dir/e.edd" "$scr" CO.SCR >/dev/null
+    # Дискета -- копия: сам $OUT/co-t72.fdd уезжает в выпуск, а v06x пишет в
+    # образ всё, что пишет Вектор.
+    cp "$OUT/co-t72.fdd" "$dir/a.fdd"
     ( cd "$dir" && V06X_COV_LO=0x0100 V06X_COV_HI=0xBFFF V06X_COV_FILE="$dir/cov" \
-        "$V06X" --rom "$ROM" --fdd "$OUT/co-t72.fdd" --edd e.edd --novideo --nosound \
+        "$V06X" --rom "$ROM" --fdd a.fdd --edd e.edd --novideo --nosound \
         --script "$HERE/tools/vector06sdl/scripts/robotnik.chai" --script "$chai" \
         --max-frame 1710 --save-frame 600 --save-frame 1100 --save-frame 1700 \
         >"$dir/log" 2>&1 ) || true
